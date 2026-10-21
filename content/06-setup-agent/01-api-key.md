@@ -1,0 +1,35 @@
+---
+title: Create an API Key
+linkTitle: API Key
+weight: 10
+description: "Create the FortiSOAR API key your agent will authenticate with."
+---
+
+The agent authenticates to FortiSOAR with an API key. Create a dedicated one so you can see the agent's actions in the audit log and revoke it independently of your own login.
+
+## 1. Create the key
+
+<!-- step: fsa06-01-create-api-key manual -->
+
+1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
+2. Open **Settings** (gear icon) and go to **Security** > **API Keys** (named **Appliances** on some versions).
+3. Click **Add**, name it `agentlab key`, and assign a role that can read and write the modules you will work with. For this workshop use **Full App Permissions**; in production, scope it down.
+4. Save, then copy the key value.
+
+<!-- capture: fsa06-01-api-key-page -->
+![fsa06-01-api-key-page](fsa06-01-api-key-page.png)
+
+{{% notice warning %}}
+Treat the key like a password. It goes into your agent's MCP configuration and nowhere else: not into a git repo, not into a prompt, not into a chat transcript you might share.
+{{% /notice %}}
+
+## 2. What success looks like
+
+The key appears in the API Keys list with your chosen role. Keep the value handy for the next page.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| No API Keys page under Settings | Your login lacks the Security read permission | Use an admin account or ask your instructor |
+| Key works for reads but writes return 403 | The key's role lacks Create/Update on the module | Edit the role, or assign Full App Permissions for the lab |

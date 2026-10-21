@@ -1,0 +1,15 @@
+{
+  "name": "fsr-agentic-workshop-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser proof harness for the FortiSOAR Agentic Operations Workshop. Drives a live FortiSOAR box through lib/harness.js and writes captures into content/.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}
