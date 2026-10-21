@@ -84,8 +84,8 @@ async function apiPost(ctx, path, data) {
 /**
  * Run one pyfsr agent tool (the same registry the MCP server serves) from a
  * spec, via python3. Proves the exact code path the workshop's agent uses.
- * Throws on a tool error envelope. Requires pyfsr installed for python3 and
- * FSR_BASE_URL/FSR_API_KEY in the environment.
+ * Throws on a tool error envelope. Requires pyfsr installed for the interpreter
+ * (FSR_PYTHON, default python3) and FSR_BASE_URL/FSR_API_KEY in the environment.
  */
 function pyfsrTool(name, args) {
   const { execFileSync } = require("child_process");
@@ -96,8 +96,14 @@ function pyfsrTool(name, args) {
     "client = EnvConfig.from_env().client()\n" +
     "name, args = json.loads(sys.argv[1]), json.loads(sys.argv[2])\n" +
     "out = dispatch(client, name, args)\n" +
-    "json.dump(out, sys.stdout)\n";
-  const stdout = execFileSync("python3", ["-c", code, JSON.stringify(name), JSON.stringify(args)], {
+    "import dataclasses\n" +
+    "def _plain(o):\n" +
+    "    if dataclasses.is_dataclass(o): return dataclasses.asdict(o)\n" +
+    "    if hasattr(o, 'model_dump'): return o.model_dump()\n" +
+    "    if hasattr(o, '__dict__'): return vars(o)\n" +
+    "    return str(o)\n" +
+    "json.dump(out, sys.stdout, default=_plain)\n";
+  const stdout = execFileSync(process.env.FSR_PYTHON || "python3", ["-c", code, JSON.stringify(name), JSON.stringify(args)], {
     encoding: "utf8",
     timeout: 12 * 60 * 1000,
   });
