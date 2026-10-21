@@ -74,3 +74,11 @@ layouts/, assets/, static/, themes/, archetypes/, i18n/   from hugo-builder/ (do
 config.toml       site config (local)
 config.github.toml  GitHub Pages overrides (CI)
 ```
+
+## Lab infrastructure ideas (not built yet)
+
+- Per-student remote MCP host: add a small container (LXC or similar) to the
+  lab topology that the FortiSOAR box can reach, so chapter 5's advanced
+  exercise ("build your own MCP server") runs as a true remote server per
+  student instead of on the appliance CLI. Decide when the pod topology for
+  this workshop is designed.
