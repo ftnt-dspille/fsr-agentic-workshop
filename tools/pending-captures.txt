@@ -3,19 +3,13 @@
 # land before its screenshot is recorded. Remove the line once the .png is in the
 # page's directory. Ids listed here but used by no capture marker are reported
 # as stale.
-fsa06-01-api-key-page
 fsa06-04-whoami-claude
 fsa07-01-user-in-ui
 fsa07-02-module-in-ui
 fsa07-03-records-grid
 fsa08-02-playbook-canvas
 fsa08-03-run-history
-fsa09-02-connector-page
-fsa09-05-greeter-installed
 fsa10-02-findings-on-alert
-fsa02-01-ai-area
-fsa02-02-agent-list
-fsa02-03-mcp-list
 fsa03-01-investigation-tab
 fsa03-02-hypotheses
 fsa03-03-alert-ai-fields
@@ -26,5 +20,4 @@ fsa03-07-verdict-dashboard
 fsa04-01-agent-detail
 fsa04-02-tool-list-record
 fsa04-03-playbook-branch
-fsa05-01-mcp-servers-page
 fsa05-02-agent-allowlist
