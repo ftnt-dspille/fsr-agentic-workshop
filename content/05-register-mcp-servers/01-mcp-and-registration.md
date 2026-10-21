@@ -12,8 +12,10 @@ The Model Context Protocol (MCP) is how an agent reaches tools that live outside
 | Kind | What it is | Who makes it |
 |---|---|---|
 | Built-in | Four families that ship with FortiSOAR: module management (records), utility tools, SOC framework (alert and indicator tools), and playbook management (run and status) | FortiSOAR |
-| External | A server you run, and register with FortiSOAR by its URL | You |
+| External | A remote MCP server that another product hosts, registered with FortiSOAR by its URL. The flagship case: FortiSIEM hosts an MCP endpoint, you register it once, and FortiSOAR agents can query SIEM incidents, reputation and inventory as tools. Any server you run yourself registers the same way - including one running on the FortiSOAR CLI itself on a local port. | The other product, or you |
 | Connector-based | A server built from installed connector operations. Each selected operation becomes one tool, and its inputs are nested under one `params` object. | FortiSOAR, from your choices |
+
+If you have a FortiSIEM in your lab, register its MCP endpoint as this chapter's external server: it is the realistic production shape (a vendor-hosted remote server with `oauth2` authentication, where the token refreshes itself). The next page's lab server exists for classes without one.
 
 Five system connectors can never become MCP tools (NLV-05-08). An MCP tool has no built-in notion of read-only or destructive, so the approval for any write belongs in a playbook with a manual-input step, not in the tool.
 

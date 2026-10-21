@@ -5,7 +5,9 @@ weight: 20
 description: "Build a small read-only MCP server, prove its handshake with curl, register it, and grant it to one agent with an explicit allowlist."
 ---
 
-In this page you build a read-only MCP server on your laptop, prove that it speaks the protocol, register it with FortiSOAR, and grant it to one agent with an explicit allowlist. Keep the tool read-only. The lab is about the handshake and the allowlist, not about writing to anything.
+In this page you build a read-only MCP server, prove that it speaks the protocol, register it with FortiSOAR, and grant it to one agent with an explicit allowlist. Keep the tool read-only. The lab is about the handshake and the allowlist, not about writing to anything.
+
+This stands in for the real production case (a remote server another product hosts, like FortiSIEM's MCP endpoint - see the previous page). To keep the networking trivial, run it on the FortiSOAR appliance itself: SSH to the box, start the server on a local port, and register `http://localhost:<port>/mcp/`. The box can always reach its own localhost, so no TLS or firewall work is needed for the lab.
 
 ## 1. Build a read-only server
 
@@ -37,7 +39,7 @@ def get_forecast(city: str) -> dict:
 app = mcp.streamable_http_app()
 ```
 
-Serve it on localhost with an ASGI server, for example `uvicorn server:app --port 8000`. Bind to localhost only. Put the server behind TLS termination before any other system can reach it.
+Copy `server.py` to the appliance and serve it on a local port with an ASGI server, for example `uvicorn server:app --port 8000` (install `mcp` and `uvicorn` into a virtualenv on the box, not into the system Python). Bind to localhost only. If you must run it anywhere other than the box itself, put it behind TLS termination before any other system can reach it.
 
 The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents expect that shape, and some shipped agents break on a bare value (NLV-04-14).
 
@@ -76,7 +78,7 @@ A request without the `Accept` header is rejected, so if the call fails with a 4
 
 Register the server with the steps from the previous page. Validate first, and check that validation returns `get_forecast`. Then persist, note the UUID, and check the status.
 
-Use the `none` authentication type for this lab server only. The URL in the examples, `https://mcp.example.com/mcp/`, is a placeholder for an address the box can reach over HTTPS. A server running on your laptop is not reachable from the box. Your instructor or administrator provides a reachable host. Confirm that the box can reach it and that its certificate is trusted before you validate (NLV-05-04).
+Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server running on your laptop is NOT reachable from the box - that is why the lab runs it on the appliance's own CLI. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate (NLV-05-04).
 
 ## 4. Grant it to one agent with an allowlist
 
