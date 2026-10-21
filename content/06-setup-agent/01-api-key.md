@@ -12,9 +12,10 @@ The agent authenticates to FortiSOAR with an API key. Create a dedicated one so 
 <!-- step: fsa06-01-create-api-key manual -->
 
 1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
-2. Open **Settings** (gear icon) and go to **Security** > **API Keys** (named **Appliances** on some versions).
+2. Open **System** > **Identity & Access Management** > **Access Keys**, on the **API Key** tab. Some versions name the tab or menu differently.
 3. Click **Add**, name it `agentlab key`, and assign a role that can read and write the modules you will work with. For this workshop use **Full App Permissions**; in production, scope it down.
-4. Save, then copy the key value.
+4. Set **Valid Till**. The form defaults to **1 day**, and a key that expires mid-class fails every later step. Set a period that covers the session.
+5. Save, then copy the key value.
 
 <!-- capture: fsa06-01-api-key-page -->
 ![fsa06-01-api-key-page](fsa06-01-api-key-page.png)

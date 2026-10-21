@@ -35,6 +35,8 @@ Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` 
 
 Type names may be case-sensitive. Try the lowercase form first, and check the list on your build (NLV-05-02).
 
+On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport and has no authentication field (NLV-05-02, NLV-05-03). The table above and the rule in section 3 describe the stored record. Check them against your build before you rely on them.
+
 The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity (NLV-05-11). Choose the type with that trade-off in mind.
 
 ## 3. Read the JSON-string rule first
@@ -81,7 +83,7 @@ The registration has four steps. Do not skip the first one.
 
 <!-- step: fsa05-01-validate-register manual -->
 
-Open the MCP servers page, which sits in the AI configuration area (NLV-05-01). Start a new server. Enter the name, the transport, the URL and the authentication, using the JSON-string form from section 3. Run validation first, and read the tool names it returns. Only then save.
+Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. It has no authentication field, so this form cannot set one (NLV-05-03). Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
 <!-- capture: fsa05-01-mcp-servers-page -->
 ![fsa05-01-mcp-servers-page](fsa05-01-mcp-servers-page.png)
@@ -115,4 +117,10 @@ If the status route fails for every server after you save, the most likely cause
 | Authentication error on every call | Wrong token, or the wrong authentication type | Check the type and the token. Do not put the token in a shared file. |
 | Edited the database directly, now unreadable | The authentication column is encrypted by the platform's layer | Always write the record through the API or the UI |
 
-<!-- NLV: NLV-05-01, NLV-05-02, NLV-05-03, NLV-05-04, NLV-05-05, NLV-05-06, NLV-05-07, NLV-05-08, NLV-05-11, NLV-05-12 -->
+<!-- NLV verdicts (live box pass):
+  verified: NLV-05-01 (AI Configurations > MCP Servers; buttons are Connect MCP Server and Create MCP Server; corrected in this page).
+  corrected: NLV-05-02 (the transport select offers only http on this build).
+  verified-absent: NLV-05-03 (no authentication field in the Connect form; the full auth type list could not be read from the UI).
+  partly: NLV-05-04 (Test Connection exists as the validate step; the persist route was not exercised).
+  open: NLV-05-05, NLV-05-06 (need a row write and a status check), NLV-05-07 (headers, not run), NLV-05-08 (system connector restriction, not run), NLV-05-11 (fsr identity, not run), NLV-05-12 (transport list beyond http, not checked). -->
+
