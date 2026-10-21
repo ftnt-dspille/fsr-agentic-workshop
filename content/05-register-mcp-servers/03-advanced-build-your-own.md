@@ -1,13 +1,16 @@
 ---
-title: Allowlists and a Read-Only Lab Server
-linkTitle: Allowlists and a Lab Server
-weight: 20
-description: "Build a small read-only MCP server, prove its handshake with curl, register it, and grant it to one agent with an explicit allowlist."
+title: "Advanced: Build Your Own MCP Server"
+linkTitle: "Advanced: Build Your Own"
+weight: 30
+description: "Optional: write a small read-only MCP server, prove its handshake with curl, and register it with FortiSOAR."
 ---
 
-In this page you build a read-only MCP server, prove that it speaks the protocol, register it with FortiSOAR, and grant it to one agent with an explicit allowlist. Keep the tool read-only. The lab is about the handshake and the allowlist, not about writing to anything.
+Optional, for teams who want to see the server side. You write a read-only MCP server, prove it speaks the protocol with curl, and register it the same way you registered the public server. Keep the tool read-only: the exercise is about the handshake, not about writing to anything.
 
-This stands in for the real production case (a remote server another product hosts, like FortiSIEM's MCP endpoint - see the previous page). To keep the networking trivial, run it on the FortiSOAR appliance itself: SSH to the box, start the server on a local port, and register `http://localhost:<port>/mcp/`. The box can always reach its own localhost, so no TLS or firewall work is needed for the lab.
+Where to run it, in order of preference:
+
+1. **Your own lab VM or container, if the class provides one.** A per-student container (an LXC or similar) that the box can reach is the cleanest shape: your server is then a true remote server, exactly like the production case. Ask your instructor whether the lab topology includes one.
+2. **The FortiSOAR appliance itself.** SSH to the box, start the server on a local port, and register `http://localhost:<port>/mcp/`. The box can always reach its own localhost, so no TLS or firewall work is needed.
 
 ## 1. Build a read-only server
 
@@ -80,25 +83,9 @@ Register the server with the steps from the previous page. Validate first, and c
 
 Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server running on your laptop is NOT reachable from the box - that is why the lab runs it on the appliance's own CLI. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate (NLV-05-04).
 
-## 4. Grant it to one agent with an allowlist
+## 4. Grant it and prove it
 
-<!-- step: fsa05-04-grant-allowlist manual -->
-
-Pick one agent that can call tools. Add the server's UUID to the agent's allowlist, and list only `get_forecast`. Save the agent configuration. Then ask the agent a question that needs the forecast, and check the trace for the call.
-
-<!-- capture: fsa05-02-agent-allowlist -->
-![fsa05-02-agent-allowlist](fsa05-02-agent-allowlist.png)
-
-The allowlist behaves in three ways. Know them before you rely on it:
-
-- A server that no agent lists is not filtered for any agent that can see it. A new server is not restricted by existing allowlists, so grant it explicitly (NLV-05-10).
-- An agent with no allowlist file gets every tool from every server it is configured with. Always write an explicit allowlist.
-- An empty tool list for a server means the agent gets no tools from it.
-
-**What success looks like**
-
-- The agent calls `get_forecast` for a known city and uses the answer.
-- Asking for a tool the allowlist does not name returns "not allowed". Ask for one on purpose to see it.
+Grant the server to one agent exactly as you did for the public server on the previous page, listing only `get_forecast`, then ask the agent for a known city's forecast and check the trace for the call. The allowlist rules from that page apply unchanged.
 
 ## 5. Optional: break the JSON-string rule on purpose
 

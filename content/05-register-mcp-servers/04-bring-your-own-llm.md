@@ -1,7 +1,7 @@
 ---
 title: Bring Your Own LLM
 linkTitle: Bring Your Own LLM
-weight: 30
+weight: 40
 description: "How agents choose their model, what to verify before you trust a model route, and why structured output decides which models work."
 ---
 
