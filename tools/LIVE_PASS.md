@@ -1,8 +1,20 @@
 # Live verification pass (user-run)
 
-Everything local is green (lint, hugo, JS syntax, terminal shots). The
-following needs a live 8.0 box and, for the agent tier, a Claude Code login.
-Run from the repo root in this order.
+Everything local is green (lint, hugo, JS syntax, terminal shots).
+
+ALREADY LIVE-VERIFIED on an 8.0.0 box (via the pyfsr tool registry, the same
+code path the specs' pyfsrTool helper uses): the whole Part 2 write path -
+create_user (confirm + idempotent), create_module with the pages' field specs
++ publish + records + filtered query + lifecycle, compile/publish_playbook
+landing in a visible "Agent Lab" collection, the on-create trigger with
+description read-back, and the full ch09 connector scaffold/package/install/
+configure/greet loop. The box holds the resulting agentlab objects; run
+reset-lab before a clean class run.
+
+Still needing a live box and, for the agent tier, a Claude Code login:
+the Playwright specs as specs (npm install, then step 2), the agent-drive
+prompt proof, the UI captures, and every Part 1 NLV item. Run from the repo
+root in this order.
 
 ## 0. Environment
 
