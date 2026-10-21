@@ -3,15 +3,27 @@
 HUGO ?= hugo
 PYTHON ?= python3
 
-.PHONY: help serve build lint e2e reset-lab reset-lab-check
+.PHONY: help serve build lint e2e agent-drive agent-drive-plan shots-terminal reset-lab reset-lab-check
 
 help:
 	@echo "serve            preview the site with drafts (hugo server -D)"
 	@echo "build            build the site into public/"
 	@echo "lint             proof-harness gate, plus the borrowed lint scripts if present"
 	@echo "e2e              run the browser specs on a live box (needs FSR_ENV_FILE=...)"
+	@echo "agent-drive      LIVE + credits: run the pages' prompts through claude -p (user runs it)"
+	@echo "agent-drive-plan list the prompts agent-drive would send (no calls)"
+	@echo "shots-terminal   render the deterministic terminal screenshots locally"
 	@echo "reset-lab        LIVE + DESTRUCTIVE: remove agentlab_ objects (user runs it, types RESET)"
 	@echo "reset-lab-check  LIVE, read-only: report what reset-lab would remove"
+
+agent-drive:
+	$(PYTHON) tools/agent-drive/run.py $(if $(CHAPTER),--chapter $(CHAPTER))
+
+agent-drive-plan:
+	$(PYTHON) tools/agent-drive/run.py --dry-run
+
+shots-terminal:
+	$(PYTHON) tools/terminal-shots/render.py --png
 
 serve:
 	$(HUGO) server -D
