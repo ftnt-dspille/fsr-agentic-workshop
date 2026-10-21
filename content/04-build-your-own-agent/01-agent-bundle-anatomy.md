@@ -68,4 +68,8 @@ The shape below is illustrative. It shows the keys a manifest carries, with plac
 - You can say why a missing `config/memory.yaml` gives an agent too much access, and why a missing manifest key can break lists for every user.
 - You can point to the rule that stops a custom agent from being routed by its tag alone. It needs a row in the tool table, which the next page covers.
 
-<!-- NLV: NLV-04-07, NLV-04-15, NLV-04-17, NLV-04-18 -->
+<!-- NLV verdicts (live box pass):
+  NLV-04-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-17: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-18: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

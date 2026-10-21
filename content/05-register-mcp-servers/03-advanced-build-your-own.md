@@ -116,4 +116,11 @@ Remove the broken copy when you finish. A leftover broken row can make the statu
 | Status route fails for every server | A row with `authentication` stored as an object | Rewrite that row's `authentication` as a string (NLV-05-05, NLV-05-06) |
 | Tool call times out | The tool is slow, and the platform's call timeout is short | Keep tool responses small and fast. Check the timeout on your build (NLV-05-13). |
 
-<!-- NLV: NLV-04-14, NLV-05-05, NLV-05-06, NLV-05-07, NLV-05-09, NLV-05-10, NLV-05-13 -->
+<!-- NLV verdicts (live box pass):
+  NLV-04-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-10: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

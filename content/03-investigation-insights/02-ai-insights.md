@@ -87,4 +87,10 @@ Do not rely on the drill-down chat from the summary card. In testing, the drill-
 | Schedule missing after save | Your user cannot create schedules | Ask an administrator to check your permissions (NLV-03-10) |
 | Edited chain of thought ignored | Editing does not reliably change the plan on some builds | Re-create the insight with the question changed instead (NLV-03-12) |
 
-<!-- NLV: NLV-03-10, NLV-03-11, NLV-03-12, NLV-03-13, NLV-03-15, NLV-03-20 -->
+<!-- NLV verdicts (live box pass):
+  NLV-03-10: partly: AI Insights is under AI Configurations > Insights (0 items on the box); creating an insight was not run
+  NLV-03-11: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-20: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

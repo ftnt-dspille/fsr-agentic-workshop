@@ -153,4 +153,16 @@ In testing, the trace panel stalled after a burst of reads. If it hangs, wait a 
 | Run fails with an authorization error | The LLM route is not entitled on the box | Ask the administrator to check the route's entitlement (NLV-05-19) |
 | Trace panel never loads | A burst of trace reads stalled the service | Wait, reload, then ask for a restart if needed (NLV-03-07) |
 
-<!-- NLV: NLV-03-01, NLV-03-02, NLV-03-03, NLV-03-04, NLV-03-05, NLV-03-06, NLV-03-07, NLV-03-08, NLV-03-09, NLV-03-19, NLV-05-19, NLV-05-20 -->
+<!-- NLV verdicts (live box pass):
+  NLV-03-01: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-02: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-04: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-05: partly: a DEFAULT investigation SOP record exists; the no-source-data behavior was not run
+  NLV-03-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-08: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-19: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-19: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-20: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

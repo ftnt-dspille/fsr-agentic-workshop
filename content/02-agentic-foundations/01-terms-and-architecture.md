@@ -73,4 +73,14 @@ You will tune four things during the workshop. Find each one before you need it:
 
 The next page covers which paths can change data and the rule for approvals. The orientation page after it walks through the screens on your own box, read-only.
 
-<!-- NLV: NLV-02-01, NLV-02-03, NLV-02-05, NLV-02-07, NLV-02-08, NLV-02-09, NLV-02-10, NLV-02-11, NLV-02-12, NLV-02-13 -->
+<!-- NLV verdicts (live box pass):
+  NLV-02-01: verified: enablement and token balance under System > System Configuration > FortiAI
+  NLV-02-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-08: verified: no separate Skills object; prompt names use the 'Skills - SOC Analyst - ...' prefix
+  NLV-02-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-10: corrected: 44 organizational context records are present on the box; whether a fresh install ships them is not verified
+  NLV-02-11: partly: records live under AI Configurations > Organizational Context; module name not checked
+  NLV-02-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

@@ -67,4 +67,8 @@ Token totals live in the trace. Whether a dashboard can show them depends on whe
 | Widget missing from the list | Content Hub package not installed | Install the widget package, or build the chart from the alert module view (NLV-00-04) |
 | Verdict values look odd | Verdict names differ on your build | Compare the values in the alert record and use those names (NLV-03-18) |
 
-<!-- NLV: NLV-00-04, NLV-02-12, NLV-03-16, NLV-03-18 -->
+<!-- NLV verdicts (live box pass):
+  NLV-00-04: partly: Content Hub and installed-connector views work; widget packages not checked
+  NLV-02-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-16: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-18: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

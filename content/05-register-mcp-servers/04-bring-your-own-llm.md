@@ -70,4 +70,14 @@ Deleting a profile in the UI may not remove it on every build. After you delete 
 | Profile still in the list after delete | Delete did not remove it on this build | Leave it, overwrite it, and tell your instructor (NLV-05-21) |
 | Trace shows an unexpected provider | The route is a default you did not set | Set the profile on the agent explicitly, then run again |
 
-<!-- NLV: NLV-00-05, NLV-02-13, NLV-05-15, NLV-05-17, NLV-05-18, NLV-05-19, NLV-05-20, NLV-05-21, NLV-05-22, NLV-05-23 -->
+<!-- NLV verdicts (live box pass):
+  NLV-00-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-02-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-17: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-18: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-19: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-20: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-21: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-22: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-23: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

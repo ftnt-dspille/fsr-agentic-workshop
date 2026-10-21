@@ -70,4 +70,8 @@ Ask the granted agent a question only the remote server can answer (for DeepWiki
 | Agent never calls the server | Not in that agent's allowlist | Grant the server and tools explicitly to the agent you are testing |
 | Calls time out | Slow public server or egress proxy | Retry; check the appliance's proxy settings |
 
-<!-- NLV: NLV-05-01, NLV-05-04, NLV-05-05, NLV-05-10 -->
+<!-- NLV verdicts (live box pass):
+  NLV-05-01: verified: MCP Servers is under AI Configurations; the Connect form was opened, not saved
+  NLV-05-04: partly: Test Connection exists as the validate step; the persist route was not exercised
+  NLV-05-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-10: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

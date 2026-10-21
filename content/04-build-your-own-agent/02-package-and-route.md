@@ -113,4 +113,16 @@ The routing instruction in the platform names the built-in agents with a fixed m
 | Agent list call fails for everyone | A manifest key was left out and stored as null | Declare every key, using an empty value where you have nothing (NLV-04-15) |
 | Replace import gives the agent a new ID | Replace creates a new UUID on some builds | Check the allowlist and the agent config after every replace (NLV-04-05) |
 
-<!-- NLV: NLV-04-03, NLV-04-04, NLV-04-05, NLV-04-06, NLV-04-08, NLV-04-09, NLV-04-12, NLV-04-13, NLV-04-14, NLV-04-15, NLV-04-16, NLV-04-17 -->
+<!-- NLV verdicts (live box pass):
+  NLV-04-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-04: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-08: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-16: verified: the Import/Upload Custom AI Agent toggle is under System > System Configuration > Advanced Development Features (left unchanged)
+  NLV-04-17: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

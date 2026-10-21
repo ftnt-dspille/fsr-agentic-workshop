@@ -86,4 +86,9 @@ Re-import the agent with replace. Note its ID before and after. Check that its a
 | Investigation started from a playbook has no verdict | Started through the HMAC route | Start investigations through a user-authenticated route, and check the write-back (NLV-03-06) |
 | Agent gone after replace | The agent was replaced and its ID changed | Re-link the playbook step to the new ID (NLV-04-05) |
 
-<!-- NLV: NLV-03-06, NLV-04-05, NLV-04-10, NLV-04-11, NLV-04-13 -->
+<!-- NLV verdicts (live box pass):
+  NLV-03-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-10: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-11: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-04-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

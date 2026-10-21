@@ -43,4 +43,8 @@ If you cannot answer both, keep the agent read-only.
 - You can name, for each path in the table, whether it reads, recommends or writes.
 - You can state the rule without looking at this page: AI recommends, playbooks with manual-input steps decide.
 
-<!-- NLV: NLV-02-14, NLV-03-03, NLV-03-15, NLV-05-11 -->
+<!-- NLV verdicts (live box pass):
+  NLV-02-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-05-11: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->
