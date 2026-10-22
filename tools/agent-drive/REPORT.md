@@ -77,3 +77,33 @@ Opus failures: none. The one Opus prompt with a regrade failure (07-02) fails on
 - Module plural (ch07 "Agent Lab Assets"): not changed on the box.
 - fsa03-04 traces on 8.0.1: not checked.
 - FortiAI token balance before and after: not recorded (no balance read before the Sonnet run).
+
+## Round 2 (after classification)
+
+| Prompt | Change before rerun | Sonnet result |
+|---|---|---|
+| `07-users-modules-records/03-work-with-records#2` | page names the agentlab_assets module | pass |
+| `08-playbook/01-author-and-publish#1` | rerun to create its session (chained prompt #2 needs it) | fail: workaround (Skill, Bash doc greps; tool gap) |
+| `08-playbook/01-author-and-publish#2` | chained: resumes #1's session (`continues`) | pass |
+| `09-connectors/02-build-a-connector#2` | stale connector removed; install prompt says what to do on "already active" | fail, then pass after the instruction moved into its own sentence |
+| `09-connectors/02-build-a-connector#3` | rerun after #2 | pass |
+| `10-capstone-investigation/01-capstone#2` | effect check accepts any beaconing alert with the write-back | effect re-checked read-only: pass (ledger row still records the original fail) |
+
+Opus is unchanged: 06 (transcript lost), 07-01 pass, 07-02 pass at run time with the publish-wait workaround on regrade.
+
+Other round-2 facts:
+- Plural: `agentlab_assets` plural staged as "Agent Lab Assets" (was "Agent Lab Assetss", the default-"s" bug). `pending_changes()` held only that module before publish; publish ran; after publish pending is empty and the published plural is "Agent Lab Assets".
+- The plural publish overlapped with the Sonnet reruns. Note the 09-02#2 earlier failures came while the box was mid-update (503 "Wait For Update Across Cluster"), and the first 09-02#3 attempt was aborted by preflight on that 503 (preflight now falls back to the config check on any whoami error).
+- Stale connector: agentlab-greeter was removed by name, then active again on the next check, so the install path was exercised repeatedly.
+- 8.0.1 traces: the fsr801-beta alias is in the real registry file; its API port refused connections, so the trace check is BLOCKED (box down).
+- FortiAI token balance: 375,567 remaining monthly tokens, before and after the reruns (unchanged; these runs use Claude Code credits, not FortiAI tokens).
+- Chained prompts: `continues` resumes the prerequisite prompt's session (session ids in a gitignored .sessions.json). 08-01#1 had no session recorded before this change, so it was rerun to create one.
+- fsa10-02 capture: clipped to the Description block in the ui-captures spec; reruns write the cropped image. The image shows the scenario address 203.0.113.99 (RFC 5737 documentation space) and the page's example name web-server-01.
+
+Tool and framework findings to route (toolkit/pyfsr owner), with evidence in the transcripts named in the classification table:
+1. `publish`: returns 503 progress states as errors and does not wait (Opus and Sonnet 07-02).
+2. `search_records`: term search returns 0 for a record that a filtered query finds in agentlab_assets (Sonnet 07-03#2).
+3. No MCP password generator (Sonnet 07-01 used Bash/python).
+4. No MCP reference for playbook YAML authoring (Sonnet 08-01#1 used Skill and Bash doc greps).
+
+Pending: per-prompt terminal-shot PNGs and the "What the agent did" blocks are not rendered. Built-in tools (Bash, Monitor, ScheduleWakeup, Skill) are available on MCP-only prompts; the workaround check fails those runs (decision: keep, per the user).
