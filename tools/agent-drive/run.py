@@ -119,7 +119,7 @@ MANIFEST: dict[str, dict] = {
     "09-connectors/02-build-a-connector#1": {
         "calls": [], "confirm_ok": [],
         "bash": ["pyfsr connector scaffold"],
-        "tools": ["Bash(pyfsr:*)", "Read", "Write", "Edit"],
+        "tools": ["Bash(pyfsr:*)", "Read({work}/**)", "Write({work}/**)", "Edit({work}/**)"],
         "local": "greet",  # work folder agentlab-greeter/operations.py defines greet
         "answer": ["greet"],
     },
@@ -127,7 +127,7 @@ MANIFEST: dict[str, dict] = {
         "calls": ["install_connector", "upsert_connector_configuration", "healthcheck_connector"],
         "confirm_ok": ["install_connector"],
         "bash": ["pyfsr connector package"],
-        "tools": ["Bash(pyfsr:*)", "Read", "Write", "Edit"],
+        "tools": ["Bash(pyfsr:*)", "Read({work}/**)", "Write({work}/**)", "Edit({work}/**)"],
         "answer": ["Available"],
         "local": "tgz",  # a .tgz exists in the work folder
         "effect": ("09-connectors.spec.js", ["fsa09-04-deploy-connector"]),
@@ -373,7 +373,10 @@ def run_env() -> dict:
 
 def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None) -> tuple[int, list[dict], str]:
     """Run claude -p with stream-json; returns (rc, events, stderr tail)."""
-    allowed = [f"{TOOL_PREFIX}*", *(extra_tools or [])]
+    # {work} in a rule is the work folder: file tools may touch only that folder.
+    # Absolute rule paths take the // prefix. Bare Read/Write/Edit are never allowed.
+    scoped = [t.replace("{work}", "/" + str(work.resolve()).lstrip("/")) for t in (extra_tools or [])]
+    allowed = [f"{TOOL_PREFIX}*", *scoped]
     cmd = ["claude", "-p", PREAMBLE + prompt, "--output-format", "stream-json", "--verbose",
            "--mcp-config", str(work / ".mcp.json"), "--strict-mcp-config",
            "--allowedTools", ",".join(allowed)]

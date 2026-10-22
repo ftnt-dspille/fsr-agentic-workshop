@@ -178,8 +178,15 @@ class BashAndEffectTests(unittest.TestCase):
 
         with mock.patch.object(run.subprocess, "run", side_effect=fake_run), \
              mock.patch.dict(run.os.environ, {"FSR_PYTHON": "/venv/bin/python3"}):
-            run.run_claude(Path(tempfile.gettempdir()), "x", run.MANIFEST[self.scaffold]["tools"])
+            run.run_claude(run.WORK, "x", run.MANIFEST[self.scaffold]["tools"])
             self.assertIn("Bash(pyfsr:*)", captured["allowed"])
+            # File tools are confined to the work folder; bare Read/Write/Edit never appear.
+            work = str(run.WORK.resolve()).lstrip("/")
+            self.assertIn(f"Read(/{work}/**)", captured["allowed"])
+            self.assertIn(f"Write(/{work}/**)", captured["allowed"])
+            self.assertNotIn("Read", captured["allowed"])
+            self.assertNotIn("Write", captured["allowed"])
+            self.assertNotIn("Edit", captured["allowed"])
             self.assertTrue(captured["env_path"].startswith("/venv/bin"))
             run.run_claude(Path(tempfile.gettempdir()), "x", None)
             self.assertFalse(any(a.startswith("Bash") for a in captured["allowed"]))
