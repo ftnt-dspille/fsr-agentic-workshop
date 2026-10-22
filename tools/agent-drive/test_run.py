@@ -103,9 +103,25 @@ class BehaviorTests(unittest.TestCase):
 
 
 class PreflightTests(unittest.TestCase):
+    def test_server_ignores_the_instance_registry(self) -> None:
+        # Else pyfsr-mcp answers for its registry default box, not the env file's.
+        with mock.patch.dict(run.os.environ, {"FSR_BASE_URL": f"https://{BOX}", "FSR_API_KEY": "k"}):
+            server = run.fortisoar_lab_server()
+        self.assertIn("PYFSR_INSTANCES", server["env"])
+        self.assertFalse(Path(server["env"]["PYFSR_INSTANCES"]).exists())
+
     def test_matching_host_passes(self) -> None:
         with mock.patch.object(run, "mcp_whoami", return_value={"base_url": f"https://{BOX}:443", "user": {}}):
             run.preflight({}, BOX)
+
+    def test_api_key_whoami_falls_back_to_config_check(self) -> None:
+        err = {"error": {"type": "UnsupportedAuthOperationError", "message": "auth"}}
+        server = {"command": "x", "env": {"FSR_BASE_URL": f"https://{BOX}", "PYFSR_INSTANCES": "/nope"}}
+        with mock.patch.object(run, "mcp_whoami", return_value=err):
+            run.preflight(server, BOX)
+            server["env"]["FSR_BASE_URL"] = "https://other.example.com"
+            with self.assertRaises(SystemExit):
+                run.preflight(server, BOX)
 
     def test_other_box_aborts_before_any_prompt(self) -> None:
         with mock.patch.object(run, "mcp_whoami", return_value={"base_url": "https://other.example.com"}):

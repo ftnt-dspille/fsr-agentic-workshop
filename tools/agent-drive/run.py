@@ -295,6 +295,9 @@ def fortisoar_lab_server() -> dict:
     exe = exe or shutil.which("pyfsr-mcp")
     server = {"command": exe} if exe else {"command": "uvx", "args": ["--from", "pyfsr[mcp]", "pyfsr-mcp"]}
     server["env"] = {
+        # pyfsr-mcp prefers ~/.pyfsr/instances.toml (its default alias can be another
+        # box). Point it at a path that does not exist so it uses the env file's box.
+        "PYFSR_INSTANCES": str(WORK / "no-instances.toml"),
         "FSR_BASE_URL": os.environ["FSR_BASE_URL"],
         "FSR_API_KEY": os.environ["FSR_API_KEY"],
         "FSR_VERIFY_SSL": os.environ.get("FSR_VERIFY_SSL", "false"),
@@ -345,6 +348,16 @@ def mcp_whoami(server: dict, timeout: int = 120) -> dict:
 
 def preflight(server: dict, expected_host: str) -> None:
     who = mcp_whoami(server)
+    if "error" in who and "auth" in str(who.get("error", {}).get("type", "")).lower():
+        # whoami's auth probe is unsupported with API-key auth. The server env is built
+        # from the env file and the registry is pinned off, so check that config instead.
+        got = (urlparse(server["env"]["FSR_BASE_URL"]).hostname or "").lower()
+        if got != expected_host or "PYFSR_INSTANCES" not in server["env"]:
+            raise SystemExit("ABORT: the fortisoar-lab server config does not target the env file's box; "
+                             "no prompt was run.")
+        print(f"preflight (config-level; whoami auth is unsupported with an API key): "
+              f"fortisoar-lab targets the env file's box ({expected_host})")
+        return
     got = (urlparse(who.get("base_url") or "").hostname or "").lower()
     if got != expected_host:
         raise SystemExit("ABORT: the fortisoar-lab server answered for a different box than the env file; "
