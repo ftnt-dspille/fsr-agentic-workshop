@@ -30,7 +30,7 @@ pyfsr agent init --url fortisoar.example.com --api-key '<your-api-key>' --no-ver
 You should see:
 
 ```text
-connected: csadmin <csadmin@example.com> @ fortisoar.example.com
+connected: analyst <analyst@example.com> @ fortisoar.example.com
 --- claude-code ---
 # .mcp.json (project root), or merge into ~/.claude.json
 { ... }

@@ -36,7 +36,7 @@ SHOTS = {
 
 
 def fake_verify(args):  # noqa: ANN001 - mirrors agent_setup._verify
-    return {"loginid": "csadmin", "email": "csadmin@example.com"}
+    return {"loginid": "analyst", "email": "analyst@example.com"}
 
 
 def render(shot: str, argv: list[str]) -> Path:
