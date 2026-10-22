@@ -39,14 +39,16 @@ test("10-capstone-investigation", async ({ playwright }) => {
         logic: "AND",
         filters: [{ field: "name", operator: "like", value: "Agent Lab - beaconing%" }],
       });
-      // Newest staged capstone alert first: the one the prompt investigates.
-      const alert = [...(found["hydra:member"] || [])].sort((a, b) =>
-        String(b.createDate).localeCompare(String(a.createDate)))[0];
-      expect(alert, "stage the capstone alert first (fsa10-01)").toBeTruthy();
-      const text = alert.description || "";
-      expect(text, "the agent has not written findings to the alert").not.toMatch(/^Triaged automatically/);
-      expect(text).toMatch(/verdict/i);
-      expect(text).toMatch(/confidence/i);
+      // The capstone title is not unique (repeated runs stage duplicates), so the
+      // proof is: some staged beaconing alert carries the write-back. Matching the
+      // newest duplicate would test the wrong record when the agent picked another.
+      const staged = found["hydra:member"] || [];
+      expect(staged.length, "stage the capstone alert first (fsa10-01)").toBeGreaterThan(0);
+      const written = staged.filter((a) => {
+        const text = a.description || "";
+        return !/^Triaged automatically/.test(text) && /verdict/i.test(text) && /confidence/i.test(text);
+      });
+      expect(written.length, "the agent has not written findings to any capstone alert").toBeGreaterThan(0);
     } finally {
       await api.dispose();
     }

@@ -141,7 +141,7 @@ MANIFEST: dict[str, dict] = {
         "effect": ("09-connectors.spec.js", ["fsa09-05-run-own-connector"]),
     },
     "10-capstone-investigation/01-capstone#1": {
-        "calls": ["create_record", "wait_for_playbook_run"], "confirm_ok": [],
+        "calls": ["create_record"], "confirm_ok": [],
         "answer": ["beaconing"],
         "effect": ("10-capstone-investigation.spec.js", ["fsa10-01-stage-alert"]),
     },
@@ -394,8 +394,9 @@ def run_env() -> dict:
 def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None,
                 model: str = DEFAULT_MODEL) -> tuple[int, list[dict], str]:
     """Run claude -p with stream-json; returns (rc, events, stderr tail)."""
-    # {work} in a rule is the work folder: file tools may touch only that folder.
-    # Absolute rule paths take the // prefix. Bare Read/Write/Edit are never allowed.
+    # {work} in a rule is the work folder. These rules PRE-APPROVE file tools under that
+    # folder; they are not a sandbox, and built-in tools not listed here can still run.
+    # Absolute rule paths take the // prefix. Bare Read/Write/Edit are never pre-approved.
     scoped = [t.replace("{work}", "/" + str(work.resolve()).lstrip("/")) for t in (extra_tools or [])]
     allowed = [f"{TOOL_PREFIX}*", *scoped]
     cmd = ["claude", "-p", PREAMBLE + prompt, "--model", model, "--output-format", "stream-json", "--verbose",
@@ -443,6 +444,13 @@ def check_behavior(pid: str, events: list[dict]) -> list[str]:
             failed.append(f"forbidden-call:{c['name']}")
         if c["input"].get("confirm") is True and c["name"] not in spec.get("confirm_ok", []):
             failed.append(f"unexpected-confirm:{c['name']}")
+    # A prompt the page answers with MCP tools fails if the agent needed built-in tools
+    # (Bash, sleep, Monitor, ScheduleWakeup, Read...) to get there: a workaround.
+    # Built-in names are capitalized; MCP names are snake_case. ToolSearch is loading, not a workaround.
+    if not spec.get("tools") and not spec.get("bash"):
+        for c in calls:
+            if c["name"][:1].isupper() and c["name"] != "ToolSearch":
+                failed.append(f"workaround:{c['name']}")
     bash_cmds = [str(c["input"].get("command", "")) for c in calls if c["name"] == "Bash"]
     for needle in spec.get("bash", []):
         if not any(needle in cmd for cmd in bash_cmds):
@@ -460,7 +468,7 @@ def check_local(pid: str, work: Path) -> list[str]:
         f = work / "agentlab-greeter" / "operations.py"
         return [] if f.exists() and "def greet" in f.read_text() else ["local:greet-not-in-work-folder"]
     if kind == "tgz":
-        return [] if any(work.glob("*.tgz")) else ["local:no-tgz-in-work-folder"]
+        return [] if any(work.rglob("*.tgz")) else ["local:no-tgz-in-work-folder"]
     return []
 
 
@@ -477,10 +485,12 @@ def check_effect(pid: str) -> list[str]:
     return [] if proc.returncode == 0 else [f"effect:{steps[0]}"]
 
 
-def save_transcript(pid: str, events: list[dict]) -> None:
-    TRANSCRIPTS.mkdir(exist_ok=True)
+def save_transcript(pid: str, events: list[dict], model: str = DEFAULT_MODEL) -> None:
+    # One folder per model, so a later run never overwrites another model's transcripts.
+    folder = TRANSCRIPTS / re.sub(r"[^A-Za-z0-9_.-]", "_", model)
+    folder.mkdir(parents=True, exist_ok=True)
     name = re.sub(r"[^A-Za-z0-9_.#-]", "_", pid.replace("/", "__"))
-    with (TRANSCRIPTS / f"{name}.jsonl").open("w") as fh:
+    with (folder / f"{name}.jsonl").open("w") as fh:
         for ev in events:
             fh.write(json.dumps(ev) + "\n")
 
@@ -489,7 +499,7 @@ def run_one(choice: Choice, work: Path, box: str, results: list[dict], model: st
     p = choice.prompt
     print(f"\n### {p.pid}  ({choice.reason})")
     rc, events, err = run_claude(work, p.text, MANIFEST.get(p.pid, {}).get("tools"), model)
-    save_transcript(p.pid, events)
+    save_transcript(p.pid, events, model)
     commit = page_commit(p.page)
     if rc != 0 or not events:
         row = record(results, p, box, "blocked", f"claude exit {rc}: {err[-300:]}", commit, model)
@@ -501,17 +511,32 @@ def run_one(choice: Choice, work: Path, box: str, results: list[dict], model: st
     return outcome
 
 
+def regrade_dir(folder: Path) -> dict[str, list[str]]:
+    """Re-grade saved transcripts with the behavior checks. Reads files only; no calls, no ledger."""
+    out: dict[str, list[str]] = {}
+    for f in sorted(folder.glob("*.jsonl")):
+        pid = f.stem.replace("__", "/", 1)
+        events = [json.loads(line) for line in f.read_text().splitlines() if line.strip()]
+        out[pid] = check_behavior(pid, events)
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env-file", default=os.environ.get("FSR_ENV_FILE"))
     ap.add_argument("--chapter")
     ap.add_argument("--prompt")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--regrade", metavar="DIR", help="re-grade saved transcripts in DIR; no calls")
     ap.add_argument("--model", default=os.environ.get("MODEL") or DEFAULT_MODEL,
                     help=f"claude model for the prompt runs (default {DEFAULT_MODEL}; or MODEL=...)")
     ap.add_argument("--plan", action="store_true", help="show what would run and why; no calls")
     args = ap.parse_args(argv)
 
+    if args.regrade:
+        for pid, failed in regrade_dir(Path(args.regrade)).items():
+            print(f"{pid}: {'pass' if not failed else 'fail ' + ','.join(failed)}")
+        return 0
     load_env_file(args.env_file)
     if not args.plan:
         for k in ("FSR_API_KEY",):

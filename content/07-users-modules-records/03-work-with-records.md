@@ -40,8 +40,9 @@ The agent should reach for `get_or_create_record` or `upsert_record` (idempotent
 Give your agent this prompt:
 
 ```text
-Take the db-server-01 record and show me its full lifecycle: every
-create/update event, who did it, and when. Use the record's uuid.
+Take the db-server-01 record in the agentlab_assets module and show me its
+full lifecycle: every create/update event, who did it, and when. Use the
+record's uuid.
 ```
 
 <!-- step: fsa07-04-record-lifecycle -->
