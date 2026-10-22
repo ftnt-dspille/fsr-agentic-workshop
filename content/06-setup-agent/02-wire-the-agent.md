@@ -89,3 +89,21 @@ FortiSOAR version the box runs, and how many modules it has.
 | Agent says it has no fortisoar tools | MCP config not loaded | Claude Code: `.mcp.json` must be in the folder you started `claude` in; check `/mcp` |
 | Tools listed but every call fails with a connection error | Workstation cannot reach the box | `curl -k https://fortisoar.example.com` from the same machine |
 | whoami works but the agent picks odd tools | Tool surface too wide for the task | Add `FSR_MCP_DENY_TOOLS=appliance_*` to the env block |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`02-wire-the-agent#1`** (Sonnet run, sanitized)
+
+![06-setup-agent/02-wire-the-agent#1](fsa06-04-whoami-claude.png)
+
+```text
+  > whoami {}
+  > list_modules {}
+  > appliance_info_identity {}
+```
+
+</details>
+
+<!-- agent-drive:end -->

@@ -56,3 +56,48 @@ record's uuid.
 | Picklist error naming valid_values | Wrong casing like "critical" | The error lists the valid values; the agent should retry with the exact one |
 | Query returns every record | Filter used the picklist display value against the IRI field | Ask the agent to filter on `criticality.itemValue` |
 | Duplicate records after re-runs | Agent used create_record, not upsert | Delete the extras (confirm-gated) and redo with "skip any that already exist" |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`03-work-with-records#1`** (Sonnet run, sanitized)
+
+![07-users-modules-records/03-work-with-records#1](agent-run-03-work-with-records-1.png)
+
+```text
+  > describe_module {"module": "agentlab_assets"}
+  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "db-server-01", "i...
+  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "web-server-01", "...
+  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "jump-host-01", "i...
+  > query_records {"module": "agentlab_assets", "filters": [{"field": "criticality", "o...
+  > resolve_picklist {"module": "agentlab_assets", "field": "criticality", "value": "High"}
+  > resolve_picklist {"module": "agentlab_assets", "field": "criticality", "value": "Criti...
+  > query_records {"module": "agentlab_assets", "filters": [{"field": "criticality", "o...
+  > query_records {"module": "agentlab_assets", "filters": [{"field": "criticality", "o...
+```
+
+**`03-work-with-records#2`** (Sonnet run, sanitized)
+
+![07-users-modules-records/03-work-with-records#2](agent-run-03-work-with-records-2.png)
+
+```text
+  > search_records {"module": "assets", "term": "db-server-01", "limit": 5}
+  > list_modules {}
+  > query_records {"module": "assets", "filters": [{"field": "name", "operator": "like"...
+  > search_records {"module": "alerts", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "agentlab_assets", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "appliances", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "incidents", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "events", "term": "db-server-01", "limit": 5}
+  > query_records {"module": "assets", "limit": 10}
+  > query_records {"module": "assets", "filters": [{"field": "name", "operator": "like"...
+  > query_records {"module": "assets", "limit": 20, "fields": ["name"], "sort": [{"fiel...
+  > search_records {"module": "indicators", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "asset_resources", "term": "db-server-01", "limit": 5}
+  > search_records {"module": "global_visibility_data", "term": "db-server-01", "limit":...
+```
+
+</details>
+
+<!-- agent-drive:end -->

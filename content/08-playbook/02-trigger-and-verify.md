@@ -50,3 +50,22 @@ Ask the agent for the record's lifecycle (`record_lifecycle`) and you get the wh
 | Run failed at Tag Alert | The update step's record reference | diagnose_run names the failing step and error; common cause is a mangled Jinja reference |
 | Run finished but description unchanged | Updated the wrong record or wrong field | Check the run's step results via get_playbook_run; read the alert by uuid |
 | Nothing in Executed Playbooks | Playbook inactive | Activate it and create a fresh alert (triggers do not fire retroactively) |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`02-trigger-and-verify#1`** (Sonnet run, sanitized)
+
+![08-playbook/02-trigger-and-verify#1](agent-run-02-trigger-and-verify-1.png)
+
+```text
+  > create_record {"module": "alerts", "data": {"name": "Agent Lab - suspicious login o...
+  > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts", "timeout": 120}
+  > get_record {"module": "alerts", "ref": "e19b618f-cc9a-4460-91ec-c81aed759aed", "...
+  > diagnose_run {"playbook": "Tag Agent Lab Alerts", "run": "145725"}
+```
+
+</details>
+
+<!-- agent-drive:end -->

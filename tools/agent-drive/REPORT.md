@@ -107,3 +107,43 @@ Tool and framework findings to route (toolkit/pyfsr owner), with evidence in the
 4. No MCP reference for playbook YAML authoring (Sonnet 08-01#1 used Skill and Bash doc greps).
 
 Pending: per-prompt terminal-shot PNGs and the "What the agent did" blocks are not rendered. Built-in tools (Bash, Monitor, ScheduleWakeup, Skill) are available on MCP-only prompts; the workaround check fails those runs (decision: keep, per the user).
+
+## Shots (Sonnet transcripts)
+
+Rendered by `tools/agent-drive/render_shots.py` from the saved transcripts: the prompt, the tool calls (short args, credential args dropped), and the trimmed final answer. Every image was opened and checked: no IP other than RFC 5737 documentation addresses, no host name, username, date or key. A line that mentions a password is withheld. Each chapter page carries its own collapsed "What the agent did" block.
+
+| Prompt | Shot |
+|---|---|
+| `06-setup-agent/02#1` | `content/06-setup-agent/fsa06-04-whoami-claude.png` |
+| `07-users-modules-records/01#1` | `content/07-users-modules-records/agent-run-01-create-a-user-1.png` |
+| `07-users-modules-records/02#1` | `content/07-users-modules-records/agent-run-02-create-a-module-1.png` |
+| `07-users-modules-records/03#1` | `content/07-users-modules-records/agent-run-03-work-with-records-1.png` |
+| `07-users-modules-records/03#2` | `content/07-users-modules-records/agent-run-03-work-with-records-2.png` |
+| `08-playbook/01#1` | `content/08-playbook/agent-run-01-author-and-publish-1.png` |
+| `08-playbook/01#2` | `content/08-playbook/agent-run-01-author-and-publish-2.png` |
+| `08-playbook/02#1` | `content/08-playbook/agent-run-02-trigger-and-verify-1.png` |
+| `09-connectors/01#1` | `content/09-connectors/agent-run-01-explore-and-run-1.png` |
+| `09-connectors/01#2` | `content/09-connectors/agent-run-01-explore-and-run-2.png` |
+| `09-connectors/02#1` | `content/09-connectors/agent-run-02-build-a-connector-1.png` |
+| `09-connectors/02#2` | `content/09-connectors/agent-run-02-build-a-connector-2.png` |
+| `09-connectors/02#3` | `content/09-connectors/agent-run-02-build-a-connector-3.png` |
+| `10-capstone-investigation/01#1` | `content/10-capstone-investigation/agent-run-01-capstone-1.png` |
+| `10-capstone-investigation/01#2` | `content/10-capstone-investigation/agent-run-01-capstone-2.png` |
+
+The shots show the Sonnet transcripts as they were last run. 08-01#1 and 07-03#2 reflect the page and check state at those runs, not the current grade (see the classification table above).
+
+## Fixed upstream, pending rerun
+
+These four tool findings and the plural default are fixed in fsr-agentic-toolkit and pyfsr, not in the pages. The three affected prompts are rerun (only them) once the workshop moves onto the toolkit release:
+
+1. `publish` waits for the schema publish; it no longer returns the 503 progress states as errors. (Opus and Sonnet 07-02.) Rerun: `07-users-modules-records/02-create-a-module#1`.
+2. `search_records` falls back to a filtered search when the term search misses a custom-module record. (Sonnet 07-03#2.) Rerun: `07-users-modules-records/03-work-with-records#2`.
+3. `create_user` generates a password (no Bash). (Sonnet 07-01.) Rerun: `07-users-modules-records/01-create-a-user#1`.
+4. A `playbook_yaml_reference` tool exists for playbook authoring. (Sonnet 08-01#1.) Rerun: `08-playbook/01-author-and-publish#1` and the chained #2.
+5. pyfsr's plural default no longer appends "s". (The agentlab_assets plural was set by hand on the box this round; the pyfsr fix is on fix/module-plural-default.)
+
+Strict workaround grading stays: a rerun on the toolkit release is graded the same way.
+
+## Traces (8.0.1)
+
+BLOCKED. The fsr801-beta alias is in the real registry file; its API port refused connections. The ch03 page does not yet state that traces need 8.0.1 or later. Retry when an 8.0.1 box is up.

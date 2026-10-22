@@ -54,3 +54,32 @@ Expect the phases below, in order:
 | Publish times out | Busy box; publishes poll a job | Ask the agent to retry publish; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Delete the module (confirm-gated) and recreate; the field spec must name the picklist |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`02-create-a-module#1`** (Sonnet run, sanitized)
+
+![07-users-modules-records/02-create-a-module#1](agent-run-02-create-a-module-1.png)
+
+```text
+  > create_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "plural": ...
+  > describe_module {"module": "agentlab_assets"}
+  > list_modules {}
+  > publish {}
+  > publish {"confirm": true}
+  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
+  > Bash {"command": "sleep 60", "description": "Wait for publish to finish"}
+  > describe_module {"module": "agentlab_assets"}
+  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
+  > Monitor {"command": "sleep 45; echo done", "description": "Wait for publish t...
+  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
+  > Monitor {"command": "sleep 90; echo done", "description": "Wait for publish t...
+  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
+  > get_record {"module": "agentlab_assets", "ref": "8a9a92ad-1906-4574-980f-793cce8...
+```
+
+</details>
+
+<!-- agent-drive:end -->

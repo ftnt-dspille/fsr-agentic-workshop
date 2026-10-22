@@ -44,3 +44,22 @@ If your agent silently retried with `confirm: true` without asking you, that is 
 | `ToolDisabled: read-only mode` | You left `FSR_MCP_READONLY=1` in the MCP config from chapter 6 | Remove it from the env block and restart the agent |
 | 403 on the create | API key role cannot manage users | Use a Full App Permissions key for the lab |
 | Role not found error | Role name typo; roles are matched by name | Ask the agent to list available roles first, then retry |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`01-create-a-user#1`** (Sonnet run, sanitized)
+
+![07-users-modules-records/01-create-a-user#1](agent-run-01-create-a-user-1.png)
+
+```text
+  > Bash {"command": "python3 -c \"import secrets,string;a=string.ascii_letter...
+  > create_user {"loginid": "agentlab_analyst", "firstname": "Agent", "lastname": "La...
+  > create_user {"loginid": "agentlab_analyst", "firstname": "Agent", "lastname": "La...
+  > query_records {"module": "people", "filters": [{"field": "email", "operator": "eq",...
+```
+
+</details>
+
+<!-- agent-drive:end -->

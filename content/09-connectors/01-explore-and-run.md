@@ -47,3 +47,31 @@ connector to evaluate 2+2 as a demonstration.
 | healthcheck says no-config | Connector installed but never configured | Pick another, or configure it (the agent can: default_connector_config then upsert_connector_configuration) |
 | Operation fails with a params error | Wrong parameter names | list_connector_operations shows each operation's exact parameter names and types |
 | run_connector_operation returns empty data | Some connectors are fire-and-forget | Not a failure; check the connector's own logs or pick a synchronous operation |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`01-explore-and-run#1`** (Sonnet run, sanitized)
+
+![09-connectors/01-explore-and-run#1](agent-run-01-explore-and-run-1.png)
+
+```text
+  > list_connectors {}
+  > healthcheck_connector {"connector": "agentlab-greeter"}
+  > list_connector_operations {"connector": "agentlab-greeter"}
+```
+
+**`01-explore-and-run#2`** (Sonnet run, sanitized)
+
+![09-connectors/01-explore-and-run#2](agent-run-01-explore-and-run-2.png)
+
+```text
+  > list_connectors {}
+  > list_connector_operations {"connector": "code-snippet"}
+  > run_connector_operation {"connector": "code-snippet", "operation": "python_inline_code_editor...
+```
+
+</details>
+
+<!-- agent-drive:end -->

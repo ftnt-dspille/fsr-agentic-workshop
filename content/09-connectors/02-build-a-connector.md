@@ -70,3 +70,42 @@ show me the result.
 | package fails: missing required file | A core file was renamed or deleted | info.json, connector.py, operations.py, requirements.txt must all exist |
 | Install succeeds, operation unknown | info.json and operations.py disagree | The operation name must match in both; repackage and redeploy (deploys replace) |
 | Healthcheck fails after configure | The scaffold's check requires the server field | Pass a server value when configuring |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`02-build-a-connector#1`** (Sonnet run, sanitized)
+
+![09-connectors/02-build-a-connector#1](agent-run-02-build-a-connector-1.png)
+
+```text
+  > Bash {"command": "pyfsr connector scaffold --help; ls -la"}
+  > Bash {"command": "pyfsr connector scaffold agentlab-greeter && cd agentlab...
+  > Bash {"command": "python3 - <<'E'\np='operations.py'\ns=open(p).read()\na=...
+```
+
+**`02-build-a-connector#2`** (Sonnet run, sanitized)
+
+![09-connectors/02-build-a-connector#2](agent-run-02-build-a-connector-2.png)
+
+```text
+  > Bash {"command": "cd <repo> && find . -type d -name agentlab-greeter -not ...
+  > Bash {"command": "pyfsr connector package agentlab-greeter 2>&1 | tail -15...
+  > install_connector {"path": "<repo>", "confirm": true}
+  > default_connector_config {"connector": "agentlab-greeter"}
+  > upsert_connector_configuration {"connector": "agentlab-greeter", "name": "default", "config": {"serv...
+  > healthcheck_connector {"connector": "agentlab-greeter", "config": "67eb77dc-da00-4526-8279-...
+```
+
+**`02-build-a-connector#3`** (Sonnet run, sanitized)
+
+![09-connectors/02-build-a-connector#3](agent-run-02-build-a-connector-3.png)
+
+```text
+  > run_connector_operation {"connector": "agentlab-greeter", "operation": "greet", "params": {"n...
+```
+
+</details>
+
+<!-- agent-drive:end -->

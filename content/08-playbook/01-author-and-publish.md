@@ -77,3 +77,31 @@ and is active.
 | Compile error no_trigger | Missing the start_on_create step | The YAML needs exactly one trigger step per playbook |
 | Compile ok but publish fails | Collection name collision on the box | Rename the collection or ask the agent to list existing collections first |
 | Playbook exists but shows inactive | Push did not activate it | Ask the agent to verify and activate it, or toggle it in the UI |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`01-author-and-publish#1`** (Sonnet run, sanitized)
+
+![08-playbook/01-author-and-publish#1](agent-run-01-author-and-publish-1.png)
+
+```text
+  > Skill {"skill": "fsr-playbooks"}
+  > Bash {"command": "cd <repo> && grep -n -B2 -A40 -i \"on_create\\|trigger_o...
+  > Bash {"command": "cd <repo> && sed -n 25,47p docs/AUTHORING.md; grep -rn \...
+  > compile_playbook_yaml {"yaml_text": "collection: Agent Lab\nplaybooks:\n  - name: Tag Agent...
+```
+
+**`01-author-and-publish#2`** (Sonnet run, sanitized)
+
+![08-playbook/01-author-and-publish#2](agent-run-01-author-and-publish-2.png)
+
+```text
+  > Bash {"command": "ls -la <repo>"}
+  > Bash {"command": "cd <repo> && find . -newer tools/agent-drive/run.py \\( ...
+```
+
+</details>
+
+<!-- agent-drive:end -->

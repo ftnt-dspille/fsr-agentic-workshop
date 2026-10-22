@@ -81,3 +81,42 @@ The investigation worked once; chapter 8 showed you how to make it permanent. As
 | Write-back overwrote the playbook's tag | Full description replace | Fine for the lab; for surgical edits, ask it to append instead |
 | investigate_alert errors | Native AI investigation not configured on this box | Expected on a bare lab box; skip step 4 |
 | Investigation stalls on huge results | Tool outputs hit the size cap | The truncation envelope tells the agent to narrow; nudge it to use summary=true and filters |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`01-capstone#1`** (Sonnet run, sanitized)
+
+![10-capstone-investigation/01-capstone#1](agent-run-01-capstone-1.png)
+
+```text
+  > describe_module {"module": "alerts"}
+  > create_record {"module": "alerts", "data": {"name": "Agent Lab - beaconing from web...
+```
+
+**`01-capstone#2`** (Sonnet run, sanitized)
+
+![10-capstone-investigation/01-capstone#2](agent-run-01-capstone-2.png)
+
+```text
+  > search_records {"module": "alerts", "term": "Agent Lab beaconing", "summary": false,...
+  > list_connectors {}
+  > search_records {"module": "alerts", "term": "beaconing", "summary": false, "limit": ...
+  > query_records {"module": "alerts", "filters": [{"field": "name", "operator": "like"...
+  > search_records {"module": "alerts", "term": "beaconing", "fields": ["name", "descrip...
+  > record_lifecycle {"entity_uuid": "b19e9ebb-0588-46e2-bbf4-ba886eaa7acb", "entity_type"...
+  > search_records {"module": "agentlab_assets", "term": "web-server-01", "summary": fal...
+  > query_records {"module": "agentlab_assets", "limit": 20, "summary": false}
+  > record_lifecycle {"entity_uuid": "e0af18d0-3162-43cb-8365-13a5efc08c5c", "entity_type"...
+  > search_records {"module": "alerts", "term": "203.0.113.99", "fields": ["name", "seve...
+  > query_records {"module": "agentlab_assets", "fields": ["hostname", "owner", "critic...
+  > search_records {"module": "alerts", "term": "web-server-01", "fields": ["name", "sev...
+  > list_connector_operations {"connector": "alienvault-otx"}
+  > run_connector_operation {"connector": "alienvault-otx", "operation": "get_ip_reputation", "pa...
+  ... 1 more tool calls
+```
+
+</details>
+
+<!-- agent-drive:end -->
