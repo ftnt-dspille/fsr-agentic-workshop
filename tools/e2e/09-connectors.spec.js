@@ -9,7 +9,7 @@ const { execFileSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { pyfsrTool } = require("./lib/harness");
+const { pyfsrTool, pyfsrEnv } = require("./lib/harness");
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(15 * 60 * 1000);
@@ -17,7 +17,7 @@ test.setTimeout(15 * 60 * 1000);
 const NAME = "agentlab-greeter";
 
 function sh(cmd, args, opts = {}) {
-  return execFileSync(cmd, args, { encoding: "utf8", timeout: 5 * 60 * 1000, ...opts });
+  return execFileSync(cmd, args, { encoding: "utf8", timeout: 5 * 60 * 1000, env: pyfsrEnv(), ...opts });
 }
 
 test("09-connectors", async () => {

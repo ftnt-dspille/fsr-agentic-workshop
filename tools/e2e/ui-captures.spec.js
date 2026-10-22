@@ -7,7 +7,7 @@
 // Capture through an /etc/hosts alias so the URL bar reads fortisoar.example.com.
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { openSession, capture, pyfsrTool } = require("./lib/harness");
+const { openSession, capture, apiContext, apiPost, REPO_ROOT } = require("./lib/harness");
 
 const ENABLED = process.env.SOAR_KIT_DIR && process.env.FSR_USERNAME && process.env.FSR_PASSWORD;
 
@@ -15,39 +15,50 @@ test.describe(() => {
   test.skip(!ENABLED, "needs SOAR_KIT_DIR + FSR_USERNAME + FSR_PASSWORD");
   test.setTimeout(10 * 60 * 1000);
 
-  test("ui-captures", async () => {
+  test("ui-captures", async ({ playwright }) => {
     const kitDir = path.resolve(process.env.SOAR_KIT_DIR);
     const alertDetail = require(path.join(kitDir, "pages", "alertDetail.js"));
+    const api = await apiContext(playwright.request);
     const s = await openSession();
     const base = (process.env.FSR_BASE_URL.startsWith("http") ? "" : "https://") + process.env.FSR_BASE_URL;
     try {
       // fsa10-02: the capstone alert with the agent's findings written back.
-      const found = pyfsrTool("query_records", {
-        module: "alerts",
+      const found = await apiPost(api, "/api/query/alerts", {
+        logic: "AND",
         filters: [{ field: "name", operator: "like", value: "Agent Lab - beaconing%" }],
-        limit: 1,
-        summary: false,
       });
-      const alert = (found["hydra:member"] || found.records || [])[0];
+      const alert = (found["hydra:member"] || [])[0];
       expect(alert, "stage the capstone alert first (chapter 10 spec or agent run)").toBeTruthy();
-      await alertDetail.openDetail(s.page, base, "alerts", alert.uuid);
-      await capture(s.page, "10-capstone-investigation", "fsa10-02-findings-on-alert");
-
-      // fsa08-03: the tagged chapter 8 alert's detail doubles as run evidence
-      // until the run-history list navigation is proven live.
-      const tagged = pyfsrTool("query_records", {
-        module: "alerts",
-        filters: [{ field: "name", operator: "like", value: "Agent Lab - suspicious login%" }],
-        limit: 1,
-        summary: false,
-      });
-      const alert8 = (tagged["hydra:member"] || tagged.records || [])[0];
-      if (alert8) {
-        await alertDetail.openDetail(s.page, base, "alerts", alert8.uuid);
-        await capture(s.page, "08-playbook", "fsa08-03-run-history");
+      // Only the agent's write-back is the page's picture. Until chapter 10's
+      // prompt has written findings, the description is still the playbook's tag.
+      const wroteBack = /verdict/i.test(alert.description || "") && !/^Triaged automatically/.test(alert.description || "");
+      if (wroteBack) {
+        await alertDetail.openDetail(s.page, base, "alerts", alert.uuid);
+        await capture(s.page, "10-capstone-investigation", "fsa10-02-findings-on-alert");
+      } else {
+        console.log("SKIP fsa10-02: the agent has not written findings to the capstone alert yet");
       }
+
+      // fsa08-03: the Executed Playbook Logs run graph for the tagged chapter 8
+      // alert. Cropped to the graph (no run dates, no user identity in frame).
+      const tagged = await apiPost(api, "/api/query/alerts", {
+        logic: "AND",
+        filters: [{ field: "name", operator: "like", value: "Agent Lab - suspicious login%" }],
+      });
+      // Oldest first: a run that finished earlier is already in the historical logs;
+      // the newest alert's run can take a while to show there.
+      const alert8 = [...(tagged["hydra:member"] || [])].sort((a, b) => String(a.createDate).localeCompare(String(b.createDate)))[0];
+      expect(alert8, "stage the chapter 8 alert first (chapter 8 spec)").toBeTruthy();
+      await s.page.setViewportSize({ width: 1440, height: 900 });
+      await alertDetail.openDetail(s.page, base, "alerts", alert8.uuid);
+      await alertDetail.openPlaybookLogs(s.page, { historical: true, select: "Tag Agent Lab" });
+      await s.page.screenshot({
+        path: path.join(REPO_ROOT, "content", "08-playbook", "fsa08-03-run-history.png"),
+        clip: { x: 481, y: 230, width: 960, height: 330 },
+      });
     } finally {
       await s.close();
+      await api.dispose();
     }
   });
 });

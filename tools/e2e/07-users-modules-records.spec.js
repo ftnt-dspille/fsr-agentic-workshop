@@ -32,8 +32,14 @@ test("07-users-modules-records", async ({ playwright }) => {
     });
 
     await test.step("fsa07-02-create-module", async () => {
-      const described = pyfsrTool("list_modules", {});
-      const exists = (described.modules || []).some((m) => m.type === MODULE);
+      // list_modules truncates on a box with many modules, so probe the module itself.
+      let exists = true;
+      try {
+        pyfsrTool("describe_module", { module: MODULE });
+      } catch (err) {
+        if (!/not found|does not exist|unknown module/i.test(String(err.message))) throw err;
+        exists = false;
+      }
       if (!exists) {
         pyfsrTool("create_module", {
           module: MODULE,

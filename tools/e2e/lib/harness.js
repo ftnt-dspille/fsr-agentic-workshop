@@ -114,4 +114,14 @@ function pyfsrTool(name, args) {
   return result;
 }
 
-module.exports = { REPO_ROOT, loadKit, openSession, capture, apiContext, apiGet, apiPost, pyfsrTool };
+/**
+ * Environment for the pyfsr CLI (the `pyfsr` entry point). It lives beside the
+ * interpreter named by FSR_PYTHON, so that directory is put first on PATH.
+ */
+function pyfsrEnv() {
+  const py = process.env.FSR_PYTHON;
+  const bin = py && py.includes(path.sep) ? path.dirname(py) : null;
+  return { ...process.env, PATH: bin ? `${bin}${path.delimiter}${process.env.PATH}` : process.env.PATH };
+}
+
+module.exports = { REPO_ROOT, loadKit, openSession, capture, apiContext, apiGet, apiPost, pyfsrTool, pyfsrEnv };
