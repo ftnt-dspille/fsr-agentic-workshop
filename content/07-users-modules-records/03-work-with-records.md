@@ -28,7 +28,7 @@ The agent should reach for `get_or_create_record` or `upsert_record` (idempotent
 ## 2. What success looks like
 
 - Three records created on the first run; zero on a re-run (the agent reports they already exist).
-- The query returns db-server-01 and jump-host-01 (Critical + High), not web-server-01.
+- The query returns db-server-01 and jump-host-01 (Critical + High), plus the build-server-01 test record from the previous page (also High), and not web-server-01.
 
 **Verify in the UI:** open the Agent Lab Assets module and check the grid.
 

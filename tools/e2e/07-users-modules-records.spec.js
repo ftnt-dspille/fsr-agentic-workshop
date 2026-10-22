@@ -51,12 +51,27 @@ test("07-users-modules-records", async ({ playwright }) => {
             { name: "criticality", type: "picklist", picklist: "Severity" },
             { name: "notes", type: "richtext" },
           ],
-          grant_to: ["Full App Permissions"],
+          // grant_to is not sent: on 8.0 it runs through the bulk routes, which reject
+          // API-key auth. The role grant is a UI step (see the page), checked below.
         });
         pyfsrTool("publish", { confirm: true });
       }
       const schema = pyfsrTool("describe_module", { module: MODULE });
       expect(JSON.stringify(schema)).toContain("hostname");
+
+      // Proof the key can use the module: the role grant (Full App Permissions) must
+      // be in place. This spec does not grant; a 403 here names the step to do.
+      const read = await api.get(`/api/3/${MODULE}?$limit=1`);
+      expect(read.status(), "the key cannot read agentlab_assets: grant Full App Permissions read/create/update/delete on it in the UI, then rerun").toBe(200);
+
+      // The page's test record: hostname build-server-01, criticality High.
+      pyfsrTool("get_or_create_record", {
+        module: MODULE,
+        data: { hostname: "build-server-01", criticality: "High" },
+        key: "hostname",
+      });
+      const probe = await apiGet(api, `/api/3/${MODULE}?hostname=build-server-01`);
+      expect((probe["hydra:member"] || []).length).toBeGreaterThan(0);
     });
 
     await test.step("fsa07-03-seed-records", async () => {
@@ -76,7 +91,7 @@ test("07-users-modules-records", async ({ playwright }) => {
         ],
       });
       const names = (query["hydra:member"] || []).map((r) => r.hostname).sort();
-      expect(names).toEqual(["db-server-01", "jump-host-01"]);
+      expect(names).toEqual(["build-server-01", "db-server-01", "jump-host-01"]); // build-server-01 is the step-02 test record (High)
     });
 
     await test.step("fsa07-04-record-lifecycle", async () => {
