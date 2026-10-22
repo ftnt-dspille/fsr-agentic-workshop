@@ -37,7 +37,12 @@ test.describe(() => {
       const wroteBack = /verdict/i.test(alert.description || "") && !/^Triaged automatically/.test(alert.description || "");
       if (wroteBack) {
         await alertDetail.openDetail(s.page, base, "alerts", alert.uuid);
-        await capture(s.page, "10-capstone-investigation", "fsa10-02-findings-on-alert");
+        // Clipped to the Description block: no header (it carries the editing user and a
+        // date), no SLA panel, no URL bar. Viewport 1500x1100 at scale 1.
+        await s.page.screenshot({
+          path: path.join(REPO_ROOT, "content", "10-capstone-investigation", "fsa10-02-findings-on-alert.png"),
+          clip: { x: 110, y: 440, width: 1380, height: 185 },
+        });
       } else {
         console.log("SKIP fsa10-02: the agent has not written findings to the capstone alert yet");
       }

@@ -114,8 +114,8 @@ class PreflightTests(unittest.TestCase):
         with mock.patch.object(run, "mcp_whoami", return_value={"base_url": f"https://{BOX}:443", "user": {}}):
             run.preflight({}, BOX)
 
-    def test_api_key_whoami_falls_back_to_config_check(self) -> None:
-        err = {"error": {"type": "UnsupportedAuthOperationError", "message": "auth"}}
+    def test_whoami_error_falls_back_to_config_check(self) -> None:
+        err = {"error": {"type": "APIError", "message": "publish in progress"}}
         server = {"command": "x", "env": {"FSR_BASE_URL": f"https://{BOX}", "PYFSR_INSTANCES": "/nope"}}
         with mock.patch.object(run, "mcp_whoami", return_value=err):
             run.preflight(server, BOX)
@@ -306,6 +306,47 @@ class ModelTests(unittest.TestCase):
             with mock.patch.object(run, "LEDGER", Path(tmp) / "r.json"), contextlib.redirect_stdout(buf):
                 run.main(["--env-file", str(env), "--plan"])
         self.assertIn("model: claude-sonnet-5-5", buf.getvalue())
+
+
+class ChainTests(unittest.TestCase):
+    """A prompt the page writes as a follow-up turn resumes its prerequisite's session."""
+
+    first = "08-playbook/01-author-and-publish#1"
+    second = "08-playbook/01-author-and-publish#2"
+
+    def test_manifest_marks_the_chained_prompt(self) -> None:
+        self.assertEqual(run.MANIFEST[self.second]["continues"], self.first)
+
+    def test_session_id_is_read_from_the_stream(self) -> None:
+        self.assertEqual(run.session_id([{"type": "system"}, {"session_id": "abc"}]), "abc")
+        self.assertIsNone(run.session_id([{"type": "result"}]))
+
+    def test_chained_prompt_without_prerequisite_session_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            res: list[dict] = []
+            p = run.Prompt(self.second, Path("x.md"), "publish that playbook")
+            with mock.patch.object(run, "SESSIONS", Path(tmp) / "s.json"), \
+                 mock.patch.object(run, "run_claude") as rc:
+                outcome = run.run_one(run.Choice(p, True, "t"), run.WORK, BOX, res, "claude-sonnet-5-5")
+            rc.assert_not_called()
+            self.assertEqual(outcome, "blocked")
+
+    def test_chained_prompt_resumes_the_prerequisite_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            sess = Path(tmp) / "s.json"
+            run.save_sessions({f"{self.first}|claude-sonnet-5-5": "sess-1"}, sess)
+            res: list[dict] = []
+            p = run.Prompt(self.second, Path("x.md"), "publish that playbook")
+            ev = [{"session_id": "sess-2", "type": "result", "result": "published"}]
+            with mock.patch.object(run, "SESSIONS", sess), \
+                 mock.patch.object(run, "run_claude", return_value=(0, ev, "")) as rc, \
+                 mock.patch.object(run, "check_behavior", return_value=[]), \
+                 mock.patch.object(run, "check_effect", return_value=[]), \
+                 mock.patch.object(run, "check_local", return_value=[]), \
+                 mock.patch.object(run, "page_commit", return_value="abc"):
+                run.run_one(run.Choice(p, True, "t"), run.WORK, BOX, res, "claude-sonnet-5-5")
+            self.assertEqual(rc.call_args.args[-1], "sess-1")
+            self.assertEqual(run.load_sessions(sess)[f"{self.second}|claude-sonnet-5-5"], "sess-2")
 
 
 if __name__ == "__main__":

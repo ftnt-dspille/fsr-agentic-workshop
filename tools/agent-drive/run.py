@@ -41,6 +41,7 @@ CONTENT = REPO_ROOT / "content"
 HERE = Path(__file__).resolve().parent
 E2E = REPO_ROOT / "tools" / "e2e"
 LEDGER = HERE / ".results.json"
+SESSIONS = HERE / ".sessions.json"  # gitignored: session ids of prompts other prompts continue
 WORK = HERE / ".work"          # stable work folder: 09's files persist across prompts
 TRANSCRIPTS = HERE / ".transcripts"  # gitignored stream-json per prompt
 
@@ -98,6 +99,7 @@ MANIFEST: dict[str, dict] = {
     },
     "08-playbook/01-author-and-publish#2": {
         "calls": ["publish_playbook"], "confirm_ok": [],
+        "continues": "08-playbook/01-author-and-publish#1",  # the page writes #2 as a follow-up turn
         "answer": ["published"],
         "effect": ("08-playbook.spec.js", ["fsa08-02-publish-playbook"]),
     },
@@ -355,9 +357,10 @@ def mcp_whoami(server: dict, timeout: int = 120) -> dict:
 
 def preflight(server: dict, expected_host: str) -> None:
     who = mcp_whoami(server)
-    if "error" in who and "auth" in str(who.get("error", {}).get("type", "")).lower():
-        # whoami's auth probe is unsupported with API-key auth. The server env is built
-        # from the env file and the registry is pinned off, so check that config instead.
+    if "error" in who:
+        # whoami can fail for reasons that say nothing about the target (its auth probe is
+        # unsupported with an API key; the box can answer 503 mid-publish). The server env is
+        # built from the env file and the registry is pinned off, so check that config instead.
         got = (urlparse(server["env"]["FSR_BASE_URL"]).hostname or "").lower()
         if got != expected_host or "PYFSR_INSTANCES" not in server["env"]:
             raise SystemExit("ABORT: the fortisoar-lab server config does not target the env file's box; "
@@ -391,8 +394,23 @@ def run_env() -> dict:
     return env
 
 
+def session_id(events: list[dict]) -> str | None:
+    for ev in events:
+        if ev.get("session_id"):
+            return str(ev["session_id"])
+    return None
+
+
+def load_sessions(path: Path = SESSIONS) -> dict[str, str]:
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def save_sessions(sessions: dict[str, str], path: Path = SESSIONS) -> None:
+    path.write_text(json.dumps(sessions, indent=2) + "\n")
+
+
 def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None,
-                model: str = DEFAULT_MODEL) -> tuple[int, list[dict], str]:
+                model: str = DEFAULT_MODEL, resume: str | None = None) -> tuple[int, list[dict], str]:
     """Run claude -p with stream-json; returns (rc, events, stderr tail)."""
     # {work} in a rule is the work folder. These rules PRE-APPROVE file tools under that
     # folder; they are not a sandbox, and built-in tools not listed here can still run.
@@ -400,6 +418,7 @@ def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None,
     scoped = [t.replace("{work}", "/" + str(work.resolve()).lstrip("/")) for t in (extra_tools or [])]
     allowed = [f"{TOOL_PREFIX}*", *scoped]
     cmd = ["claude", "-p", PREAMBLE + prompt, "--model", model, "--output-format", "stream-json", "--verbose",
+           *(["--resume", resume] if resume else []),
            "--mcp-config", str(work / ".mcp.json"), "--strict-mcp-config",
            "--allowedTools", ",".join(allowed)]
     proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True, timeout=1800, env=run_env())
@@ -498,7 +517,18 @@ def save_transcript(pid: str, events: list[dict], model: str = DEFAULT_MODEL) ->
 def run_one(choice: Choice, work: Path, box: str, results: list[dict], model: str = DEFAULT_MODEL) -> str:
     p = choice.prompt
     print(f"\n### {p.pid}  ({choice.reason})")
-    rc, events, err = run_claude(work, p.text, MANIFEST.get(p.pid, {}).get("tools"), model)
+    spec = MANIFEST.get(p.pid, {})
+    sessions = load_sessions(SESSIONS)
+    resume = None
+    if spec.get("continues"):
+        resume = sessions.get(f"{spec['continues']}|{model}")
+        if not resume:
+            row = record(results, p, box, "blocked", f"no session for {spec['continues']}: run that prompt first", "n/a", model)
+            return row["outcome"]
+    rc, events, err = run_claude(work, p.text, spec.get("tools"), model, resume)
+    if session_id(events):
+        sessions[f"{p.pid}|{model}"] = session_id(events)
+        save_sessions(sessions, SESSIONS)
     save_transcript(p.pid, events, model)
     commit = page_commit(p.page)
     if rc != 0 or not events:
