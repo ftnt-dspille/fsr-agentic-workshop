@@ -52,7 +52,7 @@ Enabling AI features is an administrator task. If the banner appears, ask your i
 
 ## 3. Read the agent catalog
 
-<!-- step: fsa02-02-agent-catalog manual: reads the Content Hub Discover catalog; no spec drives it yet -->
+<!-- step: fsa02-02-agent-catalog manual: the catalog and its AI Agent filter are captured; reading each Triage and Insight agent LLM profile, MCP servers and masking setting is by hand -->
 
 Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Content Type. The catalog lists the shipped AI agents (23 on the build this page was checked against) (NLV-02-02). Filter by tag, then open one agent tagged `Triage` and one tagged `Insight`. For each, write down:
 

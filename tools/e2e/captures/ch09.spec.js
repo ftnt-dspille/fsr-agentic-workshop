@@ -26,6 +26,22 @@ test("09-connectors", async () => {
       clip: { x: 670, y: 340, width: 265, height: 360 },
       pad: 0,
     });
+
+    // fsa09-02: the connector's detail panel (Configurations tab) in Content Hub > Manage.
+    await page.goto(`${s.base}/connectors`, { waitUntil: "domcontentloaded" });
+    await settle(page);
+    await page.getByText("Manage", { exact: true }).first().click();
+    await settle(page);
+    await page.getByText("Agentlab Greeter", { exact: true }).first().click();
+    await settle(page, 2000);
+    await expect(page.getByText("HEALTH CHECK:", { exact: false }).first()).toBeVisible();
+    await shotPanel(page, {
+      chapter: "09-connectors",
+      id: "fsa09-02-connector-page",
+      locator: page.locator("body"),
+      clip: { x: 560, y: 0, width: 935, height: 900 },
+      pad: 0,
+    });
   } finally {
     await s.close();
   }

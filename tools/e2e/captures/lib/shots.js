@@ -159,6 +159,13 @@ async function autoMaskSensitive(page, box) {
         count += 1;
       }
     });
+    // Form fields hold their address in .value, which is not a text node.
+    document.querySelectorAll("input, textarea").forEach((el) => {
+      if (el.value && re.test(el.value)) {
+        el.setAttribute("data-privacy", "mask");
+        count += 1;
+      }
+    });
     return count;
   }, [SENSITIVE_LEAF.source]);
 }

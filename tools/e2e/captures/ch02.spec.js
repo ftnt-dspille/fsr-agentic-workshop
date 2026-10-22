@@ -27,6 +27,30 @@ test("02-agentic-foundations", async () => {
 
     await page.goto(`${s.base}/ai-configuration/prompts`, { waitUntil: "domcontentloaded" });
     await settle(page);
+    // fsa02-02: the Content Hub Discover catalog filtered to AI Agent only (the route
+    // presets the Connectors filter, so untick it first). Read-only.
+    await page.goto(`${s.base}/connectors`, { waitUntil: "domcontentloaded" });
+    await settle(page);
+    await page.getByText("Discover", { exact: true }).first().click();
+    await settle(page);
+    const contentType = (label) => page.evaluate((text) => {
+      const box = [...document.querySelectorAll("div, section")].find((el) => /Content Type/.test(el.innerText || "") && el.querySelector("input[type=checkbox]") && el.innerText.length < 400);
+      const hit = box && [...box.querySelectorAll("label, span, div")].find((el) => el.children.length === 0 && el.innerText.trim() === text);
+      if (!hit) throw new Error(`Content Type filter "${text}" not found`);
+      hit.click();
+    }, label);
+    await contentType("Connectors");
+    await contentType("AI Agent");
+    await settle(page, 2000);
+    await expect(page.getByText("Filtered by:").first()).toBeVisible();
+    await shotPanel(page, {
+      chapter: "02-agentic-foundations",
+      id: "fsa02-02-agent-list",
+      locator: page.locator("body"),
+      clip: { x: 0, y: 0, width: 1440, height: 900 },
+      pad: 0,
+    });
+
     await shotPanel(page, {
       chapter: "02-agentic-foundations",
       id: "fsa02-01-ai-area",
