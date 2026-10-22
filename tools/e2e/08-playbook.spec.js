@@ -5,7 +5,7 @@
 // NOTE: unrun until the live pass; needs FSR_BASE_URL + FSR_API_KEY and
 // pyfsr[playbooks] installed for python3.
 const { test, expect } = require("@playwright/test");
-const { apiContext, apiPost, pyfsrTool } = require("./lib/harness");
+const { apiContext, apiPost, pyfsrTool, wanted } = require("./lib/harness");
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(10 * 60 * 1000);
@@ -41,18 +41,18 @@ playbooks:
 test("08-playbook", async ({ playwright }) => {
   const api = await apiContext(playwright.request);
   try {
-    await test.step("fsa08-01-compile-yaml", async () => {
+    if (wanted("fsa08-01-compile-yaml")) await test.step("fsa08-01-compile-yaml", async () => {
       const out = pyfsrTool("compile_playbook_yaml", { yaml_text: YAML });
       expect(out.ok).toBe(true);
       expect(out.playbooks).toEqual(["Tag Agent Lab Alerts"]);
     });
 
-    await test.step("fsa08-02-publish-playbook", async () => {
+    if (wanted("fsa08-02-publish-playbook")) await test.step("fsa08-02-publish-playbook", async () => {
       const out = pyfsrTool("publish_playbook", { yaml_text: YAML });
       expect(out.published).toBe(true);
     });
 
-    await test.step("fsa08-03-trigger-and-verify", async () => {
+    if (wanted("fsa08-03-trigger-and-verify")) await test.step("fsa08-03-trigger-and-verify", async () => {
       const since = new Date().toISOString();
       const created = pyfsrTool("create_record", {
         module: "alerts",

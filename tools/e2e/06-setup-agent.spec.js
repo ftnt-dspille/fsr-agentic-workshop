@@ -4,12 +4,12 @@
 // themselves are proved by the agent-drive tier (make agent-drive).
 // NOTE: unrun until the live pass; needs FSR_BASE_URL + FSR_API_KEY.
 const { test, expect } = require("@playwright/test");
-const { apiContext, apiGet } = require("./lib/harness");
+const { apiContext, apiGet, wanted } = require("./lib/harness");
 
 test("06-setup-agent", async ({ playwright }) => {
   const api = await apiContext(playwright.request);
   try {
-    await test.step("fsa06-04-whoami", async () => {
+    if (wanted("fsa06-04-whoami")) await test.step("fsa06-04-whoami", async () => {
       const actor = await apiGet(api, "/api/3/actors/current");
       expect(actor.userId).toBeTruthy();
       const meta = await apiGet(api, "/api/3/staging_model_metadatas?$limit=500&$orderby=type");

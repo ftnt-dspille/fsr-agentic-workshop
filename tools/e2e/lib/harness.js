@@ -124,4 +124,14 @@ function pyfsrEnv() {
   return { ...process.env, PATH: bin ? `${bin}${path.delimiter}${process.env.PATH}` : process.env.PATH };
 }
 
-module.exports = { REPO_ROOT, loadKit, openSession, capture, apiContext, apiGet, apiPost, pyfsrTool, pyfsrEnv };
+/**
+ * Step gating. FSR_ONLY_STEPS (comma-separated step ids, set by the agent-drive runner)
+ * restricts a spec to those steps, so a prompt's effect check never re-runs a whole
+ * spec's publishes or writes. Unset means every step runs.
+ */
+function wanted(stepId) {
+  const only = (process.env.FSR_ONLY_STEPS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return only.length === 0 || only.includes(stepId);
+}
+
+module.exports = { wanted, REPO_ROOT, loadKit, openSession, capture, apiContext, apiGet, apiPost, pyfsrTool, pyfsrEnv };

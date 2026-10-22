@@ -4,12 +4,12 @@
 // work: it is proved by the agent-drive tier (make agent-drive), not here.
 // NOTE: unrun until the live pass; needs FSR_BASE_URL + FSR_API_KEY.
 const { test, expect } = require("@playwright/test");
-const { pyfsrTool } = require("./lib/harness");
+const { apiContext, apiPost, pyfsrTool, wanted } = require("./lib/harness");
 
 test.setTimeout(5 * 60 * 1000);
 
-test("10-capstone-investigation", async () => {
-  await test.step("fsa10-01-stage-alert", async () => {
+test("10-capstone-investigation", async ({ playwright }) => {
+  if (wanted("fsa10-01-stage-alert")) await test.step("fsa10-01-stage-alert", async () => {
     const since = new Date().toISOString();
     const created = pyfsrTool("create_record", {
       module: "alerts",
@@ -28,5 +28,27 @@ test("10-capstone-investigation", async () => {
       timeout: 120,
     });
     expect(JSON.stringify(run)).toContain("finished");
+  });
+
+  // fsa10-02 proves the write-back is present, not that the findings are right:
+  // the marker stays `manual` on the page.
+  if (wanted("fsa10-02-investigate")) await test.step("fsa10-02-investigate", async () => {
+    const api = await apiContext(playwright.request);
+    try {
+      const found = await apiPost(api, "/api/query/alerts", {
+        logic: "AND",
+        filters: [{ field: "name", operator: "like", value: "Agent Lab - beaconing%" }],
+      });
+      // Newest staged capstone alert first: the one the prompt investigates.
+      const alert = [...(found["hydra:member"] || [])].sort((a, b) =>
+        String(b.createDate).localeCompare(String(a.createDate)))[0];
+      expect(alert, "stage the capstone alert first (fsa10-01)").toBeTruthy();
+      const text = alert.description || "";
+      expect(text, "the agent has not written findings to the alert").not.toMatch(/^Triaged automatically/);
+      expect(text).toMatch(/verdict/i);
+      expect(text).toMatch(/confidence/i);
+    } finally {
+      await api.dispose();
+    }
   });
 });

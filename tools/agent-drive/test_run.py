@@ -144,5 +144,78 @@ class MainFakeRunTests(unittest.TestCase):
                 rc.assert_not_called()
 
 
+class BashAndEffectTests(unittest.TestCase):
+    """Chapter 9 Bash prompts, the effect environment, and manifest/spec consistency."""
+
+    scaffold = "09-connectors/02-build-a-connector#1"
+    package = "09-connectors/02-build-a-connector#2"
+
+    def bash_ev(self, command: str, answer: str = "greet") -> list[dict]:
+        return [{"type": "assistant", "message": {"content": [
+                    {"type": "tool_use", "name": "Bash", "input": {"command": command}}]}},
+                {"type": "result", "result": answer}]
+
+    def test_scaffold_needs_the_pyfsr_scaffold_command(self) -> None:
+        self.assertIn("bash-missing:pyfsr connector scaffold",
+                      run.check_behavior(self.scaffold, self.bash_ev("ls -la")))
+        self.assertEqual(run.check_behavior(self.scaffold,
+                                            self.bash_ev("pyfsr connector scaffold agentlab-greeter")), [])
+
+    def test_bash_check_is_a_substring_of_some_command(self) -> None:
+        # A required command must appear in some Bash call; the match is textual, by design.
+        ev = self.bash_ev("echo pyfsr connector scaffold > /dev/null")
+        self.assertEqual(run.check_behavior(self.scaffold, ev), [])
+        self.assertIn("bash-missing:pyfsr connector package",
+                      run.check_behavior(self.package, self.bash_ev("pyfsr connector scaffold x", "Available")))
+
+    def test_bash_tools_only_for_chapter9_build_prompts(self) -> None:
+        captured: dict[str, list[str]] = {}
+
+        def fake_run(cmd, **kw):  # noqa: ANN001
+            captured["allowed"] = cmd[cmd.index("--allowedTools") + 1].split(",")
+            captured["env_path"] = kw["env"].get("PATH", "")
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        with mock.patch.object(run.subprocess, "run", side_effect=fake_run), \
+             mock.patch.dict(run.os.environ, {"FSR_PYTHON": "/venv/bin/python3"}):
+            run.run_claude(Path(tempfile.gettempdir()), "x", run.MANIFEST[self.scaffold]["tools"])
+            self.assertIn("Bash(pyfsr:*)", captured["allowed"])
+            self.assertTrue(captured["env_path"].startswith("/venv/bin"))
+            run.run_claude(Path(tempfile.gettempdir()), "x", None)
+            self.assertFalse(any(a.startswith("Bash") for a in captured["allowed"]))
+
+    def test_effect_runs_only_its_steps_in_the_work_folder(self) -> None:
+        seen: dict[str, dict] = {}
+
+        def fake_run(cmd, **kw):  # noqa: ANN001
+            seen["env"] = kw["env"]
+            return mock.Mock(returncode=0)
+
+        with mock.patch.object(run.subprocess, "run", side_effect=fake_run):
+            self.assertEqual(run.check_effect("10-capstone-investigation/01-capstone#2"), [])
+        self.assertEqual(seen["env"]["FSR_ONLY_STEPS"], "fsa10-02-investigate")
+        self.assertEqual(seen["env"]["FSR_WORKDIR"], str(run.WORK))
+
+    def test_every_manifest_effect_step_exists_and_is_gated(self) -> None:
+        import re
+        for pid, spec in run.MANIFEST.items():
+            if "effect" not in spec:
+                continue
+            fname, steps = spec["effect"]
+            text = (run.E2E / fname).read_text()
+            for step in steps:
+                self.assertIn(f'wanted("{step}")', text, f"{pid}: {step} is not gated in {fname}")
+                self.assertIn(f'"{step}"', text, f"{pid}: {step} not in {fname}")
+        for path in (run.E2E / "lib" / "harness.js", *run.E2E.glob("[01]*.spec.js")):
+            text = path.read_text()
+            for m in re.finditer(r"await test\.step\(\"([^\"]+)\"", text):
+                line_start = text.rfind("\n", 0, m.start()) + 1
+                self.assertIn("wanted(", text[line_start:m.start()], f"ungated step {m.group(1)} in {path.name}")
+
+    def test_every_manifest_key_is_a_real_prompt(self) -> None:
+        ids = {p.pid for p in run.all_prompts()}
+        self.assertEqual(sorted(set(run.MANIFEST) - ids), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,7 @@
 // NOTE: unrun until the live pass; needs FSR_BASE_URL + FSR_API_KEY.
 // create_module/publish are slow (schema publish): generous timeout.
 const { test, expect } = require("@playwright/test");
-const { apiContext, apiGet, apiPost, pyfsrTool } = require("./lib/harness");
+const { apiContext, apiGet, apiPost, pyfsrTool, wanted } = require("./lib/harness");
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(15 * 60 * 1000);
@@ -16,7 +16,7 @@ const MODULE = "agentlab_assets";
 test("07-users-modules-records", async ({ playwright }) => {
   const api = await apiContext(playwright.request);
   try {
-    await test.step("fsa07-01-create-user", async () => {
+    if (wanted("fsa07-01-create-user")) await test.step("fsa07-01-create-user", async () => {
       const out = pyfsrTool("create_user", {
         loginid: "agentlab_analyst",
         password: `Lab-${Date.now()}-x!`,
@@ -31,7 +31,7 @@ test("07-users-modules-records", async ({ playwright }) => {
       expect((people["hydra:member"] || []).length).toBe(1);
     });
 
-    await test.step("fsa07-02-create-module", async () => {
+    if (wanted("fsa07-02-create-module")) await test.step("fsa07-02-create-module", async () => {
       // list_modules truncates on a box with many modules, so probe the module itself.
       let exists = true;
       try {
@@ -74,7 +74,7 @@ test("07-users-modules-records", async ({ playwright }) => {
       expect((probe["hydra:member"] || []).length).toBeGreaterThan(0);
     });
 
-    await test.step("fsa07-03-seed-records", async () => {
+    if (wanted("fsa07-03-seed-records")) await test.step("fsa07-03-seed-records", async () => {
       const rows = [
         { hostname: "db-server-01", ip_address: "203.0.113.10", owner: "dba-team", criticality: "Critical" },
         { hostname: "web-server-01", ip_address: "203.0.113.20", owner: "web-team", criticality: "Medium" },
@@ -91,10 +91,11 @@ test("07-users-modules-records", async ({ playwright }) => {
         ],
       });
       const names = (query["hydra:member"] || []).map((r) => r.hostname).sort();
-      expect(names).toEqual(["build-server-01", "db-server-01", "jump-host-01"]); // build-server-01 is the step-02 test record (High)
+      // Critical and High seeds. build-server-01 (High) is the step-02 test record: not required here, so this step runs alone.
+      expect(names).toEqual(expect.arrayContaining(["db-server-01", "jump-host-01"]));
     });
 
-    await test.step("fsa07-04-record-lifecycle", async () => {
+    if (wanted("fsa07-04-record-lifecycle")) await test.step("fsa07-04-record-lifecycle", async () => {
       const query = await apiPost(api, `/api/query/${MODULE}`, {
         logic: "AND",
         filters: [{ field: "hostname", operator: "eq", value: "db-server-01" }],

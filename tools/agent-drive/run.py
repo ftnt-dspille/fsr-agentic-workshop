@@ -113,17 +113,24 @@ MANIFEST: dict[str, dict] = {
         "answer": ["operation"],
         "effect": ("09-connectors.spec.js", ["fsa09-02-run-operation"]),
     },
+    # Chapter 9 build prompts are Claude Code work (students have Bash): Bash is
+    # allowed only for the pyfsr CLI, and Read/Write/Edit run in the work folder
+    # (the runner's cwd). "bash" lists substrings that some Bash call must contain.
     "09-connectors/02-build-a-connector#1": {
         "calls": [], "confirm_ok": [],
+        "bash": ["pyfsr connector scaffold"],
+        "tools": ["Bash(pyfsr:*)", "Read", "Write", "Edit"],
         "local": "greet",  # work folder agentlab-greeter/operations.py defines greet
         "answer": ["greet"],
     },
     "09-connectors/02-build-a-connector#2": {
         "calls": ["install_connector", "upsert_connector_configuration", "healthcheck_connector"],
         "confirm_ok": ["install_connector"],
+        "bash": ["pyfsr connector package"],
+        "tools": ["Bash(pyfsr:*)", "Read", "Write", "Edit"],
         "answer": ["Available"],
         "local": "tgz",  # a .tgz exists in the work folder
-        "effect": ("09-connectors.spec.js", ["fsa09-05-run-own-connector"]),
+        "effect": ("09-connectors.spec.js", ["fsa09-04-deploy-connector"]),
     },
     "09-connectors/02-build-a-connector#3": {
         "calls": ["run_connector_operation"], "confirm_ok": [],
@@ -355,12 +362,22 @@ def make_workdir(server: dict) -> Path:
     return WORK
 
 
-def run_claude(work: Path, prompt: str) -> tuple[int, list[dict], str]:
+def run_env() -> dict:
+    """Environment for claude and its Bash calls: the pyfsr CLI sits beside FSR_PYTHON."""
+    env = dict(os.environ)
+    py = os.environ.get("FSR_PYTHON", "")
+    if py and os.sep in py:
+        env["PATH"] = f"{Path(py).parent}{os.pathsep}{env.get('PATH', '')}"
+    return env
+
+
+def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None) -> tuple[int, list[dict], str]:
     """Run claude -p with stream-json; returns (rc, events, stderr tail)."""
+    allowed = [f"{TOOL_PREFIX}*", *(extra_tools or [])]
     cmd = ["claude", "-p", PREAMBLE + prompt, "--output-format", "stream-json", "--verbose",
            "--mcp-config", str(work / ".mcp.json"), "--strict-mcp-config",
-           "--allowedTools", f"{TOOL_PREFIX}*"]
-    proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True, timeout=1800)
+           "--allowedTools", ",".join(allowed)]
+    proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True, timeout=1800, env=run_env())
     events = []
     for line in proc.stdout.splitlines():
         try:
@@ -402,6 +419,10 @@ def check_behavior(pid: str, events: list[dict]) -> list[str]:
             failed.append(f"forbidden-call:{c['name']}")
         if c["input"].get("confirm") is True and c["name"] not in spec.get("confirm_ok", []):
             failed.append(f"unexpected-confirm:{c['name']}")
+    bash_cmds = [str(c["input"].get("command", "")) for c in calls if c["name"] == "Bash"]
+    for needle in spec.get("bash", []):
+        if not any(needle in cmd for cmd in bash_cmds):
+            failed.append(f"bash-missing:{needle}")
     answer = final_answer(events).lower()
     for needle in spec.get("answer", []):
         if needle.lower() not in answer:
@@ -424,7 +445,9 @@ def check_effect(pid: str) -> list[str]:
     if not eff:
         return []
     spec, steps = eff
-    env = {**os.environ, "FSR_ONLY_STEPS": ",".join(steps), "FSR_ENV_FILE": os.environ.get("FSR_ENV_FILE", "")}
+    # Only this prompt's steps run (FSR_ONLY_STEPS, see lib/harness.js wanted()).
+    # FSR_WORKDIR points the chapter 9 steps at the agent's work folder.
+    env = {**run_env(), "FSR_ONLY_STEPS": ",".join(steps), "FSR_WORKDIR": str(WORK)}
     proc = subprocess.run(["npx", "playwright", "test", spec], cwd=E2E, env=env, capture_output=True,
                           text=True, timeout=1800)
     return [] if proc.returncode == 0 else [f"effect:{steps[0]}"]
@@ -441,7 +464,7 @@ def save_transcript(pid: str, events: list[dict]) -> None:
 def run_one(choice: Choice, work: Path, box: str, results: list[dict]) -> str:
     p = choice.prompt
     print(f"\n### {p.pid}  ({choice.reason})")
-    rc, events, err = run_claude(work, p.text)
+    rc, events, err = run_claude(work, p.text, MANIFEST.get(p.pid, {}).get("tools"))
     save_transcript(p.pid, events)
     commit = page_commit(p.page)
     if rc != 0 or not events:
