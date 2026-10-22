@@ -35,6 +35,8 @@ CONTENT = REPO_ROOT / "content"
 PROMPT_HEADING = re.compile(r"Give your agent this prompt", re.IGNORECASE)
 FENCE = re.compile(r"```text\n(.*?)```", re.DOTALL)
 
+LAB_SERVER = "fortisoar-lab"
+
 PREAMBLE = (
     "You are running unattended in a disposable FortiSOAR lab as part of a "
     "workshop verification run. Use only the fortisoar MCP tools. When a tool "
@@ -80,7 +82,9 @@ def make_workdir() -> Path:
         "FSR_SUPPRESS_INSECURE_WARNINGS": "true",
     }
     work = Path(tempfile.mkdtemp(prefix="agent-drive-"))
-    (work / ".mcp.json").write_text(json.dumps({"mcpServers": {"fortisoar": server}}, indent=2))
+    # Named apart from a user-level "fortisoar" server: claude -p loads both, and the
+    # user-level one (another instance) answered the agent in the first run.
+    (work / ".mcp.json").write_text(json.dumps({"mcpServers": {LAB_SERVER: server}}, indent=2))
     return work
 
 
@@ -89,8 +93,11 @@ def run_claude(work: Path, prompt: str) -> int:
         "claude",
         "-p",
         PREAMBLE + prompt,
+        "--mcp-config",
+        str(work / ".mcp.json"),
+        "--strict-mcp-config",
         "--allowedTools",
-        "mcp__fortisoar__*",
+        f"mcp__{LAB_SERVER}__*",
     ]
     print(f"\n=== claude -p ({len(prompt)} chars) ===")
     proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True, timeout=1800)
