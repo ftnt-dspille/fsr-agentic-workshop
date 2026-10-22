@@ -8,3 +8,7 @@ tools/e2e/test-results/
 tools/e2e/.state/
 .DS_Store
 .hugo_build.lock
+tools/agent-drive/.results.json
+tools/agent-drive/.transcripts/
+tools/agent-drive/.work/
+tools/agent-drive/__pycache__/
