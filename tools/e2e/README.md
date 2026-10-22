@@ -55,11 +55,10 @@ web filter accepts, logs in as `FSR_USERNAME` with `FSR_PASSWORD`, accepts the
 EULA gate if it appears, and caches the session in `statePath`. The kit's page
 objects and DOM notes are documented in that repo's README.
 
-Open issue: the kit's README warns that `@playwright/test` imported from two
-separate installs throws ("imported twice"). This folder pins
-`@playwright/test` 1.59.1, the kit's version, but the two installs are still
-separate directories. Until that is verified against a live box, the e2e tier
-is unrun.
+The kit's README warns that `@playwright/test` imported from two separate
+installs throws ("imported twice"). `make e2e-install SOAR_KIT_DIR=...` links this
+folder's `node_modules/@playwright/test` to the kit's install, so both resolve to
+one real path and one module instance. Run it after `pnpm install`.
 
 ## Configuration
 
@@ -81,3 +80,23 @@ missing box is never reported as a pass.
 `content/<chapter>/<capture-id>.png`, the same folder as the chapter page, so Hugo
 serves it beside the page. The kit's `docShot()` also writes a `manifest.json`
 into its target folder, which is why this harness uses its own writer.
+
+## Captures (captures/)
+
+`captures/chNN.spec.js` writes the chapter's screenshots through
+`captures/lib/shots.js`. `shotPanel()` crops to a named panel, paints the shared
+`SHARED_MASK` selectors (user menu, timestamps, key names), runs a post-shot privacy
+scan over the text inside the crop (IPv4, hostnames and URLs, e-mail, dates and
+times, key-like tokens, the box hostname and login name), and writes nothing when the
+scan finds anything. Screenshots are headless, so no URL bar appears.
+
+FortiAI-spending specs use `captures/lib/spend.js`: they skip unless `SPEND_AI=1`,
+refuse when the balance cannot be read or is under `SPEND_AI_FLOOR` (default 100000),
+and report the tokens spent per spec.
+
+## Workshop proof
+
+`make workshop-proof FSR_ENV_FILE=... [CHAPTER=07]` runs the read-only reset-lab
+check, each chapter's specs, `lint-steps --strict` (reported, not fatal while captures
+are pending) and the hugo build, then writes `tools/proof-report.md` (gitignored).
+`make workshop-proof-report` rebuilds the report from the last run without a box.
