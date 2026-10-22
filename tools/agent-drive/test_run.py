@@ -240,5 +240,64 @@ class BashAndEffectTests(unittest.TestCase):
         self.assertEqual(sorted(set(run.MANIFEST) - ids), [])
 
 
+class ModelTests(unittest.TestCase):
+    """The baseline model is part of the selection key; a pass on another model never satisfies it."""
+
+    def setUp(self) -> None:
+        self.a = P("07-users-modules-records/01-create-a-user#1")
+
+    def test_default_model_is_the_sonnet_baseline(self) -> None:
+        self.assertEqual(run.DEFAULT_MODEL, "claude-sonnet-5-5")
+
+    def test_pass_on_other_model_does_not_skip(self) -> None:
+        res = []
+        run.record(res, self.a, BOX, "pass", "ok", "abc", model="claude-opus-4-8")
+        ch = run.select([self.a], res, BOX, model="claude-sonnet-5-5")
+        self.assertTrue(ch[0].run)
+        self.assertEqual(res[0]["model"], "claude-opus-4-8")
+
+    def test_pass_on_same_model_skips(self) -> None:
+        res = []
+        run.record(res, self.a, BOX, "pass", "ok", "abc", model="claude-sonnet-5-5")
+        self.assertFalse(run.select([self.a], res, BOX, model="claude-sonnet-5-5")[0].run)
+
+    def test_legacy_row_without_model_is_not_a_baseline_pass(self) -> None:
+        legacy = [{"id": self.a.pid, "outcome": "pass", "box": BOX, "date": "2026-10-22",
+                   "prompt_sha256": self.a.sha, "page_commit": "abc", "detail": "ok"}]
+        self.assertTrue(run.select([self.a], legacy, BOX)[0].run)
+
+    def test_failed_other_model_row_does_not_block_baseline(self) -> None:
+        res = []
+        run.record(res, self.a, BOX, "fail", "effect", "abc", model="claude-opus-4-8")
+        ch = run.select([self.a], res, BOX, model="claude-sonnet-5-5")
+        self.assertIn("no result recorded", ch[0].reason)
+
+    def test_run_claude_passes_the_model_flag(self) -> None:
+        captured: dict[str, list[str]] = {}
+
+        def fake_run(cmd, **kw):  # noqa: ANN001
+            captured["cmd"] = cmd
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        with mock.patch.object(run.subprocess, "run", side_effect=fake_run):
+            run.run_claude(run.WORK, "x")
+            cmd = captured["cmd"]
+            self.assertEqual(cmd[cmd.index("--model") + 1], "claude-sonnet-5-5")
+            run.run_claude(run.WORK, "x", None, "claude-opus-4-8")
+            cmd = captured["cmd"]
+            self.assertEqual(cmd[cmd.index("--model") + 1], "claude-opus-4-8")
+
+    def test_plan_shows_the_model(self) -> None:
+        import io
+        import contextlib
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Path(tmp) / "env"
+            env.write_text(f"FSR_BASE_URL=https://{BOX}\n")
+            buf = io.StringIO()
+            with mock.patch.object(run, "LEDGER", Path(tmp) / "r.json"), contextlib.redirect_stdout(buf):
+                run.main(["--env-file", str(env), "--plan"])
+        self.assertIn("model: claude-sonnet-5-5", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

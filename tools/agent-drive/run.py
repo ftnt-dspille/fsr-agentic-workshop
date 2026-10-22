@@ -46,6 +46,9 @@ TRANSCRIPTS = HERE / ".transcripts"  # gitignored stream-json per prompt
 
 PROMPT_HEADING = re.compile(r"Give your agent this prompt", re.IGNORECASE)
 FENCE = re.compile(r"```text\n(.*?)```", re.DOTALL)
+# Baseline model for the proof. A run on any other model is recorded but does not
+# satisfy the baseline (the selection key includes the model).
+DEFAULT_MODEL = "claude-sonnet-5-5"
 LAB_SERVER = "fortisoar-lab"
 TOOL_PREFIX = f"mcp__{LAB_SERVER}__"
 
@@ -218,7 +221,8 @@ def save_ledger(results: list[dict], path: Path = LEDGER) -> None:
     path.write_text(json.dumps({"results": results}, indent=2) + "\n")
 
 
-def record(results: list[dict], prompt: Prompt, box: str, outcome: str, detail: str, commit: str) -> dict:
+def record(results: list[dict], prompt: Prompt, box: str, outcome: str, detail: str, commit: str,
+           model: str = DEFAULT_MODEL) -> dict:
     row = {
         "id": prompt.pid,
         "outcome": outcome,  # pass | fail | blocked
@@ -226,15 +230,17 @@ def record(results: list[dict], prompt: Prompt, box: str, outcome: str, detail: 
         "date": dt.date.today().isoformat(),
         "prompt_sha256": prompt.sha,
         "page_commit": commit,
+        "model": model,
         "detail": detail,
     }
     results.append(row)
     return row
 
 
-def passed(results: list[dict], prompt: Prompt, box: str) -> dict | None:
+def passed(results: list[dict], prompt: Prompt, box: str, model: str = DEFAULT_MODEL) -> dict | None:
     for row in reversed(results):
-        if row["id"] == prompt.pid and row["box"] == box and row["prompt_sha256"] == prompt.sha:
+        if (row["id"] == prompt.pid and row["box"] == box and row["prompt_sha256"] == prompt.sha
+                and row.get("model") == model):
             return row if row["outcome"] == "pass" else None
     return None
 
@@ -256,7 +262,8 @@ class Choice:
     reason: str
 
 
-def select(prompts: list[Prompt], results: list[dict], box: str, *, chapter: str | None = None,
+def select(prompts: list[Prompt], results: list[dict], box: str, *, model: str = DEFAULT_MODEL,
+           chapter: str | None = None,
            prompt_id: str | None = None, force: bool = False) -> list[Choice]:
     if prompt_id and prompt_id not in {p.pid for p in prompts}:
         sys.exit(f"no prompt with id {prompt_id!r}; ids look like 07-users-modules-records/02-create-a-module#1")
@@ -271,10 +278,10 @@ def select(prompts: list[Prompt], results: list[dict], box: str, *, chapter: str
         if force:
             out.append(Choice(p, True, "FORCE=1"))
             continue
-        prev_any = [r for r in results if r["id"] == p.pid and r["box"] == box]
-        ok = passed(results, p, box)
+        prev_any = [r for r in results if r["id"] == p.pid and r["box"] == box and r.get("model") == model]
+        ok = passed(results, p, box, model)
         if ok:
-            out.append(Choice(p, False, f"passed {ok['date']} on this box with this prompt text"))
+            out.append(Choice(p, False, f"passed {ok['date']} on this box, model {model}, with this prompt text"))
         elif prev_any and prev_any[-1]["prompt_sha256"] != p.sha:
             out.append(Choice(p, True, "prompt text changed since its last result"))
         elif prev_any:
@@ -384,13 +391,14 @@ def run_env() -> dict:
     return env
 
 
-def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None) -> tuple[int, list[dict], str]:
+def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None,
+                model: str = DEFAULT_MODEL) -> tuple[int, list[dict], str]:
     """Run claude -p with stream-json; returns (rc, events, stderr tail)."""
     # {work} in a rule is the work folder: file tools may touch only that folder.
     # Absolute rule paths take the // prefix. Bare Read/Write/Edit are never allowed.
     scoped = [t.replace("{work}", "/" + str(work.resolve()).lstrip("/")) for t in (extra_tools or [])]
     allowed = [f"{TOOL_PREFIX}*", *scoped]
-    cmd = ["claude", "-p", PREAMBLE + prompt, "--output-format", "stream-json", "--verbose",
+    cmd = ["claude", "-p", PREAMBLE + prompt, "--model", model, "--output-format", "stream-json", "--verbose",
            "--mcp-config", str(work / ".mcp.json"), "--strict-mcp-config",
            "--allowedTools", ",".join(allowed)]
     proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True, timeout=1800, env=run_env())
@@ -477,18 +485,18 @@ def save_transcript(pid: str, events: list[dict]) -> None:
             fh.write(json.dumps(ev) + "\n")
 
 
-def run_one(choice: Choice, work: Path, box: str, results: list[dict]) -> str:
+def run_one(choice: Choice, work: Path, box: str, results: list[dict], model: str = DEFAULT_MODEL) -> str:
     p = choice.prompt
     print(f"\n### {p.pid}  ({choice.reason})")
-    rc, events, err = run_claude(work, p.text, MANIFEST.get(p.pid, {}).get("tools"))
+    rc, events, err = run_claude(work, p.text, MANIFEST.get(p.pid, {}).get("tools"), model)
     save_transcript(p.pid, events)
     commit = page_commit(p.page)
     if rc != 0 or not events:
-        row = record(results, p, box, "blocked", f"claude exit {rc}: {err[-300:]}", commit)
+        row = record(results, p, box, "blocked", f"claude exit {rc}: {err[-300:]}", commit, model)
         return row["outcome"]
     failed = check_behavior(p.pid, events) + check_local(p.pid, work) + check_effect(p.pid)
     outcome = "fail" if failed else "pass"
-    row = record(results, p, box, outcome, ",".join(failed) or "all checks held", commit)
+    row = record(results, p, box, outcome, ",".join(failed) or "all checks held", commit, model)
     print(f"  {outcome}: {row['detail']}")
     return outcome
 
@@ -499,6 +507,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--chapter")
     ap.add_argument("--prompt")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--model", default=os.environ.get("MODEL") or DEFAULT_MODEL,
+                    help=f"claude model for the prompt runs (default {DEFAULT_MODEL}; or MODEL=...)")
     ap.add_argument("--plan", action="store_true", help="show what would run and why; no calls")
     args = ap.parse_args(argv)
 
@@ -509,8 +519,10 @@ def main(argv: list[str] | None = None) -> int:
                 sys.exit(f"{k} must be set (use --env-file)")
     box = box_host()
     results = load_ledger()
-    choices = select(all_prompts(), results, box, chapter=args.chapter, prompt_id=args.prompt, force=args.force)
-    print(f"box: {box}  |  {sum(c.run for c in choices)} to run, {sum(not c.run for c in choices)} skipped")
+    model = args.model
+    choices = select(all_prompts(), results, box, model=model, chapter=args.chapter,
+                     prompt_id=args.prompt, force=args.force)
+    print(f"box: {box}  |  model: {model}  |  {sum(c.run for c in choices)} to run, {sum(not c.run for c in choices)} skipped")
     for c in choices:
         print(f"  {'RUN ' if c.run else 'SKIP'} {c.prompt.pid}: {c.reason}")
     if args.plan:
@@ -526,7 +538,7 @@ def main(argv: list[str] | None = None) -> int:
     work = make_workdir(server)
     outcomes: dict[str, int] = {}
     for c in todo:
-        o = run_one(c, work, box, results)
+        o = run_one(c, work, box, results, model)
         outcomes[o] = outcomes.get(o, 0) + 1
         save_ledger(results)  # persist per prompt, so an interrupted run keeps its results
     print(f"\nagent-drive done: {outcomes}")
