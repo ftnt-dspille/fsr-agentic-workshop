@@ -81,7 +81,7 @@ The registration has four steps. Do not skip the first one.
 3. **Check status.** Read the status for the server. A healthy server shows as active with its tools.
 4. **Grant.** Add the server's UUID and the tool names it may use to each agent that should call it. Chapter 5, page 2, covers the grant.
 
-<!-- step: fsa05-01-validate-register manual -->
+<!-- step: fsa05-01-validate-register manual: Connect MCP Server form with a live Test Connection to an external server; no spec yet -->
 
 Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. It has no authentication field, so this form cannot set one (NLV-05-03). Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
@@ -95,7 +95,7 @@ Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Se
 
 If the UI does not offer a validate step, validate through the validation route with the same definition before you save (NLV-05-04).
 
-<!-- step: fsa05-02-status-check manual -->
+<!-- step: fsa05-02-status-check manual: status check after a registration made by fsa05-01; no spec yet -->
 
 Check the status of the server you just saved. Then check the status of one built-in server, to confirm the status route still works for everyone.
 

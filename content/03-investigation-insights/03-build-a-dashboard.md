@@ -23,7 +23,7 @@ Build three widgets over the alert records:
 
 Some widgets come from the Content Hub. Check that they are installed before you start (NLV-00-04).
 
-<!-- step: fsa03-10-build-dashboard manual -->
+<!-- step: fsa03-10-build-dashboard manual: builds a dashboard by hand in the UI; no spec yet -->
 
 Give the dashboard a name you will recognize, such as `Workshop Verdicts`, and add the three widgets. Filter the alert widgets to the seed alerts you created in chapter 2, so you can count them.
 
@@ -39,7 +39,7 @@ Give the dashboard a name you will recognize, such as `Workshop Verdicts`, and a
 
 A chart that renders proves only that the page drew it. Check the numbers against the records.
 
-<!-- step: fsa03-11-verify-counts manual -->
+<!-- step: fsa03-11-verify-counts manual: checks dashboard numbers against records; needs the dashboard from fsa03-10 -->
 
 Count the seed alerts by hand, grouped by verdict and severity. Write the counts down. Compare them with what each widget shows.
 

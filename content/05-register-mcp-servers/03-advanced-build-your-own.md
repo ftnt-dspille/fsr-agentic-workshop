@@ -50,7 +50,7 @@ The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents e
 
 Before FortiSOAR sees the server, check it yourself. The client must send an `Accept` header that lists both JSON and event-stream. The server returns a session ID in the `mcp-session-id` response header, and every later call must send it back.
 
-<!-- step: fsa05-03-handshake manual -->
+<!-- step: fsa05-03-handshake manual: a curl handshake run from a shell against the server, not a box UI step -->
 
 Send `initialize`. Read the session ID from the response headers. Send `notifications/initialized` with that session header. Then send `tools/list` and `tools/call`.
 
@@ -91,7 +91,7 @@ Grant the server to one agent exactly as you did for the public server on the pr
 
 Only do this on a throwaway non-production box you own. Do not run it on a shared class box.
 
-<!-- step: fsa05-05-json-trap manual -->
+<!-- step: fsa05-05-json-trap manual: breaks the JSON rule on purpose on a throwaway box; the page forbids it on a shared box -->
 
 Save a second copy of the server's definition, with `authentication` sent as a JSON object instead of a string. Watch the status route. Then fix the row by writing `authentication` back as a string, and check the status again.
 

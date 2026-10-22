@@ -9,7 +9,7 @@ Your agent talks to FortiSOAR through `pyfsr-mcp`, an MCP server from the open-s
 
 ## 1. Install the tooling
 
-<!-- step: fsa06-02-install-tooling manual -->
+<!-- step: fsa06-02-install-tooling manual: installs tooling on the learner workstation, not on the box -->
 
 You need Python 3.10+ and [uv](https://docs.astral.sh/uv/) (or pip). Then:
 
@@ -19,7 +19,7 @@ pip install 'pyfsr[mcp]'
 
 ## 2. Generate your agent's MCP config
 
-<!-- step: fsa06-03-agent-init manual -->
+<!-- step: fsa06-03-agent-init manual: starts Claude Code on the workstation against the agent; spends tokens -->
 
 `pyfsr agent init` verifies the connection with a real whoami call and prints the config snippet for your agent product:
 

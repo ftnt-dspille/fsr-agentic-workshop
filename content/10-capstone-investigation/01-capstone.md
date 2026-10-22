@@ -42,7 +42,7 @@ structured summary (verdict, evidence, recommended next steps) and raise
 its severity if your verdict warrants it. Do not close the alert.
 ```
 
-<!-- step: fsa10-02-investigate manual -->
+<!-- step: fsa10-02-investigate manual: runs the capstone investigation; spends tokens -->
 
 Let it run. A good transcript reads like an analyst's notebook: each claim traceable to a tool result, gaps stated honestly ("no reputation connector is configured, so the destination is unverified"), and a verdict that distinguishes evidence from inference.
 
@@ -67,7 +67,7 @@ investigate_alert tool, wait for the verdict, and compare it with yours:
 where do you agree, where do you differ, and why?
 ```
 
-<!-- step: fsa10-03-native-compare manual -->
+<!-- step: fsa10-03-native-compare manual: runs a native FortiAI investigation for comparison; spends tokens -->
 
 ## 5. Bottle it
 

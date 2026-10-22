@@ -33,7 +33,7 @@ The jailbreak check can end a run with a blocked summary while the run still sho
 
 Open an alert you seeded with source data and a known malicious indicator. Look for the **AI Investigation** tab on the alert, and start the run from there.
 
-<!-- step: fsa03-01-start-investigation manual -->
+<!-- step: fsa03-01-start-investigation manual: starts a FortiAI investigation; spends tokens -->
 
 1. Open the alert and select the **AI Investigation** tab. If the tab is named differently on your build, look for the investigation controls on the alert.
 2. Start the run with **Begin AI-Powered Alert Investigation**. If the button has a different label, use the one that starts a new investigation.
@@ -49,7 +49,7 @@ Open an alert you seeded with source data and a known malicious indicator. Look 
 
 ## 3. Read the result
 
-<!-- step: fsa03-02-read-result manual -->
+<!-- step: fsa03-02-read-result manual: reads a FortiAI investigation result; needs the run in fsa03-01 -->
 
 Read the result before you decide anything. For each hypothesis, note:
 
@@ -70,7 +70,7 @@ Read the result before you decide anything. For each hypothesis, note:
 
 The overview card on the alert shows the verdict, and so does the record. Check the record, because the record is what other automation reads.
 
-<!-- step: fsa03-03-verify-writeback manual -->
+<!-- step: fsa03-03-verify-writeback manual: checks the write-back of a FortiAI investigation; needs the run -->
 
 Open the alert record itself, not only the overview card. Find the three AI fields the investigation writes: verdict, severity and summary. Confirm they match what the card showed.
 
@@ -94,7 +94,7 @@ Two runs show you the limits of the feature. Run both before you rely on any ver
 
 Pick an alert that looks benign, and that matches an activity you have approved. Run an investigation on it.
 
-<!-- step: fsa03-04-benign-rerun manual -->
+<!-- step: fsa03-04-benign-rerun manual: re-runs a FortiAI investigation on a benign alert; spends tokens -->
 
 Expect an Inconclusive verdict more often than a Benign one. In testing, benign-looking alerts often ended Inconclusive. Then add an approved-activity record to the organizational context, with the exact category and subcategory, and run the investigation again. Compare the two results honestly. Whether the answer changes is the finding, either way (NLV-03-04).
 
@@ -105,7 +105,7 @@ Expect an Inconclusive verdict more often than a Benign one. In testing, benign-
 
 ### 5.2 Source data changes the SOP
 
-<!-- step: fsa03-05-sourcedata-check manual -->
+<!-- step: fsa03-05-sourcedata-check manual: compares investigations with and without source data; spends tokens -->
 
 Create one alert by hand with no source data, and one with source JSON for the same alert type. Run an investigation on each. Look in the investigation plan or the trace to see which SOP was applied.
 
@@ -126,7 +126,7 @@ Do not start an investigation from a playbook through an HMAC-authenticated API 
 
 ## 7. Read the trace
 
-<!-- step: fsa03-06-trace-review manual -->
+<!-- step: fsa03-06-trace-review manual: reads agent traces of a FortiAI run; no trace view located on 8.0 -->
 
 Open the trace for your run from section 2. Find the normalization step and the verdict step. Then find one tool call that returned evidence, and read what it returned.
 
