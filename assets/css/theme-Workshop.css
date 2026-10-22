@@ -1,0 +1,7 @@
+:root {
+  /* Workshop */
+  --theme-color: var(--fortinet-red);
+}
+#logo img {
+  content: url("/images/white-logo.svg");
+}

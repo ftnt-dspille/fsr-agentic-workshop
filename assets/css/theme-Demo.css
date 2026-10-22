@@ -1,0 +1,10 @@
+:root {
+  /* Demo */
+  --theme-color: var(--fortinet-green);
+}
+#logo img {
+  content: url("/images/logo.svg");
+}
+.dark #logo img {
+  content: url("/images/white-logo.svg");
+}
