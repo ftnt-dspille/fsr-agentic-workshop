@@ -46,7 +46,7 @@ Expect three distinct phases, in order:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Record create returns 403 after publish | Module was created without `grant_to` | Ask the agent to re-run create_module with grant_to, or grant the role in Application Editor |
+| Record create returns 403 after publish | Module was created without `grant_to` | Ask the agent to re-run create_module with grant_to, or grant the role in Application Editor. With an API key, `grant_to` fails on 8.0 (the bulk routes reject API keys), so grant the role in the UI, or sign in to the agent with a username and password |
 | Publish times out | Busy box; publishes poll a job | Ask the agent to retry publish; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Delete the module (confirm-gated) and recreate; the field spec must name the picklist |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
