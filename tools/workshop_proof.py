@@ -184,10 +184,31 @@ def spend_tokens(ch: Chapter) -> list[str]:
     return out
 
 
+def env_file_value(path: str | None, key: str) -> str | None:
+    """Read one KEY=VALUE from the env file (the same format the e2e harness loads). Values are never printed."""
+    if not path or not os.path.exists(path):
+        return None
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            if k.strip() == key:
+                return v.strip().strip("\"'")
+    return None
+
+
+def box_python(env: dict[str, str]) -> str | None:
+    """The interpreter that has pyfsr: FSR_PYTHON from the env file, else the process environment. Never bare python3."""
+    return env.get("FSR_PYTHON") or os.environ.get("FSR_PYTHON") or env_file_value(env.get("FSR_ENV_FILE"), "FSR_PYTHON")
+
+
 def run_reset_check(env: dict[str, str]) -> str:
     if not env.get("FSR_ENV_FILE"):
         return "blocked: FSR_ENV_FILE not set"
-    proc = subprocess.run([sys.executable, str(TOOLS / "reset_lab.py"), "--check-only"],
+    py = box_python(env)
+    if not py:
+        return "blocked: FSR_PYTHON is not set in the env file (the pyfsr interpreter)"
+    proc = subprocess.run([py, str(TOOLS / "reset_lab.py"), "--check-only"],
                           cwd=ROOT, env={**os.environ, **env}, capture_output=True, text=True)
     last = (proc.stdout or proc.stderr).strip().splitlines()[-1:] or [""]
     return ("passed: " if proc.returncode == 0 else "failed: ") + last[0][:200]
@@ -261,6 +282,9 @@ def main(argv: list[str] | None = None) -> int:
     env = {}
     if os.environ.get("FSR_ENV_FILE"):
         env["FSR_ENV_FILE"] = os.path.realpath(os.environ["FSR_ENV_FILE"])
+    py = box_python(env)
+    if py:
+        env["FSR_PYTHON"] = py
     if os.environ.get("SOAR_KIT_DIR"):
         env["SOAR_KIT_DIR"] = os.path.realpath(os.path.expanduser(os.environ["SOAR_KIT_DIR"]))
 

@@ -1,6 +1,7 @@
 "use strict";
 // Shared helpers for the workshop specs: the FortiSOAR UI kit, a logged-in session,
 // and the capture writer that puts screenshots beside their chapter page.
+const fs = require("fs");
 const path = require("path");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -21,14 +22,22 @@ function loadKit() {
  */
 async function openSession(opts = {}) {
   const kit = loadKit();
-  return kit.launchReproSession(
-    {
-      FSR_BASE_URL: process.env.FSR_BASE_URL,
-      FSR_USERNAME: process.env.FSR_USERNAME,
-      FSR_PASSWORD: process.env.FSR_PASSWORD,
-    },
-    { statePath: opts.statePath || path.join(__dirname, "..", ".state", "session.json") },
-  );
+  const env = {
+    FSR_BASE_URL: process.env.FSR_BASE_URL,
+    FSR_USERNAME: process.env.FSR_USERNAME,
+    FSR_PASSWORD: process.env.FSR_PASSWORD,
+  };
+  const session = { statePath: opts.statePath || path.join(__dirname, "..", ".state", "session.json") };
+  // A fresh login can find the password field hidden while the SPA is still
+  // booting (the kit waits for it to be visible). Retry once from a clean state.
+  try {
+    return await kit.launchReproSession(env, session);
+  } catch (err) {
+    if (!/#login_password|login_password/.test(String(err && err.message))) throw err;
+    fs.rmSync(session.statePath, { force: true });
+    await new Promise((r) => setTimeout(r, 15000));
+    return kit.launchReproSession(env, session);
+  }
 }
 
 /**

@@ -38,6 +38,12 @@ const DATE_RE = new RegExp([
 const IPV4_RE = /(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])/;
 const URL_RE = /https?:\/\/|\bwww\.|[a-z0-9-]+\.(com|net|org|io|local|lan|internal|example)\b/i;
 const EMAIL_RE = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+const SENSITIVE_LEAF = new RegExp([
+  "(?<![\\d.])(?:\\d{1,3}\\.){3}\\d{1,3}(?![\\d.])",  // IPv4
+  "https?:\\/\\/|\\bwww\\.",                             // URL
+  "[^\\s@]+@[^\\s@]+\\.[a-z]{2,}",                        // e-mail
+  DATE_RE.source,                                              // date or time
+].join("|"), "i");
 const KEYISH_RE = /\b(?=[A-Za-z0-9_\-]*\d)(?=[A-Za-z0-9_\-]*[A-Za-z])[A-Za-z0-9_\-]{24,}\b/;
 
 /** Hostnames and login names from the environment that must never appear in a shot. */
@@ -117,6 +123,8 @@ async function shotPanel(page, { chapter, id, locator, mask = [], pad = 8, clip 
     width: Math.min(vp.width - x, box.width + 2 * pad),
     height: Math.min(vp.height - y, box.height + 2 * pad),
   };
+  const hidden = await autoMaskSensitive(page, crop);
+  if (hidden) console.log(`shotPanel(${id}): painted over ${hidden} element(s) holding an address`);
   const selector = [...SHARED_MASK, ...mask].join(", ");
   const findings = await privacyScan(page, crop, selector);
   if (findings.length) {
@@ -136,6 +144,25 @@ async function shotPanel(page, { chapter, id, locator, mask = [], pad = 8, clip 
   return { file, crop };
 }
 
+/**
+ * Paint over leaf elements whose own text is an IP, URL or e-mail address by tagging them
+ * data-privacy="mask" (already in SHARED_MASK). Returns how many were tagged, so the
+ * caller can report what was hidden. The scan still runs on whatever remains visible.
+ */
+async function autoMaskSensitive(page, box) {
+  return page.evaluate(([src]) => {
+    const re = new RegExp(src, "i");
+    let count = 0;
+    document.querySelectorAll("body *").forEach((el) => {
+      if (el.children.length === 0 && re.test(el.textContent || "")) {
+        el.setAttribute("data-privacy", "mask");
+        count += 1;
+      }
+    });
+    return count;
+  }, [SENSITIVE_LEAF.source]);
+}
+
 /** Wait for the SPA to settle before a capture. */
 async function settle(page, ms = 1500) {
   const kit = require(path.join(path.resolve(process.env.SOAR_KIT_DIR), "lib", "soarKit.js"));
@@ -143,4 +170,4 @@ async function settle(page, ms = 1500) {
   await page.waitForTimeout(ms);
 }
 
-module.exports = { SHARED_MASK, privacyScan, shotPanel, settle, sensitiveTerms };
+module.exports = { SHARED_MASK, privacyScan, shotPanel, settle, sensitiveTerms, autoMaskSensitive };

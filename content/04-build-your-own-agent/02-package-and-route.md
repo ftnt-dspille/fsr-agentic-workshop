@@ -31,7 +31,7 @@ After import, check that the agent is active. Some builds import agents inactive
 
 Your first agent should not call an LLM. Make it return a fixed structured answer built from its input. That proves packaging, import, activation and a direct call.
 
-<!-- step: fsa04-01-hello-agent manual: authors and imports a lab agent bundle; agent run spends tokens -->
+<!-- step: fsa04-01-hello-agent manual: packages, imports and triggers a lab agent in the UI; no spec written yet (the hello agent makes no LLM call, so it spends no tokens) -->
 
 Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path. Send one input with the entity your `inputformat` declares.
 

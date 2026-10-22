@@ -4,8 +4,8 @@
 // fails closed: it refuses to run when it cannot read the token balance, when the
 // balance is under the floor, or when the balance cannot be parsed.
 //
-// The balance is read from System > System Configuration > FortiAI, the page
-// LIVE_PASS and the chapter 2 page name. The tokens spent by a spec are the balance
+// The balance is read from System > System Configuration > FortiAI: the sum of
+// "Remaining Monthly Tokens" and "Remaining Top-Up Tokens". The tokens spent by a spec are the balance
 // before minus the balance after; the proof report prints them per spec.
 const { test } = require("@playwright/test");
 
@@ -16,14 +16,20 @@ function spendEnabled() {
   return process.env.SPEND_AI === "1";
 }
 
-/** Parse a token count such as "412,350" or "412k" from the balance text. Returns null if absent. */
+/**
+ * Spendable tokens from the FortiAI page text: "Remaining Monthly Tokens" plus
+ * "Remaining Top-Up Tokens". Returns null when the monthly figure is missing, so a
+ * page change fails closed instead of reading as zero.
+ */
 function parseBalance(text) {
-  const m = /balance[^0-9]{0,40}([\d][\d,.]*)\s*(k|m)?/i.exec(text || "");
-  if (!m) return null;
-  const n = Number(m[1].replace(/,/g, ""));
-  if (!Number.isFinite(n)) return null;
-  const mult = m[2] === "k" || m[2] === "K" ? 1000 : m[2] === "m" || m[2] === "M" ? 1000000 : 1;
-  return Math.round(n * mult);
+  const grab = (label) => {
+    const m = new RegExp(label + "[\\s|:]*([\\d][\\d,]*)", "i").exec(text || "");
+    return m ? Number(m[1].replace(/,/g, "")) : null;
+  };
+  const monthly = grab("Remaining\\s+Monthly\\s+Tokens");
+  if (monthly === null || !Number.isFinite(monthly)) return null;
+  const topUp = grab("Remaining\\s+Top-Up\\s+Tokens") || 0;
+  return monthly + topUp;
 }
 
 /** Read the balance from the FortiAI page. Returns a number or null. */

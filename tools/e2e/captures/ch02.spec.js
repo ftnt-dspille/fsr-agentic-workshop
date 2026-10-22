@@ -49,10 +49,6 @@ test("02-agentic-foundations", async () => {
       locator: page.locator("body"),
       clip: { x: 0, y: 0, width: 1440, height: 900 },
       pad: 0,
-      mask: [".ui-grid-cell:nth-child(2)"],
-    }).catch((e) => {
-      // Recorded, not hidden: the page keeps its PNG until the scan passes.
-      test.info().annotations.push({ type: "capture-blocked", description: String(e.message) });
     });
 
     await test.step("fsa02-04-sop-compare", async () => {
