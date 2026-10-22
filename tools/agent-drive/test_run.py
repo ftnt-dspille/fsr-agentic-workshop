@@ -287,6 +287,15 @@ class ModelTests(unittest.TestCase):
             cmd = captured["cmd"]
             self.assertEqual(cmd[cmd.index("--model") + 1], "claude-opus-4-8")
 
+    def test_transcripts_are_kept_per_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(run, "TRANSCRIPTS", Path(tmp)):
+                run.save_transcript(self.a.pid, [{"type": "result"}], "claude-opus-4-8")
+                run.save_transcript(self.a.pid, [{"type": "result"}], "claude-sonnet-5-5")
+                names = sorted(str(p.relative_to(tmp)) for p in Path(tmp).rglob("*.jsonl"))
+        self.assertEqual(len(names), 2)
+        self.assertTrue(all(n.startswith(("claude-opus-4-8/", "claude-sonnet-5-5/")) for n in names))
+
     def test_plan_shows_the_model(self) -> None:
         import io
         import contextlib

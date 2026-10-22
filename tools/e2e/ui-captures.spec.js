@@ -27,7 +27,10 @@ test.describe(() => {
         logic: "AND",
         filters: [{ field: "name", operator: "like", value: "Agent Lab - beaconing%" }],
       });
-      const alert = (found["hydra:member"] || [])[0];
+      // Titles repeat across runs: capture the duplicate the agent wrote to, if any.
+      const alert = (found["hydra:member"] || []).find((a) =>
+        /verdict/i.test(a.description || "") && !/^Triaged automatically/.test(a.description || "")) ||
+        (found["hydra:member"] || [])[0];
       expect(alert, "stage the capstone alert first (chapter 10 spec or agent run)").toBeTruthy();
       // Only the agent's write-back is the page's picture. Until chapter 10's
       // prompt has written findings, the description is still the playbook's tag.
