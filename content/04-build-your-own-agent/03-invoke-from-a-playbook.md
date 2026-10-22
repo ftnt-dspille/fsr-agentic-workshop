@@ -66,7 +66,7 @@ If the connector has no agent action on your build, record that and stop at rout
 
 An upgrade can keep an agent's configuration but overwrite its code. Test that before you rely on a replaced agent.
 
-<!-- step: fsa04-06-replace-check manual: upgrades the agent and re-runs it to test its code; spends tokens -->
+<!-- step: fsa04-06-replace-check manual: re-imports the agent with replace and re-runs the playbook; the re-run may call FortiAI -->
 
 Re-import the agent with replace. Note its ID before and after. Check that its allowlist and agent configuration are still in place. Run the playbook again.
 
