@@ -154,9 +154,9 @@ In testing, the trace panel stalled after a burst of reads. If it hangs, wait a 
 | Trace panel never loads | A burst of trace reads stalled the service | Wait, reload, then ask for a restart if needed (NLV-03-07) |
 
 <!-- NLV verdicts (live box pass):
-  NLV-03-01: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-02: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
+  NLV-03-01: verified: the tab is named AI Investigation and the start button reads Begin AI-Powered Alert Investigation (one investigation run for the capture, on the chapter 8 alert)
+  NLV-03-02: partly: five hypotheses with Benign/False Positive/Suspicious/Malicious questions and a verdict per hypothesis; the one run returned only Inconclusive outcomes, so Confirmed and Ruled Out were not seen
+  NLV-03-03: partly: the verdict and summary are written to the alert record (AI Investigation Overview); severity stayed High and the status and owner were not compared against the audit trail
   NLV-03-04: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
   NLV-03-05: partly: a DEFAULT investigation SOP record exists; the no-source-data behavior was not run
   NLV-03-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
