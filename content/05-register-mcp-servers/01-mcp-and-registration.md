@@ -35,7 +35,7 @@ Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` 
 
 Type names may be case-sensitive. Try the lowercase form first, and check the list on your build (NLV-05-02).
 
-On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport and has no authentication field (NLV-05-02, NLV-05-03). The table above and the rule in section 3 describe the stored record. Check them against your build before you rely on them.
+On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value (NLV-05-02, NLV-05-03). Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record. Check the list of types against your build before you rely on it.
 
 The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity (NLV-05-11). Choose the type with that trade-off in mind.
 
@@ -83,7 +83,7 @@ The registration has four steps. Do not skip the first one.
 
 <!-- step: fsa05-01-validate-register manual: Connect MCP Server form with a live Test Connection to an external server; no spec yet -->
 
-Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. It has no authentication field, so this form cannot set one (NLV-05-03). Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
+Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki (NLV-05-03). Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
 <!-- capture: fsa05-01-mcp-servers-page -->
 ![fsa05-01-mcp-servers-page](fsa05-01-mcp-servers-page.png)
@@ -120,7 +120,7 @@ If the status route fails for every server after you save, the most likely cause
 <!-- NLV verdicts (live box pass):
   verified: NLV-05-01 (AI Configurations > MCP Servers; buttons are Connect MCP Server and Create MCP Server; corrected in this page).
   corrected: NLV-05-02 (the transport select offers only http on this build).
-  verified-absent: NLV-05-03 (no authentication field in the Connect form; the full auth type list could not be read from the UI).
+  corrected: NLV-05-03 (the Connect form shows a required auth_type select after transport=http; None is right for DeepWiki; the full type list is not yet read from the UI).
   partly: NLV-05-04 (Test Connection exists as the validate step; the persist route was not exercised).
   open: NLV-05-05, NLV-05-06 (need a row write and a status check), NLV-05-07 (headers, not run), NLV-05-08 (system connector restriction, not run), NLV-05-11 (fsr identity, not run), NLV-05-12 (transport list beyond http, not checked). -->
 
