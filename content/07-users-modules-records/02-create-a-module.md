@@ -12,33 +12,36 @@ Now a schema change: a custom module for lab assets. This is the step where veri
 Give your agent this prompt:
 
 ```text
-Create a custom module named agentlab_assets (label "Agent Lab Assets") with
-these fields: hostname (text, required), ip_address (text), owner (text),
-criticality (picklist using the Severity picklist), and notes (rich text).
-Publish the change, then prove the module works by describing it and creating
-one test record in it with hostname build-server-01, criticality High. Show me
-the record you created. Do not try to grant permissions on it: that is a UI
-step I will do myself.
+Use the provision_module workflow to create a custom module named
+agentlab_assets (label "Agent Lab Assets") with these fields: hostname (text,
+required), ip_address (text), owner (text), criticality (picklist using the
+Severity picklist), and notes (rich text). Grant the Full App Permissions role
+access to it, and use a probe record with hostname build-server-01,
+criticality High to prove the module works. Show me the record it created and
+what the workflow verified.
 ```
 
 <!-- step: fsa07-02-create-module -->
 
-Expect the phases below, in order:
+Expect one workflow call, `provision_module`, that runs the phases below in order. It is confirm-gated because it commits schema changes appliance-wide, so the agent must ask you before confirming.
 
-1. `create_module` with the field list - the module lands in **staging**. Do not pass `grant_to`: on 8.0 the grant runs through the bulk routes, which reject API-key auth, so the call fails.
-2. `publish` - confirm-gated (it commits every staged schema change appliance-wide). The agent must ask you before confirming.
-3. **Grant the role (UI, your step).** Open **Identity & Access Management** > **Roles**, choose **Full App Permissions**, and give it read, create, update and delete on `agentlab_assets`. The agent cannot do this with its tools.
-4. `describe_module` + `create_record` + `get_record` - the proof the schema is live and writable. Before this, the agent can confirm the key reads the module; a 403 here means step 3 is not done.
+1. **Create** the module with the field list - it lands in **staging**.
+2. **Check staging** - the workflow publishes only when nothing but your change is staged. If other changes are staged, or a publish is already running, it stops or waits and says so instead of shipping someone else's work.
+3. **Publish** and wait for the migration to finish. Right after a publish the box can reject record writes for a few seconds; the workflow retries through that window, so the agent does not need to sleep or poll.
+4. **Grant** the **Full App Permissions** role read, create, update and delete on `agentlab_assets`.
+5. **Verify** that the caller can read the module and create a record in it. The probe record comes back in the result.
+
+The agent can follow up with `describe_module` to show the five fields.
 
 {{% notice warning %}}
-`publish` ships ALL staged schema changes on the appliance, not just yours. On a shared lab box, check with your neighbors (or your instructor) before letting the agent confirm it.
+The workflow's publish ships ALL staged schema changes on the appliance, not just yours. On a shared lab box, check with your neighbors (or your instructor) before letting the agent confirm it.
 {{% /notice %}}
 
 ## 2. What success looks like
 
-- `publish` reports success after a minute or two of polling.
+- The workflow reports the publish finished and each phase it verified; no manual waiting.
 - `describe_module` lists your five fields with the right types, and the test record comes back with `hostname: build-server-01` and criticality resolved to the High picklist IRI.
-- The key can read `agentlab_assets` after the role grant (the spec checks this).
+- The key can read `agentlab_assets` after the role grant (the workflow and the spec both check this).
 
 **Verify in the UI:** the new module appears in the left navigation (you may need to reload the browser). Open it; the test record is there.
 
@@ -49,37 +52,8 @@ Expect the phases below, in order:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Record create returns 403 after publish | The role has no permission on the new module | Run the sequence in order: create_module, then publish, then grant the role (Identity & Access Management > Roles > Full App Permissions) read, create, update and delete on the module. Check that the key reads it before you create records. `grant_to` does not work with an API key on 8.0 (the bulk routes reject API keys), so the grant is a UI step |
-| Module is not visible to the key after publish | The module was staged but never published | `publish` ships every staged change. Check `describe_module` after it; if it reports the module as missing, publish again and wait a minute |
-| Publish times out | Busy box; publishes poll a job | Ask the agent to retry publish; check System Configuration > Publish status in the UI |
+| Record create returns 403 after publish | The role grant did not apply | Ask the agent to rerun the workflow with the role named, or grant it in the UI: Identity & Access Management > Roles > Full App Permissions, read, create, update and delete on the module |
+| Module is not visible to the key after publish | The workflow stopped before publishing because other changes were staged | Read its report, clear or agree on the other staged changes, then rerun it |
+| Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Delete the module (confirm-gated) and recreate; the field spec must name the picklist |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`02-create-a-module#1`** (Sonnet run, sanitized)
-
-![07-users-modules-records/02-create-a-module#1](agent-run-02-create-a-module-1.png)
-
-```text
-  > create_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "plural": ...
-  > describe_module {"module": "agentlab_assets"}
-  > list_modules {}
-  > publish {}
-  > publish {"confirm": true}
-  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
-  > Bash {"command": "sleep 60", "description": "Wait for publish to finish"}
-  > describe_module {"module": "agentlab_assets"}
-  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
-  > Monitor {"command": "sleep 45; echo done", "description": "Wait for publish t...
-  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
-  > Monitor {"command": "sleep 90; echo done", "description": "Wait for publish t...
-  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
-  > get_record {"module": "agentlab_assets", "ref": "8a9a92ad-1906-4574-980f-793cce8...
-```
-
-</details>
-
-<!-- agent-drive:end -->

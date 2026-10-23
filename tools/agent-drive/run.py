@@ -78,7 +78,8 @@ MANIFEST: dict[str, dict] = {
         "effect": ("07-users-modules-records.spec.js", ["fsa07-01-create-user"]),
     },
     "07-users-modules-records/02-create-a-module#1": {
-        "calls": ["create_module", "publish", "describe_module"], "confirm_ok": ["publish"],
+        "calls": ["provision_module"], "confirm_ok": ["provision_module"],
+        "forbid": ["create_module", "publish"],
         "answer": ["build-server-01"],
         "effect": ("07-users-modules-records.spec.js", ["fsa07-02-create-module"]),
     },
