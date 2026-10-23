@@ -80,7 +80,13 @@ async function privacyScan(page, box, maskSelector) {
       const r = range.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       const hit = r.right > b.x && r.left < b.x + b.width && r.bottom > b.y && r.top < b.y + b.height;
-      if (hit) out.push(n.nodeValue.trim());
+      if (!hit) continue;
+      // Text of the list page hidden under a detail panel is not in the pixels; skip it.
+      const cx = Math.min(Math.max(r.left + r.width / 2, 0), window.innerWidth - 1);
+      const cy = Math.min(Math.max(r.top + r.height / 2, 0), window.innerHeight - 1);
+      const top = document.elementFromPoint(cx, cy);
+      if (top && !(el.contains(top) || top.contains(el))) continue;
+      out.push(n.nodeValue.trim());
     }
     return out;
   }, [box, maskSelector]);
@@ -150,11 +156,22 @@ async function shotPanel(page, { chapter, id, locator, mask = [], pad = 8, clip 
  * caller can report what was hidden. The scan still runs on whatever remains visible.
  */
 async function autoMaskSensitive(page, box) {
-  return page.evaluate(([src]) => {
+  return page.evaluate(([src, box]) => {
     const re = new RegExp(src, "i");
     let count = 0;
+    // Only elements a reader can see in the crop. Rows of the list page that sit
+    // underneath a detail panel stay in the DOM; masking them paints bars over the panel.
+    const shown = (el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return false;
+      if (r.right < box.x || r.left > box.x + box.width || r.bottom < box.y || r.top > box.y + box.height) return false;
+      const cx = Math.min(Math.max(r.left + r.width / 2, 0), window.innerWidth - 1);
+      const cy = Math.min(Math.max(r.top + r.height / 2, 0), window.innerHeight - 1);
+      const top = document.elementFromPoint(cx, cy);
+      return !!top && (el.contains(top) || top.contains(el));
+    };
     document.querySelectorAll("body *").forEach((el) => {
-      if (el.children.length === 0 && re.test(el.textContent || "")) {
+      if (el.children.length === 0 && re.test(el.textContent || "") && shown(el)) {
         el.setAttribute("data-privacy", "mask");
         count += 1;
       }
@@ -167,7 +184,7 @@ async function autoMaskSensitive(page, box) {
       }
     });
     return count;
-  }, [SENSITIVE_LEAF.source]);
+  }, [SENSITIVE_LEAF.source, box]);
 }
 
 /** Wait for the SPA to settle before a capture. */

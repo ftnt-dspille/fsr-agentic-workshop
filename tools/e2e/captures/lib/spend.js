@@ -36,7 +36,9 @@ function parseBalance(text) {
 async function readBalance(session) {
   const { base, page } = session;
   await page.goto(`${base}/system/system-configuration/ai-features-setup`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(4000);
+  // The page is slow to render the figures on a busy box; wait for the number, not a fixed delay.
+  await page.waitForFunction(() => /Remaining\s+Monthly\s+Tokens[\s|:]*\d/i.test(document.body.innerText), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(1000);
   const text = await page.evaluate(() => document.body.innerText);
   return parseBalance(text);
 }

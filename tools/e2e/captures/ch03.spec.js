@@ -44,9 +44,78 @@ test("03-investigation-insights", async ({ playwright }) => {
       locator: page.locator("#view-panel-content"),
       pad: 0,
     });
+
+    // Same result, two more shots: no second investigation. The hypothesis graph, then
+    // the AI fields the investigation wrote onto the Alert Details tab.
+    await shotPanel(page, {
+      chapter: "03-investigation-insights",
+      id: "fsa03-02-hypotheses",
+      locator: page.locator("#view-panel-content svg:has(g#Hypo_1)"),
+      pad: 8,
+    });
+    await alertDetail.openTab(page, "Alert Details");
+    // Next Steps quotes the case id; hide any leaf that holds a record id.
+    await page.evaluate(() => {
+      const idRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      for (const el of document.querySelectorAll("#view-panel-content li, #view-panel-content p, #view-panel-content span")) {
+        if (idRe.test(el.textContent || "")) el.setAttribute("data-privacy", "mask");
+      }
+    });
+    await shotPanel(page, {
+      chapter: "03-investigation-insights",
+      id: "fsa03-03-alert-ai-fields",
+      locator: page.locator("#view-panel-content").getByText("AI Investigation Overview", { exact: true }).first()
+        .locator("xpath=ancestor::*[self::div][3]"),
+      pad: 4,
+    });
   } finally {
     await reportSpend(s, before);
     await s.close();
     await api.dispose();
+  }
+});
+
+// One paid insight run feeds both insight captures. The template fills the intent,
+// chain of thought and plan without spending; only Execute spends. The insight is
+// never saved, so nothing is left on the box.
+test("03-ai-insights", async () => {
+  test.setTimeout(20 * 60 * 1000);
+  const s = await openSession();
+  const page = s.page;
+  let before = null;
+  try {
+    before = await requireAiSpend(s);
+    await alertDetail.openModuleList(page, s.base, "alerts");
+    await page.evaluate(() => {
+      const a = [...document.querySelectorAll("a")].find((x) => /^AI Insights/.test((x.innerText || "").trim()) && /dashboard/.test(x.getAttribute("href") || ""));
+      if (!a) throw new Error("no AI Insights entry in the navigation");
+      a.click();
+    });
+    await page.getByRole("button", { name: /Add Insight/ }).first().click();
+    await page.getByText("High Risk Active Alerts", { exact: true }).first().click();
+    const modal = page.locator(".edit-insight-modal");
+    await modal.locator("#generatePlan").waitFor({ timeout: 60000 });
+    await modal.getByText("Retrieve Active Alerts").first().waitFor({ timeout: 60000 });
+    await modal.locator("#insightSocRoles").selectOption({ label: "SOC Manager" });
+    await settle(page, 1500);
+    await shotPanel(page, {
+      chapter: "03-investigation-insights",
+      id: "fsa03-05-insight-plan",
+      locator: modal,
+      pad: 0,
+    });
+
+    await modal.locator("#executeButton").click({ timeout: 60000 });
+    await expect(modal.getByText("No plan has been executed to preview")).toHaveCount(0, { timeout: 8 * 60 * 1000 });
+    await settle(page, 8000);
+    await shotPanel(page, {
+      chapter: "03-investigation-insights",
+      id: "fsa03-06-insight-card",
+      locator: modal,
+      pad: 0,
+    });
+  } finally {
+    await reportSpend(s, before);
+    await s.close();
   }
 });

@@ -3,8 +3,7 @@
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
 fsa03-04-trace-steps          # FortiAI run needed; the 8.0 trace view is not located yet (page claim unverified)
-fsa03-05-insight-plan         # FortiAI insight run needed (spends tokens)
-fsa03-06-insight-card         # FortiAI insight run needed (spends tokens)
+fsa03-06-insight-card         # insight Execute produced no result preview within the cap; spec is written, needs a rerun (spends tokens)
 fsa03-07-verdict-dashboard    # dashboard built by hand (fsa03-10) over FortiAI verdicts; no spec yet
 fsa04-01-agent-detail         # lab agent import and run needed (FortiAI spend); AI spec gate not run
 fsa04-02-tool-list-record     # lab agent import needed (chapter 4); no spec yet
