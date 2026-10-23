@@ -295,16 +295,18 @@ def select(prompts: list[Prompt], results: list[dict], box: str, *, model: str =
 
 # -- box identity preflight ---------------------------------------------------
 def fortisoar_lab_server() -> dict:
+    """The toolkit's MCP server (fsr-agentic-toolkit mcp), found beside FSR_PYTHON or on PATH."""
     py = os.environ.get("FSR_PYTHON")
     exe = None
     if py:
-        cand = Path(py).parent / "pyfsr-mcp"
+        cand = Path(py).parent / "fsr-agentic-toolkit"
         if cand.exists():
             exe = str(cand)
-    exe = exe or shutil.which("pyfsr-mcp")
-    server = {"command": exe} if exe else {"command": "uvx", "args": ["--from", "pyfsr[mcp]", "pyfsr-mcp"]}
+    exe = exe or shutil.which("fsr-agentic-toolkit")
+    server = ({"command": exe, "args": ["mcp"]} if exe else
+              {"command": "uvx", "args": ["--from", "fsr-agentic-toolkit", "fsr-agentic-toolkit", "mcp"]})
     server["env"] = {
-        # pyfsr-mcp prefers ~/.pyfsr/instances.toml (its default alias can be another
+        # the server prefers ~/.pyfsr/instances.toml (its default alias can be another
         # box). Point it at a path that does not exist so it uses the env file's box.
         "PYFSR_INSTANCES": str(WORK / "no-instances.toml"),
         "FSR_BASE_URL": os.environ["FSR_BASE_URL"],

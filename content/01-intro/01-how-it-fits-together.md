@@ -15,7 +15,7 @@ MCP (Model Context Protocol) is the plug standard between agents and tools. A se
 
 **Part 1 - inside FortiSOAR.** FortiSOAR 8.0 ships its own agentic layer: FortiAI agents run on the platform, reason with the LLM you configure, and reach the platform's own MCP servers (modules, playbooks, SOC tooling) plus any external MCP server you register. You drive all of this from the FortiSOAR UI.
 
-**Part 2 - outside FortiSOAR.** Your coding agent runs on your workstation and connects to the box through `pyfsr-mcp`, an MCP server from the open-source pyfsr SDK. It needs exactly two values: the box URL and an API key. The agent then has the full REST surface: records, modules, users, connectors, playbook authoring and runs.
+**Part 2 - outside FortiSOAR.** Your coding agent runs on your workstation and connects to the box through the `fsr-agentic-toolkit` MCP server, built on the open-source pyfsr SDK. It needs exactly two values: the box URL and an API key. The agent then has the full REST surface: records, modules, users, connectors, playbook authoring and runs.
 
 {{% notice note %}}
 Part 1 features run on the appliance and need AI features enabled plus an LLM configured (your instructor has usually done this). Part 2 needs only network reach to the box and an API key.

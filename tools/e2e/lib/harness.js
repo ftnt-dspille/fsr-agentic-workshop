@@ -91,29 +91,24 @@ async function apiPost(ctx, path, data) {
 }
 
 /**
- * Run one pyfsr agent tool (the same registry the MCP server serves) from a
- * spec, via python3. Proves the exact code path the workshop's agent uses.
- * Throws on a tool error envelope. Requires pyfsr installed for the interpreter
- * (FSR_PYTHON, default python3) and FSR_BASE_URL/FSR_API_KEY in the environment.
+ * Run one toolkit tool (the same registry the MCP server serves) from a spec,
+ * via the `fsr-agentic-toolkit call` CLI. Proves the exact code path the
+ * workshop's agent uses. Throws on a tool error envelope. The CLI is found
+ * beside FSR_PYTHON, else on PATH; FSR_BASE_URL/FSR_API_KEY come from the
+ * environment, and PYFSR_INSTANCES is pointed at a missing file so the box is
+ * the env file's, never a registry default.
  */
 function pyfsrTool(name, args) {
   const { execFileSync } = require("child_process");
-  const code =
-    "import json, sys\n" +
-    "from pyfsr.agent.tools import dispatch\n" +
-    "from pyfsr.config import EnvConfig\n" +
-    "client = EnvConfig.from_env().client()\n" +
-    "name, args = json.loads(sys.argv[1]), json.loads(sys.argv[2])\n" +
-    "out = dispatch(client, name, args)\n" +
-    "import dataclasses\n" +
-    "def _plain(o):\n" +
-    "    if dataclasses.is_dataclass(o): return dataclasses.asdict(o)\n" +
-    "    if hasattr(o, 'model_dump'): return o.model_dump()\n" +
-    "    if hasattr(o, '__dict__'): return vars(o)\n" +
-    "    return str(o)\n" +
-    "json.dump(out, sys.stdout, default=_plain)\n";
-  const stdout = execFileSync(process.env.FSR_PYTHON || "python3", ["-c", code, JSON.stringify(name), JSON.stringify(args)], {
+  const path = require("path");
+  const fs = require("fs");
+  const py = process.env.FSR_PYTHON;
+  const beside = py && py.includes(path.sep) ? path.join(path.dirname(py), "fsr-agentic-toolkit") : null;
+  const exe = beside && fs.existsSync(beside) ? beside : "fsr-agentic-toolkit";
+  const stdout = execFileSync(exe, ["call", "--json", name, JSON.stringify(args)], {
     encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+    env: { ...process.env, PYFSR_INSTANCES: path.join(__dirname, "no-instances.toml"), FSR_SUPPRESS_INSECURE_WARNINGS: "true" },
     timeout: 12 * 60 * 1000,
   });
   const result = JSON.parse(stdout);

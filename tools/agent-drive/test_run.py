@@ -104,7 +104,7 @@ class BehaviorTests(unittest.TestCase):
 
 class PreflightTests(unittest.TestCase):
     def test_server_ignores_the_instance_registry(self) -> None:
-        # Else pyfsr-mcp answers for its registry default box, not the env file's.
+        # Else the toolkit server answers for its registry default box, not the env file's.
         with mock.patch.dict(run.os.environ, {"FSR_BASE_URL": f"https://{BOX}", "FSR_API_KEY": "k"}):
             server = run.fortisoar_lab_server()
         self.assertIn("PYFSR_INSTANCES", server["env"])

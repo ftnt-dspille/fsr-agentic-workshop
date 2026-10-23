@@ -73,7 +73,7 @@ and is active.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| "pip install pyfsr[playbooks]" error | The MCP server's environment lacks the compile extra | Install it where pyfsr-mcp runs, then restart the agent |
+| "pip install pyfsr[playbooks]" error | The MCP server's environment lacks the compile extra | Reinstall `fsr-agentic-toolkit` where the MCP server runs, then restart the agent |
 | Compile error no_trigger | Missing the start_on_create step | The YAML needs exactly one trigger step per playbook |
 | Compile ok but publish fails | Collection name collision on the box | Rename the collection or ask the agent to list existing collections first |
 | Playbook exists but shows inactive | Push did not activate it | Ask the agent to verify and activate it, or toggle it in the UI |

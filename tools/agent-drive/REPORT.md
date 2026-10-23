@@ -147,3 +147,22 @@ Strict workaround grading stays: a rerun on the toolkit release is graded the sa
 ## Traces (8.0.1)
 
 BLOCKED. The fsr801-beta alias is in the real registry file; its API port refused connections. The ch03 page does not yet state that traces need 8.0.1 or later. Retry when an 8.0.1 box is up.
+
+## T5: rerun on the released toolkit (Sonnet, claude-sonnet-5-5)
+
+The lab MCP server is now `fsr-agentic-toolkit mcp` (toolkit 0.1.0, pyfsr 0.27). The e2e effect helper calls the
+toolkit CLI (`fsr-agentic-toolkit call --json`) because `pyfsr.agent` no longer exists. One run per prompt.
+
+| Prompt | Behavior | Box effect | Workaround-free |
+|---|---|---|---|
+| `07-users-modules-records/01-create-a-user#1` | pass | pass | yes (no Bash; earlier run used Bash for a password) |
+| `07-users-modules-records/02-create-a-module#1` | fail: workaround:Bash x2 | pass | no |
+| `08-playbook/01-author-and-publish#1` | pass | pass | yes (uses `playbook_yaml_reference`, no Skill or Bash) |
+
+07-02: toolkit `publish` still returns the 503 progress states ("Generating Models", "Clearing Cache") as `ok: true`
+without waiting, so `create_record` fails until the cache clears and the agent waits with Bash sleeps. The toolkit has
+`provision_module`, which waits out a publish in flight; the agent saw it but the page prompt steers it to
+`create_module` and `publish`. Open: make `publish` wait, or move the page to `provision_module`.
+
+Known gap: `fsr-agentic-toolkit init` cannot verify with an API key (auth probe unsupported); the page uses `--skip-verify`.
+`tools/terminal-shots/render.py` still imports `pyfsr.cli.agent_setup`, which is gone, so `fsa06-03-agent-init` cannot be re-rendered until it is ported.
