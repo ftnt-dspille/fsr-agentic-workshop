@@ -13,3 +13,4 @@ tools/agent-drive/.transcripts/
 tools/agent-drive/.work/
 tools/agent-drive/__pycache__/
 tools/agent-drive/.sessions.json
+tools/proof-report.md

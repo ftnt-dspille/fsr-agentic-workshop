@@ -32,7 +32,7 @@ Include one alert with no source data at all. You will use it in chapter 3 to sh
 
 Open the AI Configurations group of the left navigation and read what it shows. It holds MCP Servers, Prompts, Organizational Context and Insights. The agent catalog is not in this group; it is in the Content Hub (step 3).
 
-<!-- step: fsa02-01-ai-enabled manual -->
+<!-- step: fsa02-01-ai-enabled -->
 
 1. Look for the AI Configurations group in the left navigation.
 2. Confirm there is no "AI feature not enabled" banner. The enablement switch and the token balance are under **System** > **System Configuration** > **FortiAI**, not in the AI Configurations group (NLV-02-01).
@@ -52,7 +52,7 @@ Enabling AI features is an administrator task. If the banner appears, ask your i
 
 ## 3. Read the agent catalog
 
-<!-- step: fsa02-02-agent-catalog manual -->
+<!-- step: fsa02-02-agent-catalog manual: the catalog and its AI Agent filter are captured; reading each Triage and Insight agent LLM profile, MCP servers and masking setting is by hand -->
 
 Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Content Type. The catalog lists the shipped AI agents (23 on the build this page was checked against) (NLV-02-02). Filter by tag, then open one agent tagged `Triage` and one tagged `Insight`. For each, write down:
 
@@ -70,7 +70,7 @@ Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Conten
 
 ## 4. Inspect the MCP servers
 
-<!-- step: fsa02-03-mcp-servers manual -->
+<!-- step: fsa02-03-mcp-servers -->
 
 Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. The build this page was checked against lists five, all active and all on the HTTP transport:
 
@@ -92,7 +92,7 @@ If the names on your build differ, use what the list shows (NLV-02-04).
 
 ## 5. Compare an SOP with the planner
 
-<!-- step: fsa02-04-sop-compare manual -->
+<!-- step: fsa02-04-sop-compare -->
 
 Open the organizational context records for investigation SOPs. Find the `DEFAULT` SOP, and one SOP for an alert type. Read the question lists they contain.
 
@@ -107,7 +107,7 @@ If you cannot find the SOP records under the AI configuration area, check the li
 
 ## 6. Ask the assistant a read-only question
 
-<!-- step: fsa02-05-assistant-readonly manual -->
+<!-- step: fsa02-05-assistant-readonly manual: a FortiAI chat turn; spends tokens -->
 
 Open an alert you seeded in step 1. Use the AI Assistant on that alert and ask a question that only reads data, such as:
 

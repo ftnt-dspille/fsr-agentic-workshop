@@ -57,7 +57,7 @@ show me the result.
 
 **What success looks like:** `{"greeting": "Hello TEC Workshop from FortiSOAR"}` - produced by code your agent wrote, running inside FortiSOAR's connector runtime.
 
-**Verify in the UI:** **Automation** > **Connectors** now lists Agentlab Greeter v1.0.0 with a healthy configuration.
+**Verify in the UI:** **Connectors** now lists Agentlab Greeter v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
 
 <!-- capture: fsa09-05-greeter-installed -->
 ![fsa09-05-greeter-installed](fsa09-05-greeter-installed.png)

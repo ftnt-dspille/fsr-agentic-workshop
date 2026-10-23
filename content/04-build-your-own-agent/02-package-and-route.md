@@ -31,7 +31,7 @@ After import, check that the agent is active. Some builds import agents inactive
 
 Your first agent should not call an LLM. Make it return a fixed structured answer built from its input. That proves packaging, import, activation and a direct call.
 
-<!-- step: fsa04-01-hello-agent manual -->
+<!-- step: fsa04-01-hello-agent manual: packages, imports and triggers a lab agent in the UI; no spec written yet (the hello agent makes no LLM call, so it spends no tokens) -->
 
 Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path. Send one input with the entity your `inputformat` declares.
 
@@ -73,7 +73,7 @@ The nine default rows are:
 
 Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds (NLV-04-08).
 
-<!-- step: fsa04-02-tool-list-row manual -->
+<!-- step: fsa04-02-tool-list-row manual: edits the TOOL_LIST record by hand; needs the agent from fsa04-01 -->
 
 Open the `TOOL_LIST` record. Add one row for your agent. Its description should name the entity the agent needs, such as a host, and the kind of evidence it returns. Keep the nine defaults.
 
@@ -87,7 +87,7 @@ Open the `TOOL_LIST` record. Add one row for your agent. Its description should 
 
 ## 5. Check the route with a test investigation
 
-<!-- step: fsa04-03-route-check manual -->
+<!-- step: fsa04-03-route-check manual: checks the agent route with a FortiAI invocation; spends tokens -->
 
 Run an investigation on a seeded alert that has the entity your agent needs. When the run finishes, open its trace and find the question your row produced. Then find the call to your agent.
 

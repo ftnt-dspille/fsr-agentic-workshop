@@ -37,7 +37,7 @@ Build a playbook in the playbook designer. The trigger is up to you. A common sh
 4. A manual-input step before any change, so a person approves it.
 5. The change itself, only on the approved branch.
 
-<!-- step: fsa04-04-playbook-route-b manual -->
+<!-- step: fsa04-04-playbook-route-b manual: invokes the lab agent from a playbook; spends tokens -->
 
 Build the reasoning-only agent call through route B. Run the playbook against a seeded alert. Open the run and read the agent's returned fields.
 
@@ -53,7 +53,7 @@ Build the reasoning-only agent call through route B. Run the playbook against a 
 
 Once route A is available on your build, build the same call through the remote connector with a user login. Confirm the same branch works.
 
-<!-- step: fsa04-05-playbook-route-a manual -->
+<!-- step: fsa04-05-playbook-route-a manual: invokes the lab agent from a playbook; spends tokens -->
 
 **What success looks like**
 
@@ -66,7 +66,7 @@ If the connector has no agent action on your build, record that and stop at rout
 
 An upgrade can keep an agent's configuration but overwrite its code. Test that before you rely on a replaced agent.
 
-<!-- step: fsa04-06-replace-check manual -->
+<!-- step: fsa04-06-replace-check manual: re-imports the agent with replace and re-runs the playbook; the re-run may call FortiAI -->
 
 Re-import the agent with replace. Note its ID before and after. Check that its allowlist and agent configuration are still in place. Run the playbook again.
 

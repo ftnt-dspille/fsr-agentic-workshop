@@ -21,7 +21,7 @@ The box itself makes the MCP calls, so the URL must be reachable from the applia
 
 ## 2. Validate, then register
 
-<!-- step: fsa05-03-register-remote manual -->
+<!-- step: fsa05-03-register-remote manual: registers a remote server that the box must reach; no spec yet -->
 
 Registration is a validate-then-persist flow: validation performs the real MCP handshake and lists the server's tools without saving anything; only then do you persist the row.
 
@@ -36,7 +36,7 @@ If your build takes the registration over the API, the `authentication` field mu
 
 ## 3. Grant it to one agent with an allowlist
 
-<!-- step: fsa05-04-grant-allowlist manual -->
+<!-- step: fsa05-04-grant-allowlist manual: edits an agent allowlist; no spec yet and needs the agent from chapter 4 -->
 
 Pick one agent that can call tools. Add the server to that agent's allowlist and name only the read tools you want it to have. Save the agent configuration.
 
@@ -51,7 +51,7 @@ The allowlist behaves in three ways. Know them before you rely on it:
 
 ## 4. Prove it through the agent
 
-<!-- step: fsa05-05-agent-uses-remote manual -->
+<!-- step: fsa05-05-agent-uses-remote manual: an agent call through the remote server; spends tokens -->
 
 Ask the granted agent a question only the remote server can answer (for DeepWiki: "Using your tools, what does the modelcontextprotocol/python-sdk repository say FastMCP is called in v2?"). Then open the agent's trace.
 

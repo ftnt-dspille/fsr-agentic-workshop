@@ -64,7 +64,7 @@ and is active.
 
 <!-- step: fsa08-02-publish-playbook -->
 
-**Verify in the UI:** open **Automation** > **Playbooks**. The "Agent Lab" collection holds "Tag Agent Lab Alerts"; open it and check the canvas shows the three steps with the on-create trigger.
+**Verify in the UI:** open **Playbooks** in the left navigation. The "Agent Lab" collection holds "Tag Agent Lab Alerts"; open it and check the canvas shows the three steps with the on-create trigger.
 
 <!-- capture: fsa08-02-playbook-canvas -->
 ![fsa08-02-playbook-canvas](fsa08-02-playbook-canvas.png)

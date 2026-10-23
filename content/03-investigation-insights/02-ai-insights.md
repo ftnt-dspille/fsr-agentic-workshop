@@ -23,7 +23,7 @@ Insight agents are read-only. They have no write tools and no approval step, so 
 
 Open the AI Insights area from the AI navigation (NLV-03-10). Add a new insight. If a template is offered, pick one such as a high-risk alert review (NLV-03-11). Choose the role **SOC Manager**, or another role your build offers.
 
-<!-- step: fsa03-07-create-insight manual -->
+<!-- step: fsa03-07-create-insight manual: creates an AI insight that runs FortiAI; spends tokens -->
 
 Enter a question in plain language, for example:
 
@@ -38,7 +38,7 @@ Do not run it yet. Move to the next step.
 
 ## 3. Read the chain of thought and the plan
 
-<!-- step: fsa03-08-read-plan manual -->
+<!-- step: fsa03-08-read-plan manual: reads the plan of a FortiAI insight run; needs the run -->
 
 Read the chain of thought, then the plan. Check that the plan's steps match the question. If a step fetches data you did not ask for, change the question, not the plan.
 
@@ -51,7 +51,7 @@ Do not edit the chain of thought in this exercise. In testing, editing it did no
 
 ## 4. Run, save and schedule
 
-<!-- step: fsa03-09-schedule-insight manual -->
+<!-- step: fsa03-09-schedule-insight manual: schedules a FortiAI insight; spends tokens when it fires -->
 
 Run the insight. When the summary card appears, read the summary and the suggested actions. Save it. If you schedule it, pick a short interval such as weekly and note who the schedule runs as.
 

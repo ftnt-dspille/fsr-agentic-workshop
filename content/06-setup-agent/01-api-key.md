@@ -9,7 +9,7 @@ The agent authenticates to FortiSOAR with an API key. Create a dedicated one so 
 
 ## 1. Create the key
 
-<!-- step: fsa06-01-create-api-key manual -->
+<!-- step: fsa06-01-create-api-key manual: creates an access key in the UI; no spec yet -->
 
 1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
 2. Open **System** > **Identity & Access Management** > **Access Keys**, on the **API Key** tab. Some versions name the tab or menu differently.

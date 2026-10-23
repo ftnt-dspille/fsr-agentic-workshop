@@ -4,12 +4,16 @@
 Scans ``content/**/*.md`` for two marker forms::
 
     <!-- step: <id> -->            a step the reader performs (proved by a spec)
-    <!-- step: <id> manual -->     a step no spec proves (checked by a human)
+    <!-- step: <id> manual: <reason> -->  a step no spec proves (checked by a human);
+                                       the reason is required and says why it is manual
     <!-- capture: <id> -->         a screenshot the e2e harness writes
 
 Rules
 -----
-ERROR  bad-marker        malformed marker, or a flag other than ``manual``
+ERROR  bad-marker        malformed marker, or a flag other than ``manual: <reason>``
+ERROR  manual-no-reason  a ``manual`` step with no reason after the colon
+ERROR  pending-no-reason a tools/pending-captures.txt entry with no ``# reason``
+ERROR  capture-pending   (--strict only) a capture still listed in pending-captures.txt
 ERROR  duplicate-step    the same step id on more than one marker
 ERROR  duplicate-capture the same capture id on more than one marker
 ERROR  step-no-test      a non-manual step id with no ``test.step('<id>')`` in
@@ -23,11 +27,14 @@ ERROR  lab-credential    FSR_PASSWORD or FSR_API_KEY assigned a literal value
 WARN   stale-pending     a pending-captures entry that no capture marker uses
 
 Exit status is 0 when there are no errors (warnings do not fail), 1 otherwise.
+With --strict, every pending capture is also an error, so the gate can only pass
+once every capture PNG exists.
 
 Usage
 -----
     python3 tools/lint-steps.py            # lint the whole repo
     python3 tools/lint-steps.py --quiet    # print only findings, not the summary
+    python3 tools/lint-steps.py --strict   # also fail on pending captures
 """
 
 from __future__ import annotations
@@ -48,6 +55,7 @@ EN_DASH = "–"
 EM_DASH = "—"
 
 MARKER_RE = re.compile(r"<!--\s*(step|capture)\s*:(.*?)-->")
+MANUAL_RE = re.compile(r"^\s*(\S+)(?:\s+manual(?::\s*(.*?))?)?\s*$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
 ALLOWED_FLAGS = {"manual"}
 TEST_STEP_RE = re.compile(r"""test\.step\(\s*(['"`])(?P<id>[^'"`]+)\1""")
@@ -84,18 +92,21 @@ class Marker:
     kind: str  # "step" | "capture"
     ident: str
     flags: set[str]
+    reason: str
     path: Path
     line: int
 
 
-def read_pending() -> set[str]:
+def read_pending() -> dict[str, str]:
+    """Pending capture id -> reason (the text after '#'; empty when none)."""
     if not PENDING.exists():
-        return set()
-    out: set[str] = set()
+        return {}
+    out: dict[str, str] = {}
     for raw in PENDING.read_text(encoding="utf-8").splitlines():
-        entry = raw.split("#", 1)[0].strip()
-        if entry:
-            out.add(entry)
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        entry, _, reason = raw.partition("#")
+        out[entry.strip()] = reason.strip()
     return out
 
 
@@ -122,18 +133,32 @@ def parse_markers(path: Path, text: str, findings: list[Finding]) -> list[Marker
     for m in MARKER_RE.finditer(text):
         line = text.count("\n", 0, m.start()) + 1
         kind = m.group(1)
-        tokens = m.group(2).split()
-        if not tokens or not ID_RE.match(tokens[0]):
-            findings.append(Finding("error", "bad-marker", path, line,
-                                    f"{kind} marker has no valid id: {m.group(0).strip()}"))
+        body = m.group(2)
+        if kind == "capture":
+            tokens = body.split()
+            if len(tokens) != 1 or not ID_RE.match(tokens[0]):
+                findings.append(Finding("error", "bad-marker", path, line,
+                                        f"capture marker needs exactly one id: {m.group(0).strip()}"))
+                continue
+            markers.append(Marker(kind, tokens[0], set(), "", path, line))
             continue
-        flags = set(tokens[1:])
-        bad = flags - ALLOWED_FLAGS
-        if bad or (flags and kind == "capture"):
+        parsed = MANUAL_RE.match(body)
+        if not parsed or not ID_RE.match(parsed.group(1)):
             findings.append(Finding("error", "bad-marker", path, line,
-                                    f"unsupported flag(s) {sorted(bad or flags)} on {kind} marker"))
+                                    f"step marker has no valid id: {m.group(0).strip()}"))
             continue
-        markers.append(Marker(kind, tokens[0], flags, path, line))
+        ident, reason = parsed.group(1), (parsed.group(2) or "").strip()
+        is_manual = re.match(r"^\s*\S+\s+manual\b", body) is not None
+        if not is_manual and body.split()[1:]:
+            findings.append(Finding("error", "bad-marker", path, line,
+                                    f"unsupported flag on step marker: {m.group(0).strip()}"))
+            continue
+        if is_manual and not reason:
+            findings.append(Finding("error", "manual-no-reason", path, line,
+                                    f"manual step '{ident}' needs a reason: "
+                                    "<!-- step: id manual: why no spec proves it -->"))
+        flags = {"manual"} if is_manual else set()
+        markers.append(Marker(kind, ident, flags, reason, path, line))
     return markers
 
 
@@ -161,9 +186,10 @@ def check_lab_strings(path: Path, lines: list[str], findings: list[Finding]) -> 
                                         f"{m.group(1)} has a literal value; use <your-api-key>"))
 
 
-def run(quiet: bool) -> int:
+def run(quiet: bool, strict: bool = False) -> int:
     findings: list[Finding] = []
-    pending = read_pending()
+    pending_reasons = read_pending()
+    pending = set(pending_reasons)
     specs = spec_step_ids()
 
     all_markers: list[Marker] = []
@@ -195,8 +221,17 @@ def run(quiet: bool) -> int:
                                     f"step '{ident}' has no test.step('{ident}') in tools/e2e "
                                     f"(add the test or mark the step manual)"))
 
+    for ident, reason in pending_reasons.items():
+        if not reason:
+            findings.append(Finding("error", "pending-no-reason", PENDING, 0,
+                                    f"pending capture '{ident}' needs a '# reason' after it"))
+
     for ident, mk in captures.items():
         png = mk.path.parent / f"{ident}.png"
+        if strict and ident in pending:
+            findings.append(Finding("error", "capture-pending", mk.path, mk.line,
+                                    f"capture '{ident}' is still pending: {pending_reasons[ident] or 'no reason'}"))
+            continue
         if png.exists() or ident in pending:
             continue
         findings.append(Finding("error", "capture-missing", mk.path, mk.line,
@@ -225,8 +260,9 @@ def run(quiet: bool) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--quiet", action="store_true", help="omit the summary line")
+    ap.add_argument("--strict", action="store_true", help="also fail on pending captures")
     args = ap.parse_args(argv)
-    return run(args.quiet)
+    return run(args.quiet, args.strict)
 
 
 if __name__ == "__main__":
