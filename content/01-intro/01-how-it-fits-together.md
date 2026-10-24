@@ -26,7 +26,7 @@ If FortiSOAR is new to you, four words cover almost everything in this workshop.
 
 ## The two surfaces in this workshop
 
-**Part 1 - inside FortiSOAR.** FortiSOAR 8.0 ships its own agentic layer: FortiAI agents run on the platform, reason with the LLM you configure, and reach the platform's own MCP servers (modules, playbooks, SOC tooling) plus any external MCP server you register. You drive all of this from the FortiSOAR UI.
+**Part 1 - inside FortiSOAR.** FortiSOAR 8.0.1 ships its own agentic layer: FortiAI agents run on the platform, reason with the LLM you configure, and reach the platform's own MCP servers (modules, playbooks, SOC tooling) plus any external MCP server you register. You drive all of this from the FortiSOAR UI.
 
 **Part 2 - outside FortiSOAR.** Your coding agent runs on your workstation and connects to the box through the `fsr-agentic-toolkit` MCP server, built on the open-source pyfsr SDK. It needs exactly two values: the box URL and an API key. The agent then has the full REST surface (records, modules, users, connectors, playbook authoring and runs) plus the toolkit's seven higher-level workflows (orient, debug a run, build and repair playbooks, verify an effect, investigate an alert, provision a module) that let a general coding agent do SOC work competently. Part 2 is the agentic toolkit in practice.
 

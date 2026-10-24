@@ -78,7 +78,7 @@ FortiSOAR version the box runs, and how many modules it has.
 
 <!-- step: fsa06-04-whoami -->
 
-**What success looks like:** the agent reports your login id, the box version (8.0.x) and a module count around 40. On the box, nothing changed: whoami and list_modules are read-only.
+**What success looks like:** the agent reports your login id, the box version (8.0.1 or later) and a module count around 40. On the box, nothing changed: whoami and list_modules are read-only.
 
 <!-- capture: fsa06-04-whoami-claude -->
 ![fsa06-04-whoami-claude](fsa06-04-whoami-claude.png)

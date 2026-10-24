@@ -126,7 +126,7 @@ Do not start an investigation from a playbook through an HMAC-authenticated API 
 
 ## 7. Read the trace
 
-<!-- step: fsa03-06-trace-review manual: reads agent traces of a FortiAI run; no trace view located on 8.0 -->
+<!-- step: fsa03-06-trace-review manual: reads agent traces of a FortiAI run; the investigation trace view ships in 8.0.1 (absent on 8.0.0). Capture fsa03-04-trace-steps on 8.0.1. -->
 
 Open the trace for your run from section 2. Find the normalization step and the verdict step. Then find one tool call that returned evidence, and read what it returned.
 
@@ -139,7 +139,7 @@ Open the trace for your run from section 2. Find the normalization step and the 
 - You can say what the tool returned and whether the hypothesis used it.
 
 {{% notice note %}}
-In testing, the trace panel stalled after a burst of reads. If it hangs, wait a few minutes and reload. If it stays stuck, ask the box administrator to restart the AI services.
+If the trace panel hangs after a burst of reads, wait a few minutes and reload. If it stays stuck, ask the box administrator to restart the AI services.
 {{% /notice %}}
 
 ## Troubleshooting

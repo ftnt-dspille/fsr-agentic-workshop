@@ -13,7 +13,7 @@ This workshop shows you how to put an AI agent to work on FortiSOAR, two ways: t
 
 The workshop has two parts that share one idea: an agent is only as useful as the guardrails and verification around it.
 
-- **Part 1 - Out of the box (chapters 2-5):** the agentic AI capabilities that ship with FortiSOAR 8.0, driven from the FortiSOAR UI: the built-in investigation and insight agents, building your own FortiAI agent, and registering external MCP servers.
+- **Part 1 - Out of the box (chapters 2-5):** the agentic AI capabilities that ship with FortiSOAR 8.0.1, driven from the FortiSOAR UI: the built-in investigation and insight agents, building your own FortiAI agent, and registering external MCP servers.
 - **Part 2 - Do it yourself with the agentic toolkit (chapters 6-10):** point an external coding agent (Claude Code is the primary path; Codex and GitHub Copilot work too) at FortiSOAR and have it automate real SOC work. The agent reaches the platform through the `fsr-agentic-toolkit`, whose seven ready-made workflows (orient, debug a run, build and repair playbooks, verify an effect, investigate an alert, provision a module) make a general coding agent competent on FortiSOAR. You will create users, modules and records, author and publish a playbook, explore and build connectors, and run a full investigation that writes its findings back.
 
 **Do chapter 1 first.** Then:
@@ -26,12 +26,12 @@ The workshop has two parts that share one idea: an agent is only as useful as th
 
 For **Part 1** (in the FortiSOAR UI):
 
-- A FortiSOAR instance, version 8.0 or later, with an account that can create users, modules and playbooks.
+- A FortiSOAR instance, **version 8.0.1 or later**, with an account that can create users, modules and playbooks. Use 8.0.1 rather than 8.0.0: it adds investigation traceability and improved agentic features that several labs rely on.
 - AI features enabled on the instance and an LLM configured. An administrator (often your instructor) usually does this; chapter 2 shows you how to confirm it.
 
 For **Part 2** (on your own workstation), check each of these before chapter 6:
 
-- A FortiSOAR instance (8.0+), reachable over the network from your workstation, and a FortiSOAR API key for your account (you create a dedicated one in chapter 6).
+- A FortiSOAR instance (8.0.1 or later), reachable over the network from your workstation, and a FortiSOAR API key for your account (you create a dedicated one in chapter 6).
 - **Python 3.10 or later.** Check: `python3 --version`.
 - **A coding agent.** Claude Code is the primary path: install it and sign in with an Anthropic account that has credits or a subscription (Part 2 makes real model calls). Check: `claude --version`. Codex or GitHub Copilot also work if you prefer.
 - Basic familiarity with FortiSOAR alerts, records and playbooks. New to these? The glossary in chapter 11 defines every term this workshop uses.
