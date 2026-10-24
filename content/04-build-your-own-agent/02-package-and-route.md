@@ -25,7 +25,9 @@ Upload is gated by an **Advanced Development Settings** toggle that controls the
 
 Open the AI area and look for the agent upload control. If you do not see one, check the Advanced Development Settings toggle first. Upload the zip.
 
-If the upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file. Ask your administrator which import path your build supports for agent bundles.
+The control posts the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. If you have no upload control on your build, post it there directly from an API client. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`.
+
+If the upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file: the multipart field must be named `file`.
 
 {{% notice warning %}}
 A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again.
@@ -39,7 +41,23 @@ Your first agent should not call an LLM. Make it return a fixed structured answe
 
 <!-- step: fsa04-01-hello-agent manual: packages, imports and triggers a lab agent in the UI; no spec written yet (the hello agent makes no LLM call, so it spends no tokens) -->
 
-Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path: `POST /ai/agent/{agent_name}/trigger`, with your input as the JSON body (one input carrying the entity your `inputformat` declares). The call returns `202` with a `task_id`; poll `GET /ai/agent/result/{task_id}` for the result.
+Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path: `POST /ai/agents/{agent_name}/trigger` (note the plural `agents`), with your input as the JSON body: the object your `inputformat` declares, for the hello agent `{"entity": "host-01.example.com"}`. The call returns `202` with a `task_id` and a status:
+
+```json
+{"task_id": "7699779e-...", "status": "pending"}
+```
+
+Poll `GET /ai/agents/{task_id}/status` until the status reads `completed`, then read `GET /ai/agents/{task_id}/result`. For the hello agent the result is the dict its `act()` returned, plus `logs` and `phases`:
+
+```json
+{
+  "answer": "hello from the workshop agent for entity: host-01.example.com",
+  "confidence": "low",
+  "evidence": ["fixed response; this agent makes no LLM call"],
+  "logs": [],
+  "phases": []
+}
+```
 
 <!-- capture: fsa04-01-agent-detail -->
 ![fsa04-01-agent-detail](fsa04-01-agent-detail.png)
@@ -49,7 +67,7 @@ Open the agent's detail page. Trigger it directly, using the agent's trigger rou
 - The result is returned with `answer`, `confidence` and `evidence` keys.
 - The run shows as a task you can poll for its result.
 
-If your build has no trigger control on the detail page, call `POST /ai/agent/{agent_name}/trigger` directly, with the same JSON input, from an API client, and poll `GET /ai/agent/result/{task_id}`. Calling it needs execute and read rights on AI agents.
+If your build has no trigger control on the detail page, call `POST /ai/agents/{agent_name}/trigger` directly, with the same JSON input, from an API client, and poll `GET /ai/agents/{task_id}/result`. Calling it needs execute and read rights on AI agents.
 
 ## 4. Route an investigation to it
 
