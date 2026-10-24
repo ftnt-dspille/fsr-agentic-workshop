@@ -44,7 +44,7 @@ Drop `--check-only` to delete.
 
 ## Where to go next
 
-- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install fsr-agentic-toolkit`; pyfsr is at https://github.com/ftnt-dspille/pyfsr (its AGENTS.md is the operating guide this workshop follows)
+- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install fsr-agentic-toolkit==0.1.1` (pulls pyfsr 0.28.0+); pyfsr is at https://github.com/ftnt-dspille/pyfsr (its AGENTS.md is the operating guide this workshop follows)
 - **Playbook YAML authoring:** the fsr_playbooks package documentation (step types, triggers, Jinja)
 - **Connector development in depth:** the FortiSOAR Connectors workshop
 - **Part 1 features in depth:** the FortiSOAR 8.0 product documentation on Agentic AI

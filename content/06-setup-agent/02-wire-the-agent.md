@@ -14,10 +14,10 @@ Your agent talks to FortiSOAR through the `fsr-agentic-toolkit` MCP server, whic
 You need Python 3.10+ and [uv](https://docs.astral.sh/uv/) (or pip). Then:
 
 ```bash
-pip install fsr-agentic-toolkit
+pip install fsr-agentic-toolkit==0.1.1
 ```
 
-This also installs `pyfsr`, whose `pyfsr connector` commands you use in chapter 9.
+This also installs `pyfsr` (0.28.0 or newer), whose `pyfsr connector` commands you use in chapter 9.
 
 ## 2. Generate your agent's MCP config
 
