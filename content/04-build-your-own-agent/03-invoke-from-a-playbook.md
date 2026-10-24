@@ -12,7 +12,7 @@ A playbook is where an agent's answer turns into action, so the way the playbook
 | Route | How it calls the agent | Works for | Notes |
 |---|---|---|---|
 | A. Remote FortiSOAR connector, **Invoke AI Agent** operation | The connector's `invoke_agent` operation calls the agent with two parameters, `agent_name` and a JSON `body` (the agent's input), and returns its answer synchronously. It authenticates as the connector's configured login. | Reasoning agents and tool-using agents, with that login's rights | This is the supported route on 8.0.1. The shipped **Invoke Agent** sample playbook (tagged `#Remote FortiSOAR`) is a ready template. Configure the connection with a real user login, not an API key. |
-| B. Utility API call with HMAC | The "Make FortiSOAR API Call" step calls the agent's trigger route, authenticated with HMAC | Reasoning-only agents, with no MCP tools | An agent that needs MCP tools gets an authorization failure from the built-in servers. |
+| B. Utility API call with HMAC | The "Make FortiSOAR API Call" step calls the agent's trigger route, authenticated with HMAC | Reasoning-only agents, with no MCP tools | The trigger route is asynchronous: a single call returns a `task_id`, not the answer, so you poll for the result. An agent that needs MCP tools gets an authorization failure from the built-in servers. |
 | C. Starting a full alert investigation through the HMAC route | The same HMAC call, but it starts an investigation | Nothing reliable | The investigation runs without FortiSOAR tools, and the verdict is never written back. Do not use this route for investigations. |
 
 {{% notice warning %}}
@@ -27,47 +27,48 @@ Do not hand-roll an agent action by modifying a connector package. You do not ne
 
 Work through the routes in this order:
 
-1. Start with a **reasoning-only** agent. It needs no MCP tools, so route B will work for it. Run it through route B to see the limit clearly: route B cannot reach an agent that needs tools.
-2. Then call the same agent through route A, the Remote FortiSOAR connector's **Invoke AI Agent** operation.
+1. Build the call through **route A**, the Remote FortiSOAR connector's **Invoke AI Agent** operation. It returns the agent's answer in one step, so you can branch on it directly. This is the route most agents should use.
+2. For a **reasoning-only** agent that has no connector configured, try **route B**, the raw trigger API. Note its shape first: the trigger route is asynchronous, so a single call returns a `task_id`, not the answer, and you poll for the result. Route B also cannot reach an agent that needs MCP tools.
 3. Only after that, try an agent that uses a read-only tool, through route A.
 
-## 3. Build the playbook
+## 3. Build the playbook and branch on the answer
 
 Build a playbook in the playbook designer. The trigger is up to you. A common shape is:
 
-1. A trigger that starts on a record event.
-2. A call to your agent, through route B for the reasoning-only agent.
-3. A branch on the agent's `confidence` or `answer` value.
+1. A trigger that starts on a record event, or a manual trigger while you test.
+2. A call to your agent through route A, the **Invoke AI Agent** operation. It takes two parameters:
+   - `agent_name`: the agent's `name`, for example `workshop_hello_agent`.
+   - `body`: a JSON string of the agent's input, matching its `inputformat`, for example `{"entity": "host-01.example.com"}`. The shipped **Invoke Agent** sample calls `ioc-enrichment` with `{"question": "...", "ioc": [{"value": "203.0.113.42", "type": "IP Address"}]}`, so shape `body` to the agent you are calling.
+3. A **Decision** step that branches on the returned value. The operation returns the answer synchronously under `data`, so branch on `{{ vars.steps.<step name>.data.confidence }}` or `data.answer`.
 4. A manual-input step before any change, so a person approves it.
 5. The change itself, only on the approved branch.
 
-<!-- step: fsa04-04-playbook-route-b manual: invokes the lab agent from a playbook; spends tokens -->
+<!-- step: fsa04-04-playbook-branch manual: builds and runs a route-A playbook that calls the lab agent and branches on confidence; the hello agent makes no LLM call, so it spends no tokens -->
 
-Build the reasoning-only agent call through route B. Run the playbook against a seeded alert. Open the run and read the agent's returned fields.
+The playbook below calls the hello agent, then a Decision step routes on its `confidence`. Because the hello agent always returns `low`, the run takes the Low confidence branch (Needs Review) and skips Auto Close.
 
 <!-- capture: fsa04-03-playbook-branch -->
 ![fsa04-03-playbook-branch](fsa04-03-playbook-branch.png)
 
 **What success looks like**
 
-- The run completes and the agent's `answer` and `confidence` are visible in the step's output.
-- The branch takes the path you set for the confidence value you got.
+- The Invoke AI Agent step returns the agent's answer under `data`, with `status` `Success`.
+- The Decision step takes the branch that matches the `confidence` value the agent returned.
+- The connection is configured with a user login, not an API key.
 
-## 4. Repeat through route A
+## 4. Route B: the raw trigger API
 
-Now build the same call through the Remote FortiSOAR connector's **Invoke AI Agent** operation. Start from the shipped **Invoke Agent** sample playbook, or add an `invoke_agent` step yourself. It takes two parameters:
+Route B calls the agent's trigger route directly from a **Make FortiSOAR API Call** step, authenticated with HMAC. Use it only for a reasoning-only agent that has no connector configured, and that needs no MCP tools.
 
-- `agent_name`: the agent's `name`, for example `workshop_hello_agent`.
-- `body`: a JSON string of the agent's input, matching its `inputformat`, for example `{"entity": "host-01.example.com"}`. The sample playbook calls `ioc-enrichment` with `{"question": "...", "ioc": [{"value": "203.0.113.42", "type": "IP Address"}]}`, so shape `body` to the agent you are calling.
+The trigger route is **asynchronous**. A single call to `POST /ai/agents/{agent_name}/trigger` returns `202` with a `task_id`, not the agent's answer. To read the answer you add two more steps: poll `GET /ai/agents/{task_id}/status` until it reads `completed`, then read `GET /ai/agents/{task_id}/result`. An agent that needs MCP tools gets an authorization failure from the built-in servers through this route, so route A is the better default.
 
-The operation returns the agent's answer synchronously under `data`: `{"answer": ..., "confidence": ..., "evidence": [...]}`. Branch on `data.confidence` or `data.answer`.
-
-<!-- step: fsa04-05-playbook-route-a manual: invokes the lab agent from a playbook; spends tokens -->
+<!-- step: fsa04-05-playbook-route-b manual: invokes a reasoning-only agent through the raw trigger API; the hello agent spends no tokens -->
 
 **What success looks like**
 
-- The agent's answer comes back in the step's `data`, with `status` `Success`.
-- The connection is configured with a user login, not an API key.
+- The trigger step returns a `task_id`.
+- A later step reads the result once the status is `completed`.
+- An agent that needs tools fails here, which is the limit route B is meant to show.
 
 ## 5. Check the upgrade path
 
