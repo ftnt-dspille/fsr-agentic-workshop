@@ -12,9 +12,9 @@ An agent in FortiSOAR is a code bundle, not a point-and-click designer. You writ
 | File or folder | What it does | Rules |
 |---|---|---|
 | `info.json` | The manifest: name, label, the agent class, version, description, tags, publisher, category, minimum FortiSOAR version, input and output formats, and the configuration form | Required fields must be present. Publisher and category are required. |
-| `agent.py` | A class that subclasses the base agent and implements `act()` | Must call `self.initialize()` first. Its class name must be unique across installed agents. |
-| `prompt.yaml` | Prompts keyed by UUID. Each has a name, a system instruction, a user instruction and a response format. | Every prompt UUID your code uses must exist in this file. |
-| `config/memory.yaml` | The per-MCP-server tool allowlist, keyed by server UUID | The folder must be named exactly `config`. A missing file means every tool from every server is allowed. |
+| `agent.py` | A class that subclasses `BaseAgent` (`from agents.base_agent import BaseAgent`) and implements `act(self, input)` | Call `self.initialize()` before doing work. Its class name must be unique across installed agents and must match `agentclass` in the manifest. |
+| `prompt.yaml` | Prompts under a top-level `prompts:` key. Each has a name, a system instruction, a user instruction and a response format. | Every prompt UUID your code uses must exist in this file. |
+| `config/memory.yaml` | The tool allowlist (`allowed_tools`): a map of tool-source UUID to the list of operations the agent may call | The folder must be named exactly `config`. A missing file means every tool from every source is allowed. |
 | `images/` | Icons named in the manifest | A missing icon fails validation. |
 | `requirements.txt` (optional) | PyPI packages and pins only | Index URLs, find-links, git URLs, direct URLs and FTP are rejected at import. |
 
@@ -38,12 +38,12 @@ A manifest is short, and most import failures come from one missing or mistyped 
 Prompts that ship in code are re-imported on upgrade, and that reverts any edits you made to them. Keep your own prompts in your own bundle.
 
 {{% notice note %}}
-The exact names of the base class and helper methods depend on your build's agent SDK. Copy them from a shipped sample agent on your box rather than from memory, and confirm the import rules on your build.
+Read a real one before you write yours. FortiSOAR ships its agents as open source: see `github.com/fortinet-fortisoar/ai-agent-alert-investigation` and `ai-agent-ioc-masking`. On an 8.0.1 appliance they are installed under `/opt/fsr-ai/ai-agents/<name>_<version>/`. Each is a working example of the exact base class, the `act()` entrypoint, `prompt.yaml` and `config/memory.yaml`. Copy the structure from one of these rather than from memory.
 {{% /notice %}}
 
 ## 4. Read a sample manifest
 
-The shape below is illustrative. It shows the keys a manifest carries, with placeholder values. Check the exact fields against your build's packaging tool.
+The shape below is a real 8.0.1 manifest with team-specific values left as placeholders. Declare every key, even when its value is empty.
 
 ```json
 {
@@ -52,13 +52,16 @@ The shape below is illustrative. It shows the keys a manifest carries, with plac
   "agentclass": "WorkshopHelloAgent",
   "version": "1.0.0",
   "description": "<one sentence the router can match>",
-  "tags": ["Triage"],
   "publisher": "<your-team>",
-  "category": "<your-category>",
-  "fsrMinCompatibility": "<minimum-version>",
+  "cs_approved": false,
+  "cs_compatible": true,
+  "category": ["<your-category>"],
+  "tags": ["Triage"],
+  "fsrMinCompatibility": "8.0.1",
+  "icon_small_name": "small.png",
+  "icon_large_name": "large.png",
   "inputformat": {"entity": "<entity-name>"},
-  "outputformat": {},
-  "configuration": {}
+  "outputformat": {}
 }
 ```
 
