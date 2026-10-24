@@ -12,7 +12,7 @@ An agent in FortiSOAR is a code bundle, not a point-and-click designer. You writ
 | File or folder | What it does | Rules |
 |---|---|---|
 | `info.json` | The manifest: name, label, the agent class, version, description, tags, publisher, category, minimum FortiSOAR version, input and output formats, and the configuration form | Required fields must be present. Publisher and category are required. |
-| `agent.py` | A class that subclasses `BaseAgent` (`from agents.base_agent import BaseAgent`) and implements `act(self, input)` | Call `self.initialize()` before doing work. Its class name must be unique across installed agents and must match `agentclass` in the manifest. |
+| `agent.py` | A class that subclasses `BaseAgent` (`from agents.base_agent import BaseAgent`) and implements `act(self, input_data)` | Call `self.initialize()` before doing work. Its class name must be unique across installed agents and must match `agentclass` in the manifest. |
 | `prompt.yaml` | Prompts under a top-level `prompts:` key. Each has a name, a system instruction, a user instruction and a response format. | Every prompt UUID your code uses must exist in this file. |
 | `config/memory.yaml` | The tool allowlist (`allowed_tools`): a map of tool-source UUID to the list of operations the agent may call | The folder must be named exactly `config`. A missing file means every tool from every source is allowed. |
 | `images/` | Icons named in the manifest | A missing icon fails validation. |
@@ -43,7 +43,7 @@ Read a real one before you write yours. FortiSOAR ships its agents as open sourc
 
 ## 4. Read a sample manifest
 
-The shape below is a real 8.0.1 manifest with team-specific values left as placeholders. Declare every key, even when its value is empty.
+The manifest below is the one shipped in this workshop's example bundle. It validates on a real 8.0.1 appliance. Team-specific values are left as placeholders, but every key is present, because a key you omit is stored as null and a null can break list calls for every user. `category` and `help_online` are empty strings, `additional_information` an empty list: that is how you declare a key you have nothing for.
 
 ```json
 {
@@ -55,15 +55,22 @@ The shape below is a real 8.0.1 manifest with team-specific values left as place
   "publisher": "<your-team>",
   "cs_approved": false,
   "cs_compatible": true,
-  "category": ["<your-category>"],
-  "tags": ["Triage"],
-  "fsrMinCompatibility": "8.0.1",
+  "contributor": "",
+  "category": "",
   "icon_small_name": "small.png",
   "icon_large_name": "large.png",
+  "tags": ["Triage"],
+  "fsrMinCompatibility": "8.0.1",
+  "help_online": "",
+  "additional_information": [],
   "inputformat": {"entity": "<entity-name>"},
-  "outputformat": {}
+  "outputformat": {"answer": "", "confidence": "", "evidence": []}
 }
 ```
+
+{{% notice tip %}}
+The full example bundle is downloadable at [`/examples/workshop_hello_agent/`](/examples/workshop_hello_agent/): `info.json`, `agent.py`, `prompt.yaml` and `config/memory.yaml`, the exact files that pass the 8.0.1 validator. The next page packages and uploads it.
+{{% /notice %}}
 
 ## What success looks like
 

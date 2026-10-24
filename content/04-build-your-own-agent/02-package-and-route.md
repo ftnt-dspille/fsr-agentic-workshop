@@ -9,7 +9,13 @@ In this page you package a small agent, upload it, prove it runs, and then make 
 
 ## 1. Package the bundle
 
-Zip the bundle folder so that its top-level folder has the same name as the `name` in `info.json`. Validate the manifest before you upload it. A validator checks the required fields and the requirements file.
+Zip the bundle folder so that its top-level folder has the same name as the `name` in `info.json`. The validator on the box checks exactly that: the archive is a `.zip` or `.tgz`, it holds exactly one `info.json` and exactly one `agent.py`, the top folder equals the manifest `name` (`<name>/info.json`), the `version` reads `N.N.N`, and `requirements.txt`, if present, holds only plain PyPI names and pins. A config field named `default` or `name` is rejected.
+
+Start from the workshop example at [`/examples/workshop_hello_agent/`](/examples/workshop_hello_agent/), which passes this validator as shipped. Zip its folder:
+
+```bash
+zip -r workshop_hello_agent.zip workshop_hello_agent
+```
 
 {{% notice note %}}
 Upload is gated by an **Advanced Development Settings** toggle that controls the agent upload control. Ask your administrator to turn it on for the workshop user. The label and location may differ on your build.

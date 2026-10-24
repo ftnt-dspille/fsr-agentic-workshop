@@ -1,0 +1,20 @@
+{
+    "name": "workshop_hello_agent",
+    "label": "Workshop Hello Agent",
+    "agentclass": "WorkshopHelloAgent",
+    "version": "1.0.0",
+    "description": "Returns a fixed structured verdict for one host so a learner can prove packaging, upload, activation and a direct trigger without spending any tokens.",
+    "publisher": "Workshop",
+    "cs_approved": false,
+    "cs_compatible": true,
+    "contributor": "",
+    "category": "",
+    "icon_small_name": "small.png",
+    "icon_large_name": "large.png",
+    "tags": ["Triage"],
+    "fsrMinCompatibility": "8.0.1",
+    "help_online": "",
+    "additional_information": [],
+    "inputformat": {"entity": "Host to look up"},
+    "outputformat": {"answer": "", "confidence": "", "evidence": []}
+}
