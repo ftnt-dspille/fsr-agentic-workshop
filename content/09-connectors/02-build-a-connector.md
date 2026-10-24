@@ -66,7 +66,7 @@ show me the result.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| pyfsr: command not found | The CLI is in a venv the agent's shell does not see | `pip install fsr-agentic-toolkit==0.1.1` into the active environment |
+| pyfsr: command not found | The CLI is in a venv the agent's shell does not see | `pip install fsr-agentic-toolkit==0.1.2` into the active environment |
 | package fails: missing required file | A core file was renamed or deleted | info.json, connector.py, operations.py, requirements.txt must all exist |
 | Install succeeds, operation unknown | info.json and operations.py disagree | The operation name must match in both; repackage and redeploy (deploys replace) |
 | Healthcheck fails after configure | The scaffold's check requires the server field | Pass a server value when configuring |
