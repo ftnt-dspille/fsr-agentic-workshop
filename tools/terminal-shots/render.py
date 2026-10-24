@@ -34,6 +34,35 @@ SHOTS = {
     ),
 }
 
+#: shot id -> (chapter dir, [(kind, text)]). kind "cmd" is a bold-green prompt
+#: line, "out" is plain output. These are scrubbed transcripts of real output
+#: (no box, no secrets): host is a documentation name, the token and task id are
+#: placeholders. The values below are the real shape returned by an 8.0.1 box.
+TRANSCRIPTS = {
+    "fsa04-01-trigger-result": (
+        "04-build-your-own-agent",
+        [
+            ("cmd", "# Trigger the agent (note the plural /ai/agents), then poll for the result"),
+            ('cmd', 'curl -X POST "$FSR/ai/agents/workshop_hello_agent/trigger" \\'),
+            ('cmd', '  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\'),
+            ('cmd', "  -d '{\"entity\": \"host-01.example.com\"}'"),
+            ("out", '{"task_id": "7699779e-9c17-...", "status": "pending"}'),
+            ("out", ""),
+            ('cmd', 'curl "$FSR/ai/agents/$TASK/status" -H "Authorization: Bearer $TOKEN"'),
+            ("out", '{"task_id": "7699779e-9c17-...", "status": "completed"}'),
+            ("out", ""),
+            ('cmd', 'curl "$FSR/ai/agents/$TASK/result" -H "Authorization: Bearer $TOKEN"'),
+            ("out", "{"),
+            ("out", '  "answer": "hello from the workshop agent for entity: host-01.example.com",'),
+            ("out", '  "confidence": "low",'),
+            ("out", '  "evidence": ["fixed response; this agent makes no LLM call"],'),
+            ("out", '  "logs": [],'),
+            ("out", '  "phases": []'),
+            ("out", "}"),
+        ],
+    ),
+}
+
 
 def fake_verify(args):  # noqa: ANN001 - mirrors agent_setup._verify
     return {"loginid": "analyst", "email": "analyst@example.com"}
@@ -56,6 +85,21 @@ def render(shot: str, argv: list[str]) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     svg = OUT / f"{shot}.svg"
     svg.write_text(console.export_svg(title="pyfsr"))
+    return svg
+
+
+def render_transcript(shot: str, lines: list[tuple[str, str]]) -> Path:
+    from rich.console import Console
+
+    console = Console(record=True, width=100, file=io.StringIO())
+    for kind, text in lines:
+        if kind == "cmd":
+            console.print(f"$ {text}", style="bold green")
+        else:
+            console.print(text, highlight=False)
+    OUT.mkdir(parents=True, exist_ok=True)
+    svg = OUT / f"{shot}.svg"
+    svg.write_text(console.export_svg(title="agent trigger"))
     return svg
 
 
@@ -103,8 +147,12 @@ def main_cli() -> int:
     ap.add_argument("--png", action="store_true", help="also convert into the page bundles")
     args = ap.parse_args()
     missing_converter = False
-    for shot, (chapter, argv) in SHOTS.items():
-        svg = render(shot, argv)
+    rendered = [(shot, chapter, render(shot, argv)) for shot, (chapter, argv) in SHOTS.items()]
+    rendered += [
+        (shot, chapter, render_transcript(shot, lines))
+        for shot, (chapter, lines) in TRANSCRIPTS.items()
+    ]
+    for shot, chapter, svg in rendered:
         print(f"wrote {svg}")
         if args.png:
             png = REPO_ROOT / "content" / chapter / f"{shot}.png"

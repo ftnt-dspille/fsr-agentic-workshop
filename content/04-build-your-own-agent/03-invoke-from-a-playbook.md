@@ -19,6 +19,10 @@ A playbook is where an agent's answer turns into action, so the way the playbook
 Do not hand-roll an agent action by modifying a connector package. You do not need to: the stock Remote FortiSOAR connector already ships the **Invoke AI Agent** (`invoke_agent`) operation. A modified package is unsupported and can break on upgrade. Use route A (the stock operation) for most agents, and route B for a reasoning-only agent with no connector configured.
 {{% /notice %}}
 
+{{% notice note %}}
+**What about the chat assistant?** The FortiAI chat answers by calling its own tools; it has no "run agent X" control, so typing your agent's name into the chat does not invoke it. The chat reaches agents only indirectly: in plan mode it hands the request to the orchestrator, which plans and runs installed agents and pauses for approval on writes; and an alert investigation routes questions to `Triage`-tagged agents through the tool table (previous page). To invoke *your specific* agent on demand, use a playbook (this page) or the trigger API, not the chat box.
+{{% /notice %}}
+
 ## 2. Follow the teaching path
 
 Work through the routes in this order:

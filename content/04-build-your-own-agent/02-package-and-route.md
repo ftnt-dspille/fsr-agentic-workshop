@@ -59,6 +59,11 @@ Poll `GET /ai/agents/{task_id}/status` until the status reads `completed`, then 
 }
 ```
 
+The trigger, poll and result for the hello agent look like this (token, host and task id are placeholders):
+
+<!-- capture: fsa04-01-trigger-result -->
+![fsa04-01-trigger-result](fsa04-01-trigger-result.png)
+
 <!-- capture: fsa04-01-agent-detail -->
 ![fsa04-01-agent-detail](fsa04-01-agent-detail.png)
 
