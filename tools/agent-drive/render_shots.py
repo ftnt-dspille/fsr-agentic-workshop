@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Render one terminal-style PNG per agent-drive prompt from its saved transcript.
 
-Input: the Sonnet transcripts (tools/agent-drive/.transcripts/<prompt>.jsonl, the latest
-run per prompt). Output: content/<chapter>/agent-run-<n>.png, and a collapsed
-"What the agent did" block appended to each chapter page (between markers, so reruns
-replace it).
+Input: the per-model transcripts run.py writes (tools/agent-drive/.transcripts/<model>/<prompt>.jsonl,
+the latest run per prompt), resolved through run.transcript_path so this never drifts
+from where run.py saves them. Defaults to the baseline model (run.DEFAULT_MODEL);
+--model picks another. Falls back to the legacy top-level .transcripts/<prompt>.jsonl
+for transcripts saved before the per-model layout. Output: content/<chapter>/agent-run-<n>.png,
+and a collapsed "What the agent did" block appended to each chapter page (between
+markers, so reruns replace it).
 
 Shows: the prompt, the tool calls (name and short args), and the trimmed final answer.
 Scrubbed: local paths, IPs (except RFC 5737 documentation space), dates and times,
@@ -16,6 +19,7 @@ Run: ~/PycharmProjects/pyfsr/.venv/bin/python tools/agent-drive/render_shots.py
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import io
 import json
@@ -108,10 +112,19 @@ def render_png(pid: str, prompt_text: str, calls: list[str], answer: str, out: P
     svg.unlink()
 
 
-def chapter_block(entries: list[tuple[str, str, list[str], str]]) -> str:
+def model_label(model: str) -> str:
+    """A short, human label for the run tag (e.g. claude-sonnet-5-5 -> Sonnet)."""
+    for key, label in (("sonnet", "Sonnet"), ("opus", "Opus"), ("haiku", "Haiku"), ("fable", "Fable")):
+        if key in model.lower():
+            return label
+    return model
+
+
+def chapter_block(entries: list[tuple[str, str, list[str], str]], model: str) -> str:
+    label = model_label(model)
     parts = [MARK_BEGIN, "", "<details><summary>What the agent did</summary>", ""]
     for pid, png, calls, answer in entries:
-        parts.append(f"**`{pid.split('/')[-1]}`** (Sonnet run, sanitized)")
+        parts.append(f"**`{pid.split('/')[-1]}`** ({label} run, sanitized)")
         parts.append("")
         parts.append(f"![{pid}]({png})")
         parts.append("")
@@ -123,12 +136,50 @@ def chapter_block(entries: list[tuple[str, str, list[str], str]]) -> str:
     return "\n".join(parts)
 
 
-def main() -> int:
+def _tool_use_count(path: Path) -> int:
+    """How many tool_use blocks a transcript holds -- 0 for a stub (a bare result
+    line from a blocked/continuation run, which must not be rendered over a real run)."""
+    n = 0
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        for b in (ev.get("message") or {}).get("content") or []:
+            if isinstance(b, dict) and b.get("type") == "tool_use":
+                n += 1
+    return n
+
+
+def resolve_transcript(pid: str, model: str) -> Path | None:
+    """The transcript to render for a prompt. Prefer the model's own file (where
+    run.py now writes), but a stub there (no tool calls, e.g. a blocked run) must
+    not win over a real legacy top-level transcript saved before the per-model
+    layout. So: the model file when it has tool calls, else legacy when it exists,
+    else whichever file exists at all, else None."""
+    f = run.transcript_path(pid, model)
+    legacy = TRANSCRIPTS / (pid.replace("/", "__", 1) + ".jsonl")
+    if f.exists() and _tool_use_count(f) > 0:
+        return f
+    if legacy.exists():
+        return legacy
+    return f if f.exists() else None
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Render agent-drive transcripts to PNGs + chapter blocks.")
+    ap.add_argument("--model", default=run.DEFAULT_MODEL,
+                    help=f"which model's transcripts to render (default {run.DEFAULT_MODEL})")
+    args = ap.parse_args(argv)
+    model = args.model
+
     by_page: dict[Path, list] = {}
     for n, p in enumerate(run.all_prompts(), 1):
-        f = TRANSCRIPTS / (p.pid.replace("/", "__", 1) + ".jsonl")
-        if not f.exists():
-            print(f"skip {p.pid}: no transcript")
+        f = resolve_transcript(p.pid, model)
+        if f is None:
+            print(f"skip {p.pid}: no transcript for model {model}")
             continue
         events = [json.loads(line) for line in f.read_text().splitlines() if line.strip()]
         calls, answer = transcript_lines(events)
@@ -141,7 +192,7 @@ def main() -> int:
         text = page.read_text()
         if MARK_BEGIN in text:
             text = re.sub(re.escape(MARK_BEGIN) + r".*?" + re.escape(MARK_END) + r"\n?", "", text, flags=re.S)
-        page.write_text(text.rstrip() + "\n\n" + chapter_block(entries))
+        page.write_text(text.rstrip() + "\n\n" + chapter_block(entries, model))
         print(f"updated {page.relative_to(REPO)}")
     return 0
 

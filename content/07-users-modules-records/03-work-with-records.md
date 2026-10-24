@@ -82,20 +82,10 @@ record's uuid.
 ![07-users-modules-records/03-work-with-records#2](agent-run-03-work-with-records-2.png)
 
 ```text
-  > search_records {"module": "assets", "term": "db-server-01", "limit": 5}
-  > list_modules {}
-  > query_records {"module": "assets", "filters": [{"field": "name", "operator": "like"...
-  > search_records {"module": "alerts", "term": "db-server-01", "limit": 5}
   > search_records {"module": "agentlab_assets", "term": "db-server-01", "limit": 5}
-  > search_records {"module": "appliances", "term": "db-server-01", "limit": 5}
-  > search_records {"module": "incidents", "term": "db-server-01", "limit": 5}
-  > search_records {"module": "events", "term": "db-server-01", "limit": 5}
-  > query_records {"module": "assets", "limit": 10}
-  > query_records {"module": "assets", "filters": [{"field": "name", "operator": "like"...
-  > query_records {"module": "assets", "limit": 20, "fields": ["name"], "sort": [{"fiel...
-  > search_records {"module": "indicators", "term": "db-server-01", "limit": 5}
-  > search_records {"module": "asset_resources", "term": "db-server-01", "limit": 5}
-  > search_records {"module": "global_visibility_data", "term": "db-server-01", "limit":...
+  > query_records {"module": "agentlab_assets", "limit": 20, "summary": false}
+  > query_records {"module": "agentlab_assets", "filters": [{"field": "hostname", "oper...
+  > record_lifecycle {"entity_uuid": "8edfe9f0-22a6-42ce-863e-951e2136fdfa"}
 ```
 
 </details>

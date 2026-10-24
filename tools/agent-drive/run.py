@@ -507,12 +507,19 @@ def check_effect(pid: str) -> list[str]:
     return [] if proc.returncode == 0 else [f"effect:{steps[0]}"]
 
 
-def save_transcript(pid: str, events: list[dict], model: str = DEFAULT_MODEL) -> None:
-    # One folder per model, so a later run never overwrites another model's transcripts.
+def transcript_path(pid: str, model: str = DEFAULT_MODEL) -> Path:
+    """Where a prompt's transcript lives: one folder per model so a later run
+    never overwrites another model's transcripts. The single source of truth for
+    this layout; render_shots.py resolves transcripts through it."""
     folder = TRANSCRIPTS / re.sub(r"[^A-Za-z0-9_.-]", "_", model)
-    folder.mkdir(parents=True, exist_ok=True)
     name = re.sub(r"[^A-Za-z0-9_.#-]", "_", pid.replace("/", "__"))
-    with (folder / f"{name}.jsonl").open("w") as fh:
+    return folder / f"{name}.jsonl"
+
+
+def save_transcript(pid: str, events: list[dict], model: str = DEFAULT_MODEL) -> None:
+    path = transcript_path(pid, model)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as fh:
         for ev in events:
             fh.write(json.dumps(ev) + "\n")
 
