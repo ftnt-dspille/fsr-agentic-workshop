@@ -53,23 +53,27 @@ The recipe has three steps:
 
 1. Tag the agent `Triage`, give it a description the router can match, and declare the entity it needs in `inputformat`.
 2. Install and activate it.
-3. Add a row for it to the `TOOL_LIST` record in organizational context, under the infrastructure information category.
+3. Add a row for it to the `TOOL_LIST` record in organizational context (the investigation finds it by `category:INFRA_INFO subCategory:TOOL_LIST`).
 
 {{% notice warning %}}
 `TOOL_LIST` replaces the built-in tool table for every investigation, not just yours. Copy all nine default rows into the record before you add your row. If you leave a default row out, or write a record with only your row, the questions for that row stop. Setting a row to No stops its questions too.
 {{% /notice %}}
 
-The nine default rows are:
+The record holds a markdown table with these columns and nine default rows. Keep every default row, then append yours:
 
-- Approved activity
-- Change authorization
-- Detection quality
-- Historical baseline
-- Asset criticality
-- Identity status
-- IOC reputation
-- Prior disposition
-- Endpoint behavior
+| Avenue | Source | Required field | Active |
+| -- | -- | -- | -- |
+| Approved activity | Org Context | IOCs + activity | Yes |
+| Change authorization | ITSM | host + window | Yes |
+| Detection quality | SIEM (raw event) | case_id + rule | Yes |
+| Historical baseline | SIEM | entity | Yes |
+| Asset criticality | CMDB | host | Yes |
+| Identity status | IAM | user | Yes |
+| IOC reputation | Threat Intel | each public IOC | Yes |
+| Prior disposition | Alert Correlation | each entity | Yes |
+| Endpoint behavior | EDR | process | Yes |
+
+Your row is one more line: a short Avenue name, the Source your agent reads, the Required field it needs, and `Yes` to activate it.
 
 Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds.
 
