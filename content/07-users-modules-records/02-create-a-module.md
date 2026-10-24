@@ -57,3 +57,23 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 | Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Delete the module (confirm-gated) and recreate; the field spec must name the picklist |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`02-create-a-module#1`** (Sonnet run, sanitized)
+
+![07-users-modules-records/02-create-a-module#1](agent-run-02-create-a-module-1.png)
+
+```text
+  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
+  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
+  > resolve_picklist {"value": "High", "picklist": "Severity"}
+  > describe_module {"module": "agentlab_assets"}
+  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
+```
+
+</details>
+
+<!-- agent-drive:end -->
