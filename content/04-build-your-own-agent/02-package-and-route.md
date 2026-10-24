@@ -9,23 +9,23 @@ In this page you package a small agent, upload it, prove it runs, and then make 
 
 ## 1. Package the bundle
 
-Zip the bundle folder so that its top-level folder has the same name as the `name` in `info.json`. Validate the manifest before you upload it. A validator checks the required fields and the requirements file (NLV-04-15).
+Zip the bundle folder so that its top-level folder has the same name as the `name` in `info.json`. Validate the manifest before you upload it. A validator checks the required fields and the requirements file.
 
 {{% notice note %}}
-Upload is gated by an **Advanced Development Settings** toggle that controls the agent upload control. Ask your administrator to turn it on for the workshop user. The label and location may differ on your build (NLV-04-16).
+Upload is gated by an **Advanced Development Settings** toggle that controls the agent upload control. Ask your administrator to turn it on for the workshop user. The label and location may differ on your build.
 {{% /notice %}}
 
 ## 2. Upload it
 
 Open the AI area and look for the agent upload control. If you do not see one, check the Advanced Development Settings toggle first. Upload the zip.
 
-If the upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file. Ask your administrator which import path your build supports for agent bundles (NLV-04-03).
+If the upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file. Ask your administrator which import path your build supports for agent bundles.
 
 {{% notice warning %}}
-A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again (NLV-04-04).
+A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again.
 {{% /notice %}}
 
-After import, check that the agent is active. Some builds import agents inactive until you activate them (NLV-04-06).
+After import, check that the agent is active. Some builds import agents inactive until you activate them.
 
 ## 3. Prove it runs: a hello agent
 
@@ -43,7 +43,7 @@ Open the agent's detail page. Trigger it directly, using the agent's trigger rou
 - The result is returned with `answer`, `confidence` and `evidence` keys.
 - The run shows as a task you can poll for its result.
 
-If your build has no trigger control on the detail page, call the agent's trigger route directly, with the same input, from an API client. If the route form differs on your build, use the form the documentation for your build gives (NLV-04-12). Calling it needs execute and read rights on AI agents (NLV-04-13).
+If your build has no trigger control on the detail page, call the agent's trigger route directly, with the same input, from an API client. If the route form differs on your build, use the form the documentation for your build gives. Calling it needs execute and read rights on AI agents.
 
 ## 4. Route an investigation to it
 
@@ -71,7 +71,7 @@ The nine default rows are:
 - Prior disposition
 - Endpoint behavior
 
-Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds (NLV-04-08).
+Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds.
 
 <!-- step: fsa04-02-tool-list-row manual: edits the TOOL_LIST record by hand; needs the agent from fsa04-01 -->
 
@@ -97,32 +97,19 @@ Run an investigation on a seeded alert that has the entity your agent needs. Whe
 - The question was answered by your agent, and the answer reached the summary or the next actions.
 
 {{% notice note %}}
-The routing instruction in the platform names the built-in agents with a fixed mapping. Routing to your agent worked in testing, but a strong mismatch between the row and your description may not route. If your question goes to a built-in agent instead, tighten your row's wording first. Changing the routing instruction itself is an export, edit and re-import, and an upgrade reverts it (NLV-04-09).
+The routing instruction in the platform names the built-in agents with a fixed mapping. Routing to your agent worked in testing, but a strong mismatch between the row and your description may not route. If your question goes to a built-in agent instead, tighten your row's wording first. Changing the routing instruction itself is an export, edit and re-import, and an upgrade reverts it.
 {{% /notice %}}
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Upload fails with "field required" | The upload is not reaching the AI service as a file | Ask the administrator which import path your build supports (NLV-04-03) |
-| Every later import fails with "File exists" | A failed import left its folder on the box | Have the administrator delete the leftover folder, then import again (NLV-04-04) |
-| Agent runs but the investigation never asks it anything | No `TOOL_LIST` row, or the row is set to No | Add the row, and keep the nine defaults (NLV-04-08) |
+| Upload fails with "field required" | The upload is not reaching the AI service as a file | Ask the administrator which import path your build supports |
+| Every later import fails with "File exists" | A failed import left its folder on the box | Have the administrator delete the leftover folder, then import again |
+| Agent runs but the investigation never asks it anything | No `TOOL_LIST` row, or the row is set to No | Add the row, and keep the nine defaults |
 | Investigation stops asking the default questions | `TOOL_LIST` was replaced with a short table | Restore all nine default rows from the export |
-| Agent dies during `act()` with a null-reference error | `self.initialize()` was not called | Call it first in `act()` (NLV-04-17) |
-| "Tool not allowed" when the agent calls a tool | The server UUID in `memory.yaml` is wrong, the server is missing from the agent config, or the tool name changed | Check all three. Read the tool names from the server's list, not from memory (NLV-04-14) |
-| Agent list call fails for everyone | A manifest key was left out and stored as null | Declare every key, using an empty value where you have nothing (NLV-04-15) |
-| Replace import gives the agent a new ID | Replace creates a new UUID on some builds | Check the allowlist and the agent config after every replace (NLV-04-05) |
+| Agent dies during `act()` with a null-reference error | `self.initialize()` was not called | Call it first in `act()` |
+| "Tool not allowed" when the agent calls a tool | The server UUID in `memory.yaml` is wrong, the server is missing from the agent config, or the tool name changed | Check all three. Read the tool names from the server's list, not from memory |
+| Agent list call fails for everyone | A manifest key was left out and stored as null | Declare every key, using an empty value where you have nothing |
+| Replace import gives the agent a new ID | Replace creates a new UUID on some builds | Check the allowlist and the agent config after every replace |
 
-<!-- NLV verdicts (live box pass):
-  NLV-04-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-04: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-08: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-16: verified: the Import/Upload Custom AI Agent toggle is under System > System Configuration > Advanced Development Features (left unchanged)
-  NLV-04-17: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

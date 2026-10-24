@@ -17,11 +17,11 @@ The Model Context Protocol (MCP) is how an agent reaches tools that live outside
 
 If you have a FortiSIEM in your lab, register its MCP endpoint as this chapter's external server: it is the realistic production shape (a vendor-hosted remote server with `oauth2` authentication, where the token refreshes itself). The next page's lab server exists for classes without one.
 
-Five system connectors can never become MCP tools (NLV-05-08). An MCP tool has no built-in notion of read-only or destructive, so the approval for any write belongs in a playbook with a manual-input step, not in the tool.
+Five system connectors can never become MCP tools. An MCP tool has no built-in notion of read-only or destructive, so the approval for any write belongs in a playbook with a manual-input step, not in the tool.
 
 ## 2. Pick a transport and an authentication type
 
-Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` transport is older, and `stdio` runs only a short list of allowlisted commands, so it is not a good fit for a lab server (NLV-05-12).
+Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` transport is older, and `stdio` runs only a short list of allowlisted commands, so it is not a good fit for a lab server.
 
 | Authentication type | What the call sends | Use it for |
 |---|---|---|
@@ -31,13 +31,13 @@ Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` 
 | `basic` | Basic authentication | Legacy servers |
 | `custom` | An arbitrary header map | When nothing else fits |
 | `fsr` | The caller's own FortiSOAR token | Servers that check FortiSOAR tokens themselves |
-| `oauth2` | An OAuth flow | Vendor services that require it (NLV-05-03) |
+| `oauth2` | An OAuth flow | Vendor services that require it |
 
-Type names may be case-sensitive. Try the lowercase form first, and check the list on your build (NLV-05-02).
+Type names may be case-sensitive. Try the lowercase form first, and check the list on your build.
 
-On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value (NLV-05-02, NLV-05-03). Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record. Check the list of types against your build before you rely on it.
+On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value. Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record. Check the list of types against your build before you rely on it.
 
-The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity (NLV-05-11). Choose the type with that trade-off in mind.
+The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity. Choose the type with that trade-off in mind.
 
 ## 3. Read the JSON-string rule first
 
@@ -45,7 +45,7 @@ The `fsr` type passes the caller's own FortiSOAR token through, as the built-in 
 The `authentication` field must be sent as a JSON string, not as a JSON object. If you send an object, the platform stores the text `Array` in its place. Then the status route fails for every registered MCP server, not just the one you got wrong. Serialize the authentication value to a string before you send the record.
 {{% /notice %}}
 
-The pattern looks like this. The inner keys shown are illustrative. Match the shape your build expects (NLV-05-05).
+The pattern looks like this. The inner keys shown are illustrative. Match the shape your build expects.
 
 ```json
 {
@@ -83,7 +83,7 @@ The registration has four steps. Do not skip the first one.
 
 <!-- step: fsa05-01-validate-register manual: Connect MCP Server form with a live Test Connection to an external server; no spec yet -->
 
-Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki (NLV-05-03). Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
+Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
 <!-- capture: fsa05-01-mcp-servers-page -->
 ![fsa05-01-mcp-servers-page](fsa05-01-mcp-servers-page.png)
@@ -93,7 +93,7 @@ Open **AI Configurations** > **MCP Servers** (NLV-05-01). Click **Connect MCP Se
 - Validation returns the server's tool names, and the save returns a UUID.
 - The server appears in the MCP list.
 
-If the UI does not offer a validate step, validate through the validation route with the same definition before you save (NLV-05-04).
+If the UI does not offer a validate step, validate through the validation route with the same definition before you save.
 
 <!-- step: fsa05-02-status-check manual: status check after a registration made by fsa05-01; no spec yet -->
 
@@ -104,23 +104,16 @@ Check the status of the server you just saved. Then check the status of one buil
 - Your server reports active, with its tools.
 - A built-in server still reports its status normally.
 
-If the status route fails for every server after you save, the most likely cause is an authentication value stored as an object. Fix the row by writing the field back as a string (NLV-05-06).
+If the status route fails for every server after you save, the most likely cause is an authentication value stored as an object. Fix the row by writing the field back as a string.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Status route fails for every server | One row has `authentication` stored as an object, or as the text `Array` | Rewrite that row's `authentication` as a JSON string, then check status again (NLV-05-05, NLV-05-06) |
+| Status route fails for every server | One row has `authentication` stored as an object, or as the text `Array` | Rewrite that row's `authentication` as a JSON string, then check status again |
 | Validation says it cannot connect | Wrong URL, the server is down, or the certificate is not trusted | Check the URL, check that the server is up, and ask the administrator about the trust store for self-signed certificates |
-| Validation returns no tools | The server does not list tools, or the request is missing headers | Check the server's handshake, covered in chapter 5, page 2 (NLV-05-07) |
+| Validation returns no tools | The server does not list tools, or the request is missing headers | Check the server's handshake, covered in chapter 5, page 2 |
 | Server is saved but agents cannot use it | No allowlist entry in any agent | Grant the server to the agent with the tool names it may use |
 | Authentication error on every call | Wrong token, or the wrong authentication type | Check the type and the token. Do not put the token in a shared file. |
 | Edited the database directly, now unreadable | The authentication column is encrypted by the platform's layer | Always write the record through the API or the UI |
-
-<!-- NLV verdicts (live box pass):
-  verified: NLV-05-01 (AI Configurations > MCP Servers; buttons are Connect MCP Server and Create MCP Server; corrected in this page).
-  corrected: NLV-05-02 (the transport select offers only http on this build).
-  corrected: NLV-05-03 (the Connect form shows a required auth_type select after transport=http; None is right for DeepWiki; the full type list is not yet read from the UI).
-  partly: NLV-05-04 (Test Connection exists as the validate step; the persist route was not exercised).
-  open: NLV-05-05, NLV-05-06 (need a row write and a status check), NLV-05-07 (headers, not run), NLV-05-08 (system connector restriction, not run), NLV-05-11 (fsr identity, not run), NLV-05-12 (transport list beyond http, not checked). -->
 

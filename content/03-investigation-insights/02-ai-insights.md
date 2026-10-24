@@ -11,17 +11,17 @@ An AI Insight answers a plain-language question about your FortiSOAR data. You g
 
 1. **Question.** Write it in plain language, or pick a template.
 2. **Role.** Pick the persona the answer should be written for, such as SOC Analyst or SOC Manager. The role shapes the plan and the summary.
-3. **Chain of thought.** The platform proposes its reasoning. You can read it. It is editable on some builds (NLV-03-12).
+3. **Chain of thought.** The platform proposes its reasoning. You can read it. It is editable on some builds.
 4. **Plan.** The platform proposes the steps it will run. Read it before you run it.
 5. **Execution.** Each step runs through one insight agent. A run stops on an error or on an empty fetch.
 6. **Summary card.** A concise summary, suggested actions and the last execution.
 7. **Schedule.** Saving can create a schedule. Each run executes as the insight's creator.
 
-Insight agents are read-only. They have no write tools and no approval step, so an insight cannot change alerts (NLV-03-15).
+Insight agents are read-only. They have no write tools and no approval step, so an insight cannot change alerts.
 
 ## 2. Create an insight
 
-Open the AI Insights area from the AI navigation (NLV-03-10). Add a new insight. If a template is offered, pick one such as a high-risk alert review (NLV-03-11). Choose the role **SOC Manager**, or another role your build offers.
+Open the AI Insights area from the AI navigation. Add a new insight. If a template is offered, pick one such as a high-risk alert review. Choose the role **SOC Manager**, or another role your build offers.
 
 <!-- step: fsa03-07-create-insight manual: creates an AI insight that runs FortiAI; spends tokens -->
 
@@ -42,7 +42,7 @@ Do not run it yet. Move to the next step.
 
 Read the chain of thought, then the plan. Check that the plan's steps match the question. If a step fetches data you did not ask for, change the question, not the plan.
 
-Do not edit the chain of thought in this exercise. In testing, editing it did not reliably change the generated plan, and an edited run once failed because its filters did not match the data on the box (NLV-03-12).
+Do not edit the chain of thought in this exercise. In testing, editing it did not reliably change the generated plan, and an edited run once failed because its filters did not match the data on the box.
 
 **What success looks like**
 
@@ -73,24 +73,17 @@ Suggested actions can list record identifiers rather than alert names. Look the 
 
 ## 5. Accept an honest "no data" answer
 
-An insight can return "no data" instead of a guess. That is a valid result. If your question returns nothing, check the plan's filters before you change the question. A filter on a status value your box does not use returns nothing without an error (NLV-03-20).
+An insight can return "no data" instead of a guess. That is a valid result. If your question returns nothing, check the plan's filters before you change the question. A filter on a status value your box does not use returns nothing without an error.
 
-Do not rely on the drill-down chat from the summary card. In testing, the drill-down question did not return an answer (NLV-03-13). Use the insight itself, or start a new insight with a narrower question.
+Do not rely on the drill-down chat from the summary card. In testing, the drill-down question did not return an answer. Use the insight itself, or start a new insight with a narrower question.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Plan returns "no valid alert data" | A filter uses a status value your box does not use | Reword the question, or check the status values on your box (NLV-03-20) |
+| Plan returns "no valid alert data" | A filter uses a status value your box does not use | Reword the question, or check the status values on your box |
 | Run never finishes | Plan is large or the LLM route is slow | Wait a few minutes, then cancel and re-run with a narrower question |
-| Drill-down chat never answers | Known gap in testing | Start a new insight with a narrower question (NLV-03-13) |
-| Schedule missing after save | Your user cannot create schedules | Ask an administrator to check your permissions (NLV-03-10) |
-| Edited chain of thought ignored | Editing does not reliably change the plan on some builds | Re-create the insight with the question changed instead (NLV-03-12) |
+| Drill-down chat never answers | Known gap in testing | Start a new insight with a narrower question |
+| Schedule missing after save | Your user cannot create schedules | Ask an administrator to check your permissions |
+| Edited chain of thought ignored | Editing does not reliably change the plan on some builds | Re-create the insight with the question changed instead |
 
-<!-- NLV verdicts (live box pass):
-  NLV-03-10: partly: AI Insights is under AI Configurations > Insights (0 items on the box); creating an insight was not run
-  NLV-03-11: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-20: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

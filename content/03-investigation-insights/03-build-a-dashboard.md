@@ -9,7 +9,7 @@ You can measure what the investigations are doing, and you should build that vie
 
 ## 1. Skip the ROI claims
 
-Some vendor material promotes an AI ROI dashboard, or an "automatically investigated" count with time-saved figures. Do not teach or quote those figures. Your build may not ship them, and the source for the numbers is not something you can check on your box (NLV-03-16). If you want a time-saved figure, measure it on your own alert queue.
+Some vendor material promotes an AI ROI dashboard, or an "automatically investigated" count with time-saved figures. Do not teach or quote those figures. Your build may not ship them, and the source for the numbers is not something you can check on your box. If you want a time-saved figure, measure it on your own alert queue.
 
 ## 2. Build the dashboard
 
@@ -21,7 +21,7 @@ Build three widgets over the alert records:
 - **Verdict types**: a Top X list of verdict values.
 - **Investigation funnel**: alerts that are new, then investigated, then carrying a verdict.
 
-Some widgets come from the Content Hub. Check that they are installed before you start (NLV-00-04).
+Some widgets come from the Content Hub. Check that they are installed before you start.
 
 <!-- step: fsa03-10-build-dashboard manual: builds a dashboard by hand in the UI; no spec yet -->
 
@@ -56,7 +56,7 @@ Do the counts before you add more widgets. It is much easier to find a wrong fil
 
 ## 4. Add token figures only if the trace exposes them
 
-Token totals live in the trace. Whether a dashboard can show them depends on whether your build exposes trace data to widgets (NLV-02-12). If it does not, leave token figures out of the dashboard, and read the totals in the trace for each run instead.
+Token totals live in the trace. Whether a dashboard can show them depends on whether your build exposes trace data to widgets. If it does not, leave token figures out of the dashboard, and read the totals in the trace for each run instead.
 
 ## Troubleshooting
 
@@ -64,11 +64,6 @@ Token totals live in the trace. Whether a dashboard can show them depends on whe
 |---|---|---|
 | Widget shows no data | Filter excludes all seed alerts | Widen the filter, then narrow it again |
 | Counts do not match your hand count | Filter or grouping is on the wrong field | Check which field each widget groups by |
-| Widget missing from the list | Content Hub package not installed | Install the widget package, or build the chart from the alert module view (NLV-00-04) |
-| Verdict values look odd | Verdict names differ on your build | Compare the values in the alert record and use those names (NLV-03-18) |
+| Widget missing from the list | Content Hub package not installed | Install the widget package, or build the chart from the alert module view |
+| Verdict values look odd | Verdict names differ on your build | Compare the values in the alert record and use those names |
 
-<!-- NLV verdicts (live box pass):
-  NLV-00-04: partly: Content Hub and installed-connector views work; widget packages not checked
-  NLV-02-12: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-16: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-18: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

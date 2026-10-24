@@ -42,7 +42,7 @@ Pick one agent that can call tools. Add the server to that agent's allowlist and
 
 The allowlist behaves in three ways. Know them before you rely on it:
 
-- A server that no agent lists is not filtered for any agent that can see it. A new server is not restricted by existing allowlists, so grant it explicitly (NLV-05-10).
+- A server that no agent lists is not filtered for any agent that can see it. A new server is not restricted by existing allowlists, so grant it explicitly.
 - An agent with no allowlist gets every tool from every server it is configured with. Always write an explicit allowlist.
 - An empty tool list for a server means the agent gets no tools from it.
 
@@ -70,8 +70,3 @@ Ask the granted agent a question only the remote server can answer (for DeepWiki
 | Agent never calls the server | Not in that agent's allowlist | Grant the server and tools explicitly to the agent you are testing |
 | Calls time out | Slow public server or egress proxy | Retry; check the appliance's proxy settings |
 
-<!-- NLV verdicts (live box pass):
-  NLV-05-01: verified: MCP Servers is under AI Configurations; the Connect form was opened, not saved
-  NLV-05-04: partly: Test Connection exists as the validate step; the persist route was not exercised
-  NLV-05-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-10: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

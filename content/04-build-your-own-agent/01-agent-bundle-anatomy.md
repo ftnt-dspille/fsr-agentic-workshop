@@ -26,11 +26,11 @@ A manifest is short, and most import failures come from one missing or mistyped 
 - `agentclass` must match a class in `agent.py`, and be unique across every installed agent. Do not reuse a built-in class name.
 - Declare every key, even when its value is empty. A key you leave out is stored as null, and a null can break list calls for every user, not only your agent. Use an empty list for `tags` and an empty string for an unused field, rather than omitting them.
 - Tags are routing. Use `Triage` for an agent that investigations should route to, and `Insight` for one that insight planning should use. Do not tag a custom agent `Assistant`. That tag is reserved for designer and connector widgets.
-- A `Test` tag makes the agent reachable only by a direct trigger (NLV-04-07).
+- A `Test` tag makes the agent reachable only by a direct trigger.
 
 ## 3. Follow the code rules
 
-- Call `self.initialize()` at the start of `act()`. Without it, execution fails during output validation with a null-reference error (NLV-04-17).
+- Call `self.initialize()` at the start of `act()`. Without it, execution fails during output validation with a null-reference error.
 - Every prompt UUID referenced in code must exist in `prompt.yaml`. Otherwise the agent raises at runtime.
 - Return a structured result with `answer`, `confidence` and `evidence`. A tool result should use an envelope with `status`, `result` and `error`. A bare dictionary breaks some agents that expect the envelope.
 - Keep `requirements.txt` to plain PyPI names and pins.
@@ -38,7 +38,7 @@ A manifest is short, and most import failures come from one missing or mistyped 
 Prompts that ship in code are re-imported on upgrade, and that reverts any edits you made to them. Keep your own prompts in your own bundle.
 
 {{% notice note %}}
-The exact names of the base class and helper methods depend on your build's agent SDK. Copy them from a shipped sample agent on your box rather than from memory, and confirm the import rules on your build (NLV-04-15).
+The exact names of the base class and helper methods depend on your build's agent SDK. Copy them from a shipped sample agent on your box rather than from memory, and confirm the import rules on your build.
 {{% /notice %}}
 
 ## 4. Read a sample manifest
@@ -68,8 +68,3 @@ The shape below is illustrative. It shows the keys a manifest carries, with plac
 - You can say why a missing `config/memory.yaml` gives an agent too much access, and why a missing manifest key can break lists for every user.
 - You can point to the rule that stops a custom agent from being routed by its tag alone. It needs a row in the tool table, which the next page covers.
 
-<!-- NLV verdicts (live box pass):
-  NLV-04-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-17: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-04-18: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

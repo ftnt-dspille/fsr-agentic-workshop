@@ -11,10 +11,10 @@ An agent that can read your alerts is useful. An agent that can change them need
 
 | Path | Can it change data? | What it can change |
 |---|---|---|
-| Alert investigation | Writes three AI fields only | The verdict, severity and summary on the alert. Next steps are advisory text. It does not change status, owner or closure (NLV-03-03). |
+| Alert investigation | Writes three AI fields only | The verdict, severity and summary on the alert. Next steps are advisory text. It does not change status, owner or closure. |
 | Orchestrator | Yes, through agents | Whatever the agents it calls are allowed to do. Writes you did not ask for pause for approval. |
-| AI Assistant (chat) | Yes, directly | Whatever the tools it can call are allowed to do. Treat chat-driven writes as unconfirmed until you have tested them on your build (NLV-02-14). |
-| AI Insights | No write tools | The insight-tagged agents are read-only (NLV-03-15). |
+| AI Assistant (chat) | Yes, directly | Whatever the tools it can call are allowed to do. Treat chat-driven writes as unconfirmed until you have tested them on your build. |
+| AI Insights | No write tools | The insight-tagged agents are read-only. |
 | Playbooks you build | Whatever the playbook does | Anything you wire it to do, including changes that an analyst should approve. |
 
 ## 2. Apply the rule
@@ -29,7 +29,7 @@ Do not assume that every AI surface asks for confirmation before it writes. The 
 
 ## 3. Know whose identity a call uses
 
-Tool calls run with an identity. For built-in servers, and for servers registered with the `fsr` authentication type, the call carries the caller's FortiSOAR token. For a server that uses a static bearer token, an API key or no authentication, every call uses one fixed identity (NLV-05-11).
+Tool calls run with an identity. For built-in servers, and for servers registered with the `fsr` authentication type, the call carries the caller's FortiSOAR token. For a server that uses a static bearer token, an API key or no authentication, every call uses one fixed identity.
 
 Before you grant an agent write tools, answer two questions:
 
@@ -43,8 +43,3 @@ If you cannot answer both, keep the agent read-only.
 - You can name, for each path in the table, whether it reads, recommends or writes.
 - You can state the rule without looking at this page: AI recommends, playbooks with manual-input steps decide.
 
-<!-- NLV verdicts (live box pass):
-  NLV-02-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-03: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-15: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-11: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

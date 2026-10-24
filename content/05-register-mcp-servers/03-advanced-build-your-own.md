@@ -16,7 +16,7 @@ Where to run it, in order of preference:
 
 The server below exposes one tool that returns a forecast from a fixed table. It makes no network calls, so it works on a laptop with no internet access. The tool is named and typed, and its docstring is what the model reads to decide when to call it.
 
-The import below is for the v1 MCP Python SDK. The v2 SDK renamed `FastMCP` to `MCPServer`, in the module `mcp.server.mcpserver`. Use whichever your SDK installs (NLV-05-09 covers the registration side, and the import path is in the SDK's own docs).
+The import below is for the v1 MCP Python SDK. The v2 SDK renamed `FastMCP` to `MCPServer`, in the module `mcp.server.mcpserver`. Use whichever your SDK installs; the import path is in the SDK's own docs.
 
 ```python
 # server.py - read-only lab server, no network calls
@@ -29,7 +29,6 @@ FORECASTS = {
     "lab-city-b": "Rain, 14 C",
 }
 
-
 @mcp.tool()
 def get_forecast(city: str) -> dict:
     """Return the forecast for a known lab city. Read-only."""
@@ -38,13 +37,12 @@ def get_forecast(city: str) -> dict:
         return {"status": "error", "result": None, "error": "unknown city"}
     return {"status": "ok", "result": text, "error": None}
 
-
 app = mcp.streamable_http_app()
 ```
 
 Copy `server.py` to the appliance and serve it on a local port with an ASGI server, for example `uvicorn server:app --port 8000` (install `mcp` and `uvicorn` into a virtualenv on the box, not into the system Python). Bind to localhost only. If you must run it anywhere other than the box itself, put it behind TLS termination before any other system can reach it.
 
-The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents expect that shape, and some shipped agents break on a bare value (NLV-04-14).
+The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents expect that shape, and some shipped agents break on a bare value.
 
 ## 2. Prove the handshake with curl
 
@@ -75,13 +73,13 @@ curl -s -X POST http://localhost:8000/mcp/ \
 - The tools list includes `get_forecast` with its input schema.
 - A `tools/call` for a known city returns the envelope with the forecast.
 
-A request without the `Accept` header is rejected, so if the call fails with a 406, check that header first (NLV-05-07).
+A request without the `Accept` header is rejected, so if the call fails with a 406, check that header first.
 
 ## 3. Register it
 
 Register the server with the steps from the previous page. Validate first, and check that validation returns `get_forecast`. Then persist, note the UUID, and check the status.
 
-Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server running on your laptop is NOT reachable from the box - that is why the lab runs it on the appliance's own CLI. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate (NLV-05-04).
+Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server running on your laptop is NOT reachable from the box - that is why the lab runs it on the appliance's own CLI. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate.
 
 ## 4. Grant it and prove it
 
@@ -108,19 +106,11 @@ Remove the broken copy when you finish. A leftover broken row can make the statu
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Handshake returns 406 | The `Accept` header lacks event-stream | Send both JSON and event-stream in `Accept` (NLV-05-07) |
+| Handshake returns 406 | The `Accept` header lacks event-stream | Send both JSON and event-stream in `Accept` |
 | Tool call fails with no session | The `mcp-session-id` header was not sent back | Read it from step 1 and send it on every later call |
 | Validation returns no tools | The server did not start, or the URL points elsewhere | Check the server is up, and the URL ends in the path you served |
 | Agent says the tool is not allowed | The tool name in the allowlist does not match the server's name | Copy the name from the tools list exactly |
-| Agent calls tools you did not grant | No allowlist entry, or the agent has no allowlist file | Write an explicit allowlist with only `get_forecast` (NLV-05-10) |
-| Status route fails for every server | A row with `authentication` stored as an object | Rewrite that row's `authentication` as a string (NLV-05-05, NLV-05-06) |
-| Tool call times out | The tool is slow, and the platform's call timeout is short | Keep tool responses small and fast. Check the timeout on your build (NLV-05-13). |
+| Agent calls tools you did not grant | No allowlist entry, or the agent has no allowlist file | Write an explicit allowlist with only `get_forecast` |
+| Status route fails for every server | A row with `authentication` stored as an object | Rewrite that row's `authentication` as a string |
+| Tool call times out | The tool is slow, and the platform's call timeout is short | Keep tool responses small and fast. Check the timeout on your build. |
 
-<!-- NLV verdicts (live box pass):
-  NLV-04-14: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-05: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-10: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-13: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->

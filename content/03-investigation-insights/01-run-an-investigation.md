@@ -23,10 +23,10 @@ The stages run in the same order every time. Only the answers change.
 | Evidence evaluation | Each answer is scored as supporting or weakening each hypothesis | Yes | No |
 | Verdict | A verdict, key findings and next actions are written back | Yes | Write-back only |
 
-A run typically takes a few minutes. Token use runs to tens of thousands per investigation, depending on the route (NLV-03-08). Plan your token budget before a class run.
+A run typically takes a few minutes. Token use runs to tens of thousands per investigation, depending on the route. Plan your token budget before a class run.
 
 {{% notice note %}}
-The jailbreak check can end a run with a blocked summary while the run still shows as completed. Read the summary, not only the status (NLV-03-19).
+The jailbreak check can end a run with a blocked summary while the run still shows as completed. Read the summary, not only the status.
 {{% /notice %}}
 
 ## 2. Start an investigation
@@ -80,7 +80,7 @@ Open the alert record itself, not only the overview card. Find the three AI fiel
 **What success looks like**
 
 - The verdict, severity and summary on the record match the card.
-- Nothing else on the alert changed: status, owner and closure are untouched (NLV-03-03).
+- Nothing else on the alert changed: status, owner and closure are untouched.
 
 {{% notice tip %}}
 Check the write, not the card. A card that renders proves only that the page drew it. The record is the evidence.
@@ -96,7 +96,7 @@ Pick an alert that looks benign, and that matches an activity you have approved.
 
 <!-- step: fsa03-04-benign-rerun manual: re-runs a FortiAI investigation on a benign alert; spends tokens -->
 
-Expect an Inconclusive verdict more often than a Benign one. In testing, benign-looking alerts often ended Inconclusive. Then add an approved-activity record to the organizational context, with the exact category and subcategory, and run the investigation again. Compare the two results honestly. Whether the answer changes is the finding, either way (NLV-03-04).
+Expect an Inconclusive verdict more often than a Benign one. In testing, benign-looking alerts often ended Inconclusive. Then add an approved-activity record to the organizational context, with the exact category and subcategory, and run the investigation again. Compare the two results honestly. Whether the answer changes is the finding, either way.
 
 **What success looks like**
 
@@ -112,16 +112,16 @@ Create one alert by hand with no source data, and one with source JSON for the s
 **What success looks like**
 
 - The alert with source data shows its alert-type SOP.
-- The alert without source data shows the `DEFAULT` SOP (NLV-03-05).
+- The alert without source data shows the `DEFAULT` SOP.
 
 ## 6. Gate the trigger
 
 Do not start an investigation on every alert. Each run costs tokens and minutes.
 
-A common pattern is to score the alert's risk first and investigate only above a threshold. Low-risk alerts stop early. The pattern is a playbook that calls a risk-evaluation agent, branches on the score, and starts the investigation only for medium or high risk. Your build may not ship a risk-gate playbook, so treat that as something you build (NLV-03-09). You build it in chapter 4.
+A common pattern is to score the alert's risk first and investigate only above a threshold. Low-risk alerts stop early. The pattern is a playbook that calls a risk-evaluation agent, branches on the score, and starts the investigation only for medium or high risk. Your build may not ship a risk-gate playbook, so treat that as something you build. You build it in chapter 4.
 
 {{% notice warning %}}
-Do not start an investigation from a playbook through an HMAC-authenticated API call. That route runs the investigation without FortiSOAR tools, and the verdict never gets written back. Start investigations from a route that authenticates as a user, and check the write-back afterward (NLV-03-06).
+Do not start an investigation from a playbook through an HMAC-authenticated API call. That route runs the investigation without FortiSOAR tools, and the verdict never gets written back. Start investigations from a route that authenticates as a user, and check the write-back afterward.
 {{% /notice %}}
 
 ## 7. Read the trace
@@ -139,7 +139,7 @@ Open the trace for your run from section 2. Find the normalization step and the 
 - You can say what the tool returned and whether the hypothesis used it.
 
 {{% notice note %}}
-In testing, the trace panel stalled after a burst of reads. If it hangs, wait a few minutes and reload. If it stays stuck, ask the box administrator to restart the AI services (NLV-03-07).
+In testing, the trace panel stalled after a burst of reads. If it hangs, wait a few minutes and reload. If it stays stuck, ask the box administrator to restart the AI services.
 {{% /notice %}}
 
 ## Troubleshooting
@@ -149,20 +149,7 @@ In testing, the trace panel stalled after a burst of reads. If it hangs, wait a 
 | Run finishes with no hypotheses | The alert has no source data or no type | Add source JSON and run again |
 | Verdict is Inconclusive for a clear alert | Missing evidence, or a question with no data | Read the questions that had no data. Add the context they need, then re-run. |
 | Write-back is missing after a run | The run did not complete, or the jailbreak check blocked it | Read the run summary. Re-run if it was an error. |
-| Run fails in normalization with a quota error | The LLM account is out of credit, though the health check passed | Test the LLM route with a real completion, and top up the account (NLV-05-20) |
-| Run fails with an authorization error | The LLM route is not entitled on the box | Ask the administrator to check the route's entitlement (NLV-05-19) |
-| Trace panel never loads | A burst of trace reads stalled the service | Wait, reload, then ask for a restart if needed (NLV-03-07) |
+| Run fails in normalization with a quota error | The LLM account is out of credit, though the health check passed | Test the LLM route with a real completion, and top up the account |
+| Run fails with an authorization error | The LLM route is not entitled on the box | Ask the administrator to check the route's entitlement |
+| Trace panel never loads | A burst of trace reads stalled the service | Wait, reload, then ask for a restart if needed |
 
-<!-- NLV verdicts (live box pass):
-  NLV-03-01: verified: the tab is named AI Investigation and the start button reads Begin AI-Powered Alert Investigation (one investigation run for the capture, on the chapter 8 alert)
-  NLV-03-02: partly: five hypotheses with Benign/False Positive/Suspicious/Malicious questions and a verdict per hypothesis; the one run returned only Inconclusive outcomes, so Confirmed and Ruled Out were not seen
-  NLV-03-03: partly: the verdict and summary are written to the alert record (AI Investigation Overview); severity stayed High and the status and owner were not compared against the audit trail
-  NLV-03-04: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-05: partly: a DEFAULT investigation SOP record exists; the no-source-data behavior was not run
-  NLV-03-06: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-07: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-08: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-09: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-03-19: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-19: open: not run in this pass (needs an agent or investigation run, a box write, or the API key)
-  NLV-05-20: open: not run in this pass (needs an agent or investigation run, a box write, or the API key) -->
