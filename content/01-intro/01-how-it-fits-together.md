@@ -40,7 +40,7 @@ An agent that can write to a SOC platform needs rails. Part 2's server enforces 
 
 1. **Read-only mode.** `FSR_MCP_READONLY=1` in the server's environment hides every mutating tool. Start every new box this way.
 2. **Confirm-gated tools.** Deletes, schema publishes, user creation and connector installs refuse to run unless the call carries `confirm: true`. A good agent will tell you what is about to change and ask before setting it.
-3. **Verify the effect.** A 200 response is a claim, not proof. After every write the agent (and you) read the state back: fetch the record it created, watch the playbook run it triggered, healthcheck the connector it installed. Every lab in this workshop ends with a verification step in the FortiSOAR UI.
+3. **Verify the effect.** A 200 response is a claim, not proof. After every write the agent (and you) read the state back: fetch the record it created, watch the playbook run it triggered, healthcheck the connector it installed. Nearly every hands-on lab ends with a verification step, usually in the FortiSOAR UI and sometimes by asking the agent to read the state back.
 
 Keep those three in mind and the rest of the workshop is just practice.
 

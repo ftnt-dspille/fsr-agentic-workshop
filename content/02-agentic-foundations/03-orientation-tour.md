@@ -15,18 +15,22 @@ Investigations need an alert with source data. Without it, the alert gets the ge
 An alert created by hand, or through the API, with no raw source data always gets the `DEFAULT` SOP. Type-specific SOPs only apply when the alert carries its source JSON. Put the raw payload in the alert's **source data** field when you seed it, or the SOP exercise in chapter 3 will not show what you expect.
 {{% /notice %}}
 
-Seed three to five alerts before chapter 3. Give each one a JSON payload in the source data field, with placeholder values. For example:
+Seed three to five alerts before chapter 3. In the FortiSOAR UI, open the **Alerts** module and choose **Add**; give the alert a name and a type, then paste a JSON payload into its **source data** field. Use realistic-looking values like the example below (the `203.0.113.0/24` range is reserved for documentation, so it is safe to use here):
 
 ```json
 {
-  "alert_type": "<alert-type-name>",
-  "indicator": "<placeholder-indicator>",
-  "source": "<your-sensor-name>",
-  "severity_raw": "<raw-severity>"
+  "alert_type": "Suspicious Outbound Connection",
+  "indicator": "203.0.113.42",
+  "source": "edr-sensor-01",
+  "severity_raw": "high"
 }
 ```
 
-Include one alert with no source data at all. You will use it in chapter 3 to show the `DEFAULT` SOP behavior.
+Vary the values across your alerts (a different indicator and type each time). Include **one** alert with no source data at all: you will use it in chapter 3 to show the `DEFAULT` SOP behavior.
+
+{{% notice note %}}
+Chapter 3 also asks you to investigate an alert whose indicator a threat-intel feed will actually rate as malicious. A documentation-range address like the one above will not resolve in any feed, so for that step use a known-bad indicator your instructor supplies, or one from a reputation source your box is configured to query.
+{{% /notice %}}
 
 ## 2. Confirm AI is on
 
