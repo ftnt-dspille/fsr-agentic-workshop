@@ -18,16 +18,18 @@ zip -r workshop_hello_agent.zip workshop_hello_agent
 ```
 
 {{% notice note %}}
-Upload is gated by an **Advanced Development Settings** toggle that controls the agent upload control. Ask your administrator to turn it on for the workshop user. The label and location may differ on your build.
+The UI upload control is gated. Enable **System Configuration > Advanced Development Features > Import/Upload Custom AI Agent** (it sits next to Custom Code Execution and Build Your Own Widget). It warns that it lets users upload code that runs on the box, so an administrator turns it on deliberately. Until it is on, the **Upload** button in Content Hub offers only "Upload Solution Pack".
 {{% /notice %}}
 
 ## 2. Upload it
 
-Open the AI area and look for the agent upload control. If you do not see one, check the Advanced Development Settings toggle first. Upload the zip.
+There are two supported ways to install the bundle. Use whichever fits.
 
-The control posts the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. If you have no upload control on your build, post it there directly from an API client. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`.
+**A. Through the UI (Content Hub).** With the toggle above on, open **Content Hub > Manage**, filter to **AI Agent**, and use **Upload > Upload AI Agent**. Choose your zip (or drag it onto the drop zone). Selecting the file uploads and activates the agent in one step; on success the panel reports it was added. If an agent of the same name already exists, tick **Replace existing version** before choosing the file, or you get a `CS-AI-AGENT-11` conflict. The agent then appears as a card in the catalog with its own detail page.
 
-If the upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file: the multipart field must be named `file`.
+**B. Through the API.** Post the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`. Note: an agent installed this way is active and triggerable but is **not** listed in the Content Hub catalog; use path A if you want the catalog card and detail page.
+
+If an upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file: the multipart field must be named `file`.
 
 {{% notice warning %}}
 A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again.
