@@ -2,7 +2,6 @@
 # One id per line, then "# reason". lint-steps.py accepts a pending id in place of a
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
-fsa03-04-trace-steps          # FortiAI run needed; the 8.0 trace view is not located yet (page claim unverified)
 fsa03-06-insight-card         # insight Execute produced no result preview within the cap; spec is written, needs a rerun (spends tokens)
 fsa03-07-verdict-dashboard    # dashboard built by hand (fsa03-10) over FortiAI verdicts; no spec yet
 fsa05-02-agent-allowlist      # allowlist on the lab agent needs the chapter 4 agent and its run
