@@ -33,7 +33,7 @@ Your first agent should not call an LLM. Make it return a fixed structured answe
 
 <!-- step: fsa04-01-hello-agent manual: packages, imports and triggers a lab agent in the UI; no spec written yet (the hello agent makes no LLM call, so it spends no tokens) -->
 
-Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path. Send one input with the entity your `inputformat` declares.
+Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path: `POST /ai/agent/{agent_name}/trigger`, with your input as the JSON body (one input carrying the entity your `inputformat` declares). The call returns `202` with a `task_id`; poll `GET /ai/agent/result/{task_id}` for the result.
 
 <!-- capture: fsa04-01-agent-detail -->
 ![fsa04-01-agent-detail](fsa04-01-agent-detail.png)
@@ -43,7 +43,7 @@ Open the agent's detail page. Trigger it directly, using the agent's trigger rou
 - The result is returned with `answer`, `confidence` and `evidence` keys.
 - The run shows as a task you can poll for its result.
 
-If your build has no trigger control on the detail page, call the agent's trigger route directly, with the same input, from an API client. If the route form differs on your build, use the form the documentation for your build gives. Calling it needs execute and read rights on AI agents.
+If your build has no trigger control on the detail page, call `POST /ai/agent/{agent_name}/trigger` directly, with the same JSON input, from an API client, and poll `GET /ai/agent/result/{task_id}`. Calling it needs execute and read rights on AI agents.
 
 ## 4. Route an investigation to it
 
