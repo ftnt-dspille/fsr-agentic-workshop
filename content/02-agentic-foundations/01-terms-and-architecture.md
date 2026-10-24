@@ -54,7 +54,7 @@ An alert investigation moves through these stages, in this order, on every run:
 - verdict
 - write-back
 
-The trace shows step labels such as `normalization`, `context_enrichment`, `hypothesis`, `investigation_plan`, `investigation_execution`, `key_finding`, `hypothesis_evaluation`, `verdict` and `next_action`. Confirm the labels on your build.
+On 8.0.1 the trace shows these step labels, in roughly this order: `normalization`, `context_enrichment`, `hypothesis`, `investigation_plan`, `investigation_execution`, `hypothesis_evaluation`, `key_finding`, `verdict` and `next_action`. Reading them top to bottom is reading the pipeline in order. The exact set may differ on other 8.0.x builds.
 
 {{% notice note %}}
 Menu locations and labels differ across 8.0.x builds. Start from the AI area of the left navigation and look for the item name, not for an exact click path. Exact navigation may differ by 8.0.x version.
