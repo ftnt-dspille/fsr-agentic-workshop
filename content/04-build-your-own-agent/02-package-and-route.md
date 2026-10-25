@@ -25,7 +25,12 @@ The UI upload control is gated. Enable **System Configuration > Advanced Develop
 
 There are two supported ways to install the bundle. Use whichever fits.
 
-**A. Through the UI (Content Hub).** With the toggle above on, open **Content Hub > Manage**, filter to **AI Agent**, and use **Upload > Upload AI Agent**. Choose your zip (or drag it onto the drop zone). Selecting the file uploads and activates the agent in one step; on success the panel reports it was added. If an agent of the same name already exists, tick **Replace existing version** before choosing the file, or you get a `CS-AI-AGENT-11` conflict. The agent then appears as a card in the catalog with its own detail page.
+**A. Through the UI (Content Hub).** With the toggle above on, open **Content Hub > Manage**, filter to **AI Agent**, and use **Upload > Upload AI Agent**. The panel that slides in is a drop zone:
+
+<!-- capture: fsa04-04-upload-dialog -->
+![fsa04-04-upload-dialog](fsa04-04-upload-dialog.png)
+
+Choose your zip (or drag it onto the drop zone). Selecting the file uploads and activates the agent in one step; on success the panel reports it was added. If an agent of the same name already exists, tick **Replace existing version** before choosing the file, or you get a `CS-AI-AGENT-11` conflict. The agent then appears as a card in the catalog with its own detail page.
 
 **B. Through the API.** Post the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`. Note: an agent installed this way is active and triggerable but is **not** listed in the Content Hub catalog; use path A if you want the catalog card and detail page.
 
