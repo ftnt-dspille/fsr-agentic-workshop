@@ -26,8 +26,10 @@ This also installs `pyfsr` (0.28.0 or newer), whose `pyfsr connector` commands y
 `fsr-agentic-toolkit init` checks the box and prints the config snippet for your agent product:
 
 ```bash
-fsr-agentic-toolkit init --url fortisoar.example.com --api-key '<your-api-key>' --no-verify-ssl --skip-verify
+fsr-agentic-toolkit init --url fortisoar.example.com --api-key '<your-api-key>' --no-verify-ssl --skip-verify --readonly
 ```
+
+Replace `fortisoar.example.com` with your box's URL and `<your-api-key>` with the key you created on the previous page. `--readonly` starts the agent with a read-only tool surface for this chapter; chapter 7 has you remove it before the first write.
 
 You should see:
 
@@ -43,7 +45,7 @@ You should see:
 {{% notice tip %}}
 `--skip-verify` is needed with an API key: the connection check calls an auth probe that API-key logins do not support, so `init` reports that it could not verify and prints the snippet anyway. An API-key connection proves out in step 4 through a read-only tool call, not through `whoami` (which needs that same auth probe).
 
-`--no-verify-ssl` is for lab boxes with self-signed certificates. Add `--readonly` to start the agent with a read-only tool surface; you can remove it after chapter 6.
+`--no-verify-ssl` is for lab boxes with self-signed certificates. `--readonly` (included above) starts the agent with a read-only tool surface; chapter 7 removes it before the first write.
 {{% /notice %}}
 
 ## 3. Install the snippet

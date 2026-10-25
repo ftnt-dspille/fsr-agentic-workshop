@@ -118,7 +118,7 @@ Create one alert by hand with no source data, and one with source JSON for the s
 
 Do not start an investigation on every alert. Each run costs tokens and minutes.
 
-A common pattern is to score the alert's risk first and investigate only above a threshold. Low-risk alerts stop early. The pattern is a playbook that calls a risk-evaluation agent, branches on the score, and starts the investigation only for medium or high risk. Your build may not ship a risk-gate playbook, so treat that as something you build. You build it in chapter 4.
+A common pattern is to score the alert's risk first and investigate only above a threshold. Low-risk alerts stop early. The pattern is a playbook that calls a risk-evaluation agent, branches on the score, and starts the investigation only for medium or high risk. Your build may not ship a risk-gate playbook, so treat that as something you build. Chapter 4 shows the building block this needs: a playbook that invokes an AI agent and branches on its result.
 
 {{% notice warning %}}
 Do not start an investigation from a playbook through an HMAC-authenticated API call. That route runs the investigation without FortiSOAR tools, and the verdict never gets written back. Start investigations from a route that authenticates as a user, and check the write-back afterward.

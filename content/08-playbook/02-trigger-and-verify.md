@@ -33,7 +33,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 - The run reaches `finished` within a few seconds.
 - The alert's description changed - the read-back is the proof, not the run status.
 
-**Verify in the UI:** open the alert; its description shows the playbook's text. Open **Playbooks** and find the run in the **Executed Playbook Logs** (the run history) and find the run.
+**Verify in the UI:** open the alert; its description shows the playbook's text. Then open **Automation** > **Executed Playbooks** (the run history) and find your run.
 
 <!-- capture: fsa08-03-run-history -->
 ![fsa08-03-run-history](fsa08-03-run-history.png)

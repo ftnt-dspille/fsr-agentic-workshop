@@ -7,6 +7,10 @@ description: "Have the agent create a FortiSOAR user, and meet the confirm gate.
 
 First write: a new analyst account. This is also your first meeting with the confirm gate, because creating a user grants roles and is therefore one of the tools that never runs without explicit confirmation.
 
+{{% notice warning %}}
+This is the first chapter that writes to the box, so the read-only guard from chapter 6 must come off first. In your `.mcp.json`, remove `FSR_MCP_READONLY` from the env block (or set it to `0`) and restart the agent. Leave it on and every write in Part 2 fails with `ToolDisabled: read-only mode`.
+{{% /notice %}}
+
 ## 1. Ask the agent
 
 Give your agent this prompt:
@@ -15,7 +19,8 @@ Give your agent this prompt:
 Create a FortiSOAR user for a new analyst: login agentlab_analyst,
 email agentlab_analyst@example.com, first name Agent, last name Lab,
 role Security Analyst, and a strong random password you generate.
-Tell me the password, then verify the user exists by querying for it.
+Save the password to a local file agentlab_analyst.secret (do not print
+it in chat), then verify the user exists by querying for it.
 ```
 
 <!-- step: fsa07-01-create-user -->

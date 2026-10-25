@@ -22,7 +22,7 @@ two other meanings under *Overloaded words* below).
 
 **MCP (Model Context Protocol).** The plug standard between agents and tools. A
 *server* advertises its tools with typed schemas; a *client* lists them, picks
-one, sends inputs, and reads the result. The agent product (Claude Code, Codex,
+one, sends inputs, and reads the result. The agent product (Claude Code, OpenCode,
 Copilot) does not need to know anything about FortiSOAR: it just sees tools like
 `search_records` and reads their descriptions.
 
@@ -30,8 +30,9 @@ Copilot) does not need to know anything about FortiSOAR: it just sees tools like
 calls which matters and changes between the two parts of this workshop:
 - In **Part 1, chapter 5**, FortiSOAR is the *client*: it calls out to an
   external MCP server you register (for example, a public docs server).
-- In **Part 2**, FortiSOAR is the *target*: `pyfsr-mcp` runs on your laptop and
-  turns your coding agent's tool calls into FortiSOAR REST calls.
+- In **Part 2**, FortiSOAR is the *target*: the `fsr-agentic-toolkit` MCP server
+  runs on your laptop and turns your coding agent's tool calls into FortiSOAR
+  REST calls.
 
 **Verification step.** How you know a tool call actually worked. A success
 response is a claim, not proof: after any write you read the state back (fetch
@@ -92,14 +93,13 @@ it immediately.
 **pyfsr.** The open-source FortiSOAR SDK: a typed REST client with auth and
 instance handling. No agent code of its own.
 
-**pyfsr-mcp.** The MCP server built on pyfsr. It runs on your laptop, your coding
-agent starts it, and it translates the agent's tool calls into FortiSOAR REST
-calls. It needs two values: the box URL and an API key.
-
-**fsr-agentic-toolkit.** The agent layer on top of pyfsr: the verbs plus seven
-ready-made **workflows**, served as an MCP server, a CLI, and a Python API. It is
-what makes a general coding agent competent on FortiSOAR, and it is the heart of
-Part 2.
+**fsr-agentic-toolkit.** The package you install in Part 2. It builds on pyfsr and
+adds the agent layer: the verbs plus seven ready-made **workflows**, served as an
+MCP server, a CLI, and a Python API. Its MCP server runs on your laptop, your
+coding agent starts it, and it translates the agent's tool calls into FortiSOAR
+REST calls (it needs two values: the box URL and an API key). It is what makes a
+general coding agent competent on FortiSOAR, and it is the heart of Part 2. This
+is the one name the chapters use; you do not install a separate MCP server.
 
 **Workflow (toolkit).** One of the seven higher-level operations the toolkit
 ships: `orient`, `debug_run`, `repair_playbook`, `build_playbook`,
@@ -130,7 +130,7 @@ field live), **playbook publish** (activating a playbook), and **Content Hub
 publish** (making installed content available).
 
 **"Agent"** in Part 1 is a code bundle that runs on the appliance (a FortiAI
-agent); in Part 2 it is your coding agent (Claude Code, Codex, Copilot) on your
+agent); in Part 2 it is your coding agent (Claude Code, OpenCode, Copilot) on your
 laptop.
 
 ## Acronyms

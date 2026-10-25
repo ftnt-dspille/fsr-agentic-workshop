@@ -9,7 +9,7 @@ Before touching anything, get the map straight. Everything in this workshop is o
 
 ## MCP in one paragraph
 
-MCP (Model Context Protocol) is the plug standard between agents and tools. A server advertises tools with typed schemas; the agent lists them, picks one, sends arguments, gets a result. The agent product (Claude Code, Codex, Copilot) does not need to know anything about FortiSOAR: it just sees tools like `search_records` or `run_connector_operation` and reads their descriptions.
+MCP (Model Context Protocol) is the plug standard between agents and tools. A server advertises tools with typed schemas; the agent lists them, picks one, sends arguments, gets a result. The agent product (Claude Code, OpenCode, Copilot) does not need to know anything about FortiSOAR: it just sees tools like `search_records` or `run_connector_operation` and reads their descriptions.
 
 An MCP connection always has a caller and a thing being called, and this workshop uses it **both ways**. Keep the direction straight and nothing else is confusing:
 
