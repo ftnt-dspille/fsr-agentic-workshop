@@ -81,9 +81,14 @@ The registration has four steps. Do not skip the first one.
 3. **Check status.** Read the status for the server. A healthy server shows as active with its tools.
 4. **Grant.** Add the server's UUID and the tool names it may use to each agent that should call it. Chapter 5, page 2, covers the grant.
 
-<!-- step: fsa05-01-validate-register manual: Connect MCP Server form with a live Test Connection to an external server; no spec yet -->
+<!-- step: fsa05-01-validate-register -->
 
-Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
+Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. The filled form looks like this:
+
+<!-- capture: fsa05-03-connect-form -->
+![fsa05-03-connect-form](fsa05-03-connect-form.png)
+
+Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
 <!-- capture: fsa05-01-mcp-servers-page -->
 ![fsa05-01-mcp-servers-page](fsa05-01-mcp-servers-page.png)

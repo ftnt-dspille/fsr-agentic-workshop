@@ -69,6 +69,15 @@ test("05-register-mcp-servers", async () => {
       const auth = modal.locator("select[name=auth_type]");
       await expect(auth).toBeVisible();
       await auth.selectOption({ label: "None" });
+      // Capture the filled form so a learner sees exactly which fields to set. The server
+      // address is visible in the url input, so paint that input over (it is a hostname).
+      await shotPanel(page, {
+        chapter: "05-register-mcp-servers",
+        id: "fsa05-03-connect-form",
+        locator: modal,
+        pad: 4,
+        mask: ["input[type=url]"],
+      });
       const test_ = modal.getByRole("button", { name: "Test Connection" });
       await expect(test_).toBeEnabled();
       await test_.click();
