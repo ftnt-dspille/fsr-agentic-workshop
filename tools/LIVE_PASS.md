@@ -24,7 +24,15 @@ export FSR_API_KEY=<key>             # Full App Permissions key
 export FSR_USERNAME=<ui-user>        # for UI captures (soarKit logs in via the UI)
 export FSR_PASSWORD=<ui-pass>
 export SOAR_KIT_DIR=~/PycharmProjects/Miscellaneous/fortisoar/repro/js
+export FSR_PYTHON=~/PycharmProjects/fsr-agentic-toolkit/.venv/bin/python  # the toolkit venv
 ```
+
+`FSR_PYTHON` must point at the interpreter in the `fsr-agentic-toolkit` venv: its
+bin directory holds the `fsr-agentic-toolkit` CLI that the specs' effect checks and
+the pyfsr CLI steps call. Without it the effect checks fail with a "toolkit not
+found" message (the harness falls back to `uvx` only if that is installed). Agent
+runs still start via `uvx`, so a missing `FSR_PYTHON` shows up only as a failing
+effect check, not a failing agent run.
 
 For published screenshots, alias the box in /etc/hosts as
 `fortisoar.example.com` and set FSR_BASE_URL to that name so URL bars need no
@@ -55,6 +63,21 @@ make agent-drive-plan       # review the 15 prompts first
 make agent-drive            # or CHAPTER=07-users-modules-records per chapter
 make e2e ...                # re-assert box effects after the agent ran
 ```
+
+Re-grade without spending credits (re-grade, not re-drive): the runner stores every
+transcript under `tools/agent-drive/.transcripts/`. To re-check behavior and box
+effect for the stored runs after a grading change or a box state change, point
+`--regrade` at that folder - it runs no agent, only the behavior parse and the live
+effect steps:
+
+```bash
+python3 tools/agent-drive/run.py --regrade tools/agent-drive/.transcripts --env-file <env>
+```
+
+Prompts flagged `workaround:Bash`/`workaround:Skill` mean the agent reached outside
+the toolkit (local docs, a Skill, shell) to get the job done; those transcripts
+should be regenerated from an improved prompt, not shipped, because a learner's
+agent will not have the author's local setup.
 
 ## 4. Screenshots
 

@@ -102,15 +102,40 @@ function pyfsrTool(name, args) {
   const { execFileSync } = require("child_process");
   const path = require("path");
   const fs = require("fs");
+  // Resolve the toolkit CLI the same way the agent-drive MCP server does, so the
+  // effect check runs wherever the agent itself runs: beside FSR_PYTHON, then on
+  // PATH, then via uvx. A bare ENOENT here otherwise reads as a content failure
+  // when the real cause is an unset FSR_PYTHON (see the message below).
   const py = process.env.FSR_PYTHON;
   const beside = py && py.includes(path.sep) ? path.join(path.dirname(py), "fsr-agentic-toolkit") : null;
-  const exe = beside && fs.existsSync(beside) ? beside : "fsr-agentic-toolkit";
-  const stdout = execFileSync(exe, ["call", "--json", name, JSON.stringify(args)], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-    env: { ...process.env, PYFSR_INSTANCES: path.join(__dirname, "no-instances.toml"), FSR_SUPPRESS_INSECURE_WARNINGS: "true" },
-    timeout: 12 * 60 * 1000,
-  });
+  const onPath = (() => {
+    for (const dir of (process.env.PATH || "").split(path.delimiter)) {
+      if (dir && fs.existsSync(path.join(dir, "fsr-agentic-toolkit"))) return path.join(dir, "fsr-agentic-toolkit");
+    }
+    return null;
+  })();
+  const resolved = (beside && fs.existsSync(beside) && beside) || onPath;
+  const [exe, pre] = resolved ? [resolved, []]
+    : ["uvx", ["--from", "fsr-agentic-toolkit", "fsr-agentic-toolkit"]];
+  const callEnv = { ...process.env, PYFSR_INSTANCES: path.join(__dirname, "no-instances.toml"), FSR_SUPPRESS_INSECURE_WARNINGS: "true" };
+  let stdout;
+  try {
+    stdout = execFileSync(exe, [...pre, "call", "--json", name, JSON.stringify(args)], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      env: callEnv,
+      timeout: 12 * 60 * 1000,
+    });
+  } catch (err) {
+    if (err && err.code === "ENOENT") {
+      throw new Error(
+        "fsr-agentic-toolkit not found: set FSR_PYTHON to the interpreter in the " +
+        "toolkit's venv (its bin dir holds the fsr-agentic-toolkit CLI), or put the " +
+        "CLI on PATH, or install uv so the uvx fallback can run it. This is an env " +
+        "setup problem, not a workshop content failure.");
+    }
+    throw err;
+  }
   const result = JSON.parse(stdout);
   if (result && result.error) {
     throw new Error(`${name}: ${JSON.stringify(result.error).slice(0, 500)}`);
