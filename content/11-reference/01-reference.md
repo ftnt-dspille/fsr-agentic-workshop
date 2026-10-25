@@ -11,7 +11,7 @@ Patterns that worked throughout the workshop, generalized:
 
 | Goal | Prompt pattern |
 |---|---|
-| Safe start on any box | "Call whoami and list the modules before doing anything else." |
+| Safe start on any box | "List the modules and show me the newest alerts before doing anything else." |
 | Idempotent writes | "Create X, skipping anything that already exists (match on <field>)." |
 | Honest enrichment | "Only claim what a tool result shows; state gaps explicitly." |
 | Effect verification | "After the write, read it back and show me the proof." |

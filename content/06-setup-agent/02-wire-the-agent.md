@@ -69,20 +69,22 @@ You should see:
 {{% /tab %}}
 {{% /tabs %}}
 
-## 4. First contact: whoami
+## 4. First contact
 
 Give your agent this prompt:
 
 ```text
-Using the fortisoar tools, call whoami and tell me who I am, which
-FortiSOAR version the box runs, and how many modules it has.
+Using the fortisoar tools, list the modules on this box and then show me the
+few newest alerts, with one line on what stands out about each.
 ```
 
 <!-- step: fsa06-04-whoami -->
 
-**What success looks like:** the agent calls the tools and confirms it is talking to the box. Read the capture closely, because it shows a real limitation of an **API-key** connection: `whoami` fails (`Operation 'auth' is not supported with APIKeyAuth`), and `appliance_info_identity` has no SSH target, so the agent cannot read your login id or the version this way. What it can do read-only is `list_modules`, so it reports the module count (the exact number depends on your box). A good agent says all of this plainly rather than guessing, the same honesty you want in an investigation.
+**What success looks like:** the agent calls a read-only tool like `list_modules`, then queries the recent alerts, and answers with the module count and a short, grounded summary of the latest alerts. That is your first win: the connection works and the agent is already doing useful read-only work, before you grant it a single write.
 
-To get your login id and the box version from `whoami`, point the MCP at a **user login** instead of an API key. On the box, nothing changed: these are read-only tools.
+{{% notice tip %}}
+Notice what the agent did *not* reach for: `whoami`. With an **API-key** connection `whoami` fails (`Operation 'auth' is not supported with APIKeyAuth`), because the identity probe it uses is not available to API keys, and `appliance_info_identity` has no SSH target. To read your login id or the box version that way, point the MCP at a **user login** instead. Either way these are read-only tools and nothing on the box changes. A good agent says plainly when it cannot answer something rather than guessing - the same honesty you want in an investigation.
+{{% /notice %}}
 
 <!-- capture: fsa06-04-whoami-claude -->
 ![fsa06-04-whoami-claude](fsa06-04-whoami-claude.png)

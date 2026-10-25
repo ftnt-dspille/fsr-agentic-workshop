@@ -68,8 +68,8 @@ PREAMBLE = (
 # with confirm=true is a behavior failure.
 MANIFEST: dict[str, dict] = {
     "06-setup-agent/02-wire-the-agent#1": {
-        "calls": ["whoami"], "confirm_ok": [],
-        "answer": ["version", "module"],
+        "calls": ["list_modules"], "confirm_ok": [], "forbid": ["whoami"],
+        "answer": ["alert"],
         "effect": ("06-setup-agent.spec.js", ["fsa06-04-whoami"]),
     },
     "07-users-modules-records/01-create-a-user#1": {
