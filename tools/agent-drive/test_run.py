@@ -26,7 +26,7 @@ def P(pid: str, text: str = "do the thing") -> run.Prompt:
 
 class SelectionTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.a = P("07-users-modules-records/01-create-a-user#1")
+        self.a = P("07-users-modules-records/01-bulk-triage#1")
         self.b = P("08-playbook/01-author-and-publish#1")
         self.prompts = [self.a, self.b]
 
@@ -74,7 +74,7 @@ class SelectionTests(unittest.TestCase):
 
 
 class BehaviorTests(unittest.TestCase):
-    pid = "07-users-modules-records/01-create-a-user#1"
+    pid = "07-users-modules-records/01-bulk-triage#1"
 
     def events(self, calls: list[tuple[str, dict]], answer: str) -> list[dict]:
         ev = [{"type": "assistant", "message": {"content": [
@@ -83,23 +83,22 @@ class BehaviorTests(unittest.TestCase):
         return ev
 
     def test_passing_behavior(self) -> None:
-        ev = self.events([("create_user", {"confirm": True}), ("query_records", {})], "agentlab_analyst created")
+        ev = self.events([("query_records", {}), ("update_record", {}), ("update_record", {})],
+                         "Moved 2 Agent Lab alerts to Investigating")
         self.assertEqual(run.check_behavior(self.pid, ev), [])
 
     def test_wrong_order_fails(self) -> None:
-        ev = self.events([("query_records", {}), ("create_user", {})], "agentlab_analyst")
+        ev = self.events([("update_record", {}), ("query_records", {})], "Agent Lab")
         self.assertIn("tool-sequence", run.check_behavior(self.pid, ev))
 
     def test_unexpected_confirm_fails(self) -> None:
-        ev = self.events([("create_user", {}), ("query_records", {})], "agentlab_analyst")
-        ev[0]["message"]["content"][0]["input"] = {"confirm": True}
-        ev2 = self.events([("create_module", {"confirm": True}), ("create_user", {}), ("query_records", {})],
-                          "agentlab_analyst")
-        self.assertIn("unexpected-confirm:create_module", run.check_behavior(self.pid, ev2))
+        # A tier-2 write carries no confirm; confirm=true here is not in confirm_ok.
+        ev = self.events([("query_records", {}), ("update_record", {"confirm": True})], "Agent Lab")
+        self.assertIn("unexpected-confirm:update_record", run.check_behavior(self.pid, ev))
 
     def test_missing_answer_fails(self) -> None:
-        ev = self.events([("create_user", {}), ("query_records", {})], "done")
-        self.assertIn("answer-missing:agentlab_analyst", run.check_behavior(self.pid, ev))
+        ev = self.events([("query_records", {}), ("update_record", {})], "done")
+        self.assertIn("answer-missing:Agent Lab", run.check_behavior(self.pid, ev))
 
 
 class PreflightTests(unittest.TestCase):
@@ -244,7 +243,7 @@ class ModelTests(unittest.TestCase):
     """The baseline model is part of the selection key; a pass on another model never satisfies it."""
 
     def setUp(self) -> None:
-        self.a = P("07-users-modules-records/01-create-a-user#1")
+        self.a = P("07-users-modules-records/01-bulk-triage#1")
 
     def test_default_model_is_the_sonnet_baseline(self) -> None:
         self.assertEqual(run.DEFAULT_MODEL, "claude-sonnet-5-5")

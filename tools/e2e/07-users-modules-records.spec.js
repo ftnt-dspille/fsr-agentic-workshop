@@ -16,19 +16,32 @@ const MODULE = "agentlab_assets";
 test("07-users-modules-records", async ({ playwright }) => {
   const api = await apiContext(playwright.request);
   try {
-    if (wanted("fsa07-01-create-user")) await test.step("fsa07-01-create-user", async () => {
-      const out = pyfsrTool("create_user", {
-        loginid: "agentlab_analyst",
-        password: `Lab-${Date.now()}-x!`,
-        firstname: "Agent",
-        lastname: "Lab",
-        email: "agentlab_analyst@example.com",
-        roles: ["Security Analyst"],
-        confirm: true,
-      });
-      expect(out.user.email).toBe("agentlab_analyst@example.com");
-      const people = await apiGet(api, "/api/3/people?email=agentlab_analyst%40example.com");
-      expect((people["hydra:member"] || []).length).toBe(1);
+    if (wanted("fsa07-01-bulk-triage")) await test.step("fsa07-01-bulk-triage", async () => {
+      // Prove the batch mechanism the page promises: query a set of Open alerts and
+      // move every one to Investigating. Seed two Open marker alerts, update them, read
+      // the status back, then soft-delete them so the box is left as found.
+      const marker = `Agent Lab bulktriage e2e ${Date.now()}`;
+      const ids = [];
+      for (const suffix of ["A", "B"]) {
+        const out = pyfsrTool("create_record", { module: "alerts", data: { name: `${marker} ${suffix}`, status: "Open" } });
+        const id = out["@id"] || `/api/3/alerts/${out.uuid}`;
+        ids.push(id);
+      }
+      // The agent does query -> update per row; here we drive the writes directly.
+      for (const ref of ids) {
+        pyfsrTool("update_record", { module: "alerts", ref, data: { status: "Investigating" } });
+      }
+      // Read the effect back from the box: every seeded alert is now Investigating.
+      for (const ref of ids) {
+        const uuid = ref.split("/").pop();
+        const rec = await apiGet(api, `/api/3/alerts/${uuid}`);
+        const status = rec.status && (rec.status.itemValue || rec.status.value || rec.status);
+        expect(status).toBe("Investigating");
+      }
+      // Clean up the marker alerts (delete_record is tier 3, so confirm it).
+      for (const ref of ids) {
+        pyfsrTool("delete_record", { module: "alerts", ref, confirm: true });
+      }
     });
 
     if (wanted("fsa07-02-create-module")) await test.step("fsa07-02-create-module", async () => {

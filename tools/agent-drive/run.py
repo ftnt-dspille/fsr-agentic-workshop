@@ -72,10 +72,10 @@ MANIFEST: dict[str, dict] = {
         "answer": ["alert"],
         "effect": ("06-setup-agent.spec.js", ["fsa06-04-whoami"]),
     },
-    "07-users-modules-records/01-create-a-user#1": {
-        "calls": ["create_user", "query_records"], "confirm_ok": ["create_user"],
-        "answer": ["agentlab_analyst"],
-        "effect": ("07-users-modules-records.spec.js", ["fsa07-01-create-user"]),
+    "07-users-modules-records/01-bulk-triage#1": {
+        "calls": ["query_records", "update_record"], "confirm_ok": [],
+        "answer": ["Agent Lab"],
+        "effect": ("07-users-modules-records.spec.js", ["fsa07-01-bulk-triage"]),
     },
     "07-users-modules-records/02-create-a-module#1": {
         "calls": ["provision_module"], "confirm_ok": ["provision_module"],

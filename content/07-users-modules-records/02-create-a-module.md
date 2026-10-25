@@ -5,7 +5,11 @@ weight: 20
 description: "Have the agent design and publish a custom module with fields, picklists and permissions."
 ---
 
-Now a schema change: a custom module for lab assets. This is the step where verification discipline starts to matter, because module creation is a two-phase operation (staging, then an appliance-wide publish) and a module without role permissions looks created but rejects every record write.
+Now a schema change: a custom module for lab assets. This is also your first meeting with the confirm gate. The bulk triage in the last lab was a tier-2 write, which the agent does once the read-only guard is off. Creating a module is tier-3: it changes schema appliance-wide, so the agent must stop and ask you before it commits. This is the step where verification discipline starts to matter, because module creation is a two-phase operation (staging, then an appliance-wide publish) and a module without role permissions looks created but rejects every record write.
+
+{{% notice note %}}
+When the agent's first `provision_module` call comes back with `confirmation_required`, it should relay what will change and wait for your yes before retrying with `confirm: true`. If it silently confirmed on its own, tell it to always check with you before a gated call: the gate stops a one-shot accident, but your instructions set the standard for what the agent asks about.
+{{% /notice %}}
 
 ## 1. Ask the agent
 
