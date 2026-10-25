@@ -41,7 +41,7 @@ You should see:
 ![fsa06-03-agent-init](fsa06-03-agent-init.png)
 
 {{% notice tip %}}
-`--skip-verify` is needed with an API key: the connection check calls an auth probe that API-key logins do not support, so `init` reports that it could not verify and prints the snippet anyway. You prove the connection in step 4 with whoami instead.
+`--skip-verify` is needed with an API key: the connection check calls an auth probe that API-key logins do not support, so `init` reports that it could not verify and prints the snippet anyway. An API-key connection proves out in step 4 through a read-only tool call, not through `whoami` (which needs that same auth probe).
 
 `--no-verify-ssl` is for lab boxes with self-signed certificates. Add `--readonly` to start the agent with a read-only tool surface; you can remove it after chapter 6.
 {{% /notice %}}
@@ -78,7 +78,9 @@ FortiSOAR version the box runs, and how many modules it has.
 
 <!-- step: fsa06-04-whoami -->
 
-**What success looks like:** the agent reports your login id, the box version (8.0.1 or later) and a module count around 40. On the box, nothing changed: whoami and list_modules are read-only.
+**What success looks like:** the agent calls the tools and confirms it is talking to the box. Read the capture closely, because it shows a real limitation of an **API-key** connection: `whoami` fails (`Operation 'auth' is not supported with APIKeyAuth`), and `appliance_info_identity` has no SSH target, so the agent cannot read your login id or the version this way. What it can do read-only is `list_modules`, so it reports the module count (the exact number depends on your box). A good agent says all of this plainly rather than guessing, the same honesty you want in an investigation.
+
+To get your login id and the box version from `whoami`, point the MCP at a **user login** instead of an API key. On the box, nothing changed: these are read-only tools.
 
 <!-- capture: fsa06-04-whoami-claude -->
 ![fsa06-04-whoami-claude](fsa06-04-whoami-claude.png)
