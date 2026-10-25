@@ -108,9 +108,9 @@ Notice what the agent did *not* reach for: `whoami`. With an **API-key** connect
 ![06-setup-agent/02-wire-the-agent#1](fsa06-04-whoami-claude.png)
 
 ```text
-  > whoami {}
   > list_modules {}
-  > appliance_info_identity {}
+  > query_records {"module": "alerts", "limit": 5, "sort": [{"field": "createDate", "di...
+  > query_records {"module": "alerts", "limit": 5, "sort": [{"field": "createDate", "di...
 ```
 
 </details>

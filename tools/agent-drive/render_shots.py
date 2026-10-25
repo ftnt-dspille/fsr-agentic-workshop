@@ -51,6 +51,9 @@ def scrub(text: str) -> str:
     text = re.sub(r"~/PycharmProjects/[^\s\"']*", "<repo>", text)
     text = re.sub(r"\bdylanspille\b", "<user>", text, flags=re.I)
     text = re.sub(r"\b(?!203\.0\.113\.)\d{1,3}(?:\.\d{1,3}){3}\b", "<ip>", text)
+    # mask URLs (e.g. indicator/threat-intel URLs pulled from alert data); keep the
+    # example.com placeholder visible.
+    text = re.sub(r"https?://(?!(?:[\w.-]*\.)?example\.com\b)[^\s\"'<>)\]]+", "<url>", text)
     text = re.sub(r"\d{4}-\d{2}-\d{2}T[\d:.]+Z?", "<time>", text)
     text = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "<date>", text)
     text = re.sub(r"\b1[67]\d{8}\b", "<epoch>", text)
