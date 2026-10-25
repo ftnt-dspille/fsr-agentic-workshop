@@ -34,17 +34,22 @@ Registration is a validate-then-persist flow: validation performs the real MCP h
 If your build takes the registration over the API, the `authentication` field must be a JSON string, not an object - an object corrupts the status route for every registered server. The previous page covers the rule and the repair.
 {{% /notice %}}
 
-## 3. Grant it to one agent with an allowlist
+## 3. Grant it to one agent
 
-<!-- step: fsa05-04-grant-allowlist manual: edits an agent allowlist; no spec yet and needs the agent from chapter 4 -->
+<!-- step: fsa05-04-grant-allowlist manual: edits an agent's configuration; no spec yet and needs an agent that calls tools -->
 
-Pick one agent that can call tools. Add the server to that agent's allowlist and name only the read tools you want it to have. Save the agent configuration.
+Pick one agent that calls tools. Open it from **Content Hub** > **AI Agents**, open the agent's detail panel, and switch to the **Configurations** tab. Under a **Custom Configuration** the UI gives that one agent three settings that decide how it behaves:
 
-The allowlist behaves in three ways. Know them before you rely on it:
+- **LLM Provider** - the reasoning profile the agent thinks with (for example `Low Reasoning`). This is where you choose the model that answers for this agent.
+- **MCP Server** - the servers this agent may reach. Select the one you registered (`deepwiki`) so this agent can call it. Agents can only use servers selected here.
+- **Masking Agent** (optional) - a masking agent such as `IOC Masking` that scrubs indicators before data leaves for the LLM.
 
-- A server that no agent lists is not filtered for any agent that can see it. A new server is not restricted by existing allowlists, so grant it explicitly.
-- An agent with no allowlist gets every tool from every server it is configured with. Always write an explicit allowlist.
-- An empty tool list for a server means the agent gets no tools from it.
+Select the server, pick an LLM Provider, and **Save**.
+
+The grant is at the server level. Know how reach works before you rely on it:
+
+- The MCP Server field is how an agent is given a server. An agent that does not list a server here cannot call it, however healthy that server is.
+- Which tools from a selected server the agent may call is set by the agent's own tool allowlist in its bundle, not in this panel. An agent with no allowlist in its bundle gets every tool from every server selected here, so for anything beyond a lab, pin an explicit allowlist in the bundle.
 
 <!-- capture: fsa05-02-agent-allowlist -->
 ![fsa05-02-agent-allowlist](fsa05-02-agent-allowlist.png)
@@ -67,6 +72,6 @@ Ask the granted agent a question only the remote server can answer (for DeepWiki
 |---|---|---|
 | Validation finds no tools | The box cannot reach the URL, or the path is wrong | curl the URL from the appliance CLI; the path usually ends in /mcp |
 | Validation ok, status failing | `authentication` stored as an object | Rewrite it as a JSON string (previous page) |
-| Agent never calls the server | Not in that agent's allowlist | Grant the server and tools explicitly to the agent you are testing |
+| Agent never calls the server | Server not selected for that agent | Select the server in the agent's Configurations tab (MCP Server) and save |
 | Calls time out | Slow public server or egress proxy | Retry; check the appliance's proxy settings |
 
