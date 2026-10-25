@@ -109,6 +109,11 @@ MANIFEST: dict[str, dict] = {
         "answer": ["Triaged automatically"],
         "effect": ("08-playbook.spec.js", ["fsa08-03-trigger-and-verify"]),
     },
+    "08-playbook/03-diagnose-a-failed-run#1": {
+        "calls": ["publish_playbook", "create_record", "wait_for_playbook_run", "diagnose_run"],
+        "confirm_ok": [], "answer": ["Tag Alert"],
+        "effect": ("08-playbook.spec.js", ["fsa08-04-diagnose-run"]),
+    },
     "09-connectors/01-explore-and-run#1": {
         "calls": ["list_connectors", "healthcheck_connector", "list_connector_operations"], "confirm_ok": [],
         "answer": ["Available"],

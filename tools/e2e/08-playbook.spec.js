@@ -76,6 +76,31 @@ test("08-playbook", async ({ playwright }) => {
       const alert = (query["hydra:member"] || [])[0];
       expect(alert.description).toContain("Triaged automatically by the Agent Lab playbook");
     });
+
+    if (wanted("fsa08-04-diagnose-run")) await test.step("fsa08-04-diagnose-run", async () => {
+      // Break the playbook (update step points at a record that does not exist), trigger
+      // it, and prove diagnose_run names the failing step and the error. Restore the good
+      // YAML at the end so the box is left as found.
+      const broken = YAML.replace(
+        `record: "{{ vars.input.records[0]['@id'] }}"`,
+        `record: "/api/3/alerts/00000000-0000-0000-0000-000000000000"`,
+      );
+      expect(broken).not.toBe(YAML);
+      try {
+        expect(pyfsrTool("publish_playbook", { yaml_text: broken }).published).toBe(true);
+        const since = new Date().toISOString();
+        pyfsrTool("create_record", { module: "alerts", data: { name: `Agent Lab - diag test (${Date.now()})`, status: "Open" } });
+        const run = pyfsrTool("wait_for_playbook_run", { playbook: "Tag Agent Lab Alerts", since, timeout: 120 });
+        expect(run.status).toBe("failed");
+        const diag = pyfsrTool("diagnose_run", { playbook: "Tag Agent Lab Alerts", run: String(run.pk) });
+        expect(diag.verdict).toBe("failed");
+        expect(diag.failing_step).toBe("Tag Alert");
+        expect(diag.error_message).toMatch(/404|Not Found/i);
+      } finally {
+        // Always put the working playbook back.
+        pyfsrTool("publish_playbook", { yaml_text: YAML });
+      }
+    });
   } finally {
     await api.dispose();
   }
