@@ -2,5 +2,4 @@
 # One id per line, then "# reason". lint-steps.py accepts a pending id in place of a
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
-fsa03-07-verdict-dashboard    # dashboard built by hand over FortiAI verdicts; needs investigated alerts
 fsa05-02-agent-allowlist      # deepwiki registered + allowlist set via API; no per-agent allowlist UI editor on this 8.0.1 build
