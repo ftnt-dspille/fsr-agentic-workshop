@@ -103,7 +103,33 @@ def render_transcript(shot: str, lines: list[tuple[str, str]]) -> Path:
     return svg
 
 
+def autocrop(png: Path, pad: int = 16) -> None:
+    """Trim the solid letterbox border a square-thumbnail backend (qlmanage -s)
+    leaves around the terminal window, so the shot frames its content tightly.
+    Best effort: without Pillow, keep the full canvas rather than fail."""
+    try:
+        from PIL import Image, ImageChops
+    except Exception:  # noqa: BLE001 -- Pillow is an optional render-time extra
+        return
+    im = Image.open(png).convert("RGBA")
+    bg = Image.new("RGBA", im.size, im.getpixel((0, 0)))  # the corner = border fill
+    bbox = ImageChops.difference(im, bg).convert("L").getbbox()
+    if not bbox:
+        return
+    left, top, right, bottom = bbox
+    box = (max(0, left - pad), max(0, top - pad),
+           min(im.width, right + pad), min(im.height, bottom + pad))
+    im.crop(box).save(png)
+
+
 def to_png(svg: Path, png: Path) -> bool:
+    if not _to_png_raw(svg, png):
+        return False
+    autocrop(png)
+    return True
+
+
+def _to_png_raw(svg: Path, png: Path) -> bool:
     if shutil.which("rsvg-convert"):
         subprocess.run(["rsvg-convert", "-o", str(png), str(svg)], check=True)
         return True

@@ -133,29 +133,9 @@ def render_png(pid: str, prompt_text: str, calls: list[str], answer: str, out: P
     console.print(Text(answer or "(none)", style="white"))
     svg = out.with_suffix(".svg")
     svg.write_text(console.export_svg(title="agent-drive"))
-    if not _ts.to_png(svg, out):
+    if not _ts.to_png(svg, out):  # to_png autocrops the letterbox border
         raise SystemExit(f"no SVG-to-PNG backend for {out.name}")
     svg.unlink()
-    _autocrop(out)
-
-
-def _autocrop(png: Path, pad: int = 16) -> None:
-    """Trim the solid letterbox border a square-thumbnail backend (qlmanage -s)
-    leaves around the terminal window, so the shot frames its content tightly.
-    Best effort: without Pillow, keep the full canvas rather than fail."""
-    try:
-        from PIL import Image, ImageChops
-    except Exception:  # noqa: BLE001 -- Pillow is an optional render-time extra
-        return
-    im = Image.open(png).convert("RGBA")
-    bg = Image.new("RGBA", im.size, im.getpixel((0, 0)))  # the corner = border fill
-    bbox = ImageChops.difference(im, bg).convert("L").getbbox()
-    if not bbox:
-        return
-    left, top, right, bottom = bbox
-    box = (max(0, left - pad), max(0, top - pad),
-           min(im.width, right + pad), min(im.height, bottom + pad))
-    im.crop(box).save(png)
 
 
 def model_label(model: str) -> str:
