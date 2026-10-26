@@ -100,7 +100,7 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
   > playbook_yaml_reference {"topic": "decision"}
   > playbook_yaml_reference {"topic": "Routing"}
   > playbook_yaml_reference {"topic": "Step types"}
-  > compile_playbook_yaml {"yaml_text": "collection: Agent Lab\ndescription: Agent Lab playbook...
+  > compile_playbook_yaml {"yaml_text": "collection: Agent Lab description: Agent Lab playbooks...
 ```
 
 **`01-author-and-publish#2`** (Sonnet run, sanitized)
@@ -108,8 +108,8 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 ![08-playbook/01-author-and-publish#2](agent-run-01-author-and-publish-2.png)
 
 ```text
-  > publish_playbook {"yaml_text": "collection: Agent Lab\ndescription: Agent Lab playbook...
-  > get_record {"module": "workflows", "ref": "2e358ca7-bbed-5bd9-a7c9-54c29fcf524c"...
+  > Bash {"command": "ls -la <repo>"}
+  > Bash {"command": "cd <repo> && find . -newer tools/agent-drive/run.py \\( ...
 ```
 
 </details>

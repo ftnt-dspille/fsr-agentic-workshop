@@ -24,7 +24,7 @@ The last run of "Tag Agent Lab Alerts" failed. Tell me which step failed and
 why, show me the error verbatim, and suggest the smallest fix.
 ```
 
-This is the break-fix loop from chapter 8, page 3, in a single prompt: `diagnose_run` and `why_playbook_failed` do the reasoning the UI leaves to you.
+This is the break-fix loop from chapter 8, page 3, in a single prompt: `diagnose_run` does the reasoning the UI leaves to you, diffing the step graph against the run and naming the failing step and its error.
 
 ## Sweep every connector's health
 

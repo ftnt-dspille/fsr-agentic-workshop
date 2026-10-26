@@ -50,9 +50,15 @@ def scrub(text: str) -> str:
     text = re.sub(r"/Users/[^/\s\"']+", "~", text)
     text = re.sub(r"~/PycharmProjects/[^\s\"']*", "<repo>", text)
     text = re.sub(r"\bdylanspille\b", "<user>", text, flags=re.I)
+    # FortiSOAR API URLs: mask the appliance authority (host:port) but KEEP the
+    # /api/... path -- the path is the teaching payload (e.g. a 404 on a missing
+    # record's IRI) and carries no host, IP or credential. Runs before IP masking
+    # so the authority is replaced cleanly.
+    text = re.sub(r"https?://[^\s\"'<>)\]]*?(/api/[^\s\"'<>)\]]*)",
+                  r"https://fortisoar.example.com\1", text)
     text = re.sub(r"\b(?!203\.0\.113\.)\d{1,3}(?:\.\d{1,3}){3}\b", "<ip>", text)
-    # mask URLs (e.g. indicator/threat-intel URLs pulled from alert data); keep the
-    # example.com placeholder visible.
+    # mask any OTHER URLs (e.g. indicator/threat-intel URLs pulled from alert
+    # data); keep the example.com placeholder visible.
     text = re.sub(r"https?://(?!(?:[\w.-]*\.)?example\.com\b)[^\s\"'<>)\]]+", "<url>", text)
     text = re.sub(r"\d{4}-\d{2}-\d{2}T[\d:.]+Z?", "<time>", text)
     text = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "<date>", text)
@@ -63,9 +69,25 @@ def scrub(text: str) -> str:
     return text
 
 
+def demarkdown(text: str) -> str:
+    """Strip Markdown syntax so a terminal-style transcript shows clean prose,
+    not raw ``**bold**`` or fenced ``` blocks."""
+    out: list[str] = []
+    for ln in text.splitlines():
+        if ln.strip().startswith("```"):
+            continue  # drop code fences; keep their contents
+        ln = re.sub(r"\*\*(.+?)\*\*", r"\1", ln)   # bold
+        ln = re.sub(r"`([^`]+)`", r"\1", ln)        # inline code
+        ln = re.sub(r"^\s*#{1,6}\s+", "", ln)       # headings
+        out.append(ln)
+    return "\n".join(out)
+
+
 def short(value, limit: int = 70) -> str:
     s = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
-    s = scrub(s).replace("\n", " ")
+    # Collapse real newlines AND the literal "\n" escapes that survive json.dumps
+    # of a multi-line arg value (e.g. yaml_text), so a tool-call line reads cleanly.
+    s = scrub(s).replace("\n", " ").replace("\\n", " ")
     return s if len(s) <= limit else s[: limit - 1] + "..."
 
 
@@ -87,7 +109,7 @@ def transcript_lines(events: list[dict], tool_limit: int = 14) -> tuple[list[str
         if ev.get("type") == "result":
             answer = str(ev.get("result") or "")
             break
-    answer = scrub(answer).strip()
+    answer = demarkdown(scrub(answer)).strip()
     # A line that mentions a password or secret is dropped whole: the value may sit in backticks.
     lines = ["<line withheld: credential>" if re.search(r"password|passwd|secret", ln, re.I) else ln
              for ln in answer.splitlines()]

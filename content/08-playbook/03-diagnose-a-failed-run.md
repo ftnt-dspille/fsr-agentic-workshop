@@ -96,11 +96,11 @@ The agent can do all four from one request. Your job is to read what it changed 
 ![08-playbook/03-diagnose-a-failed-run#1](agent-run-03-diagnose-a-failed-run-1.png)
 
 ```text
-  > publish_playbook {"yaml_text": "collection: Agent Lab\nvisible: true\nplaybooks:\n  - ...
+  > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
   > create_record {"module": "alerts", "data": {"name": "Agent Lab - diag test"}}
   > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts"}
   > diagnose_run {"playbook": "Tag Agent Lab Alerts", "run": "10638"}
-  > publish_playbook {"yaml_text": "collection: Agent Lab\nvisible: true\nplaybooks:\n  - ...
+  > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
 ```
 
 </details>

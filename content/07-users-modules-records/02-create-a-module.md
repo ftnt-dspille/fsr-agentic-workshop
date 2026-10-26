@@ -73,9 +73,6 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 ```text
   > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
   > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
-  > resolve_picklist {"value": "High", "picklist": "Severity"}
-  > describe_module {"module": "agentlab_assets"}
-  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
 ```
 
 </details>
