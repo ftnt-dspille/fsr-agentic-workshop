@@ -14,7 +14,8 @@ Scrubbed: local paths, IPs (except RFC 5737 documentation space), dates and time
 emails other than example.com, host names, usernames, anything key-like.
 
 Run: ~/PycharmProjects/pyfsr/.venv/bin/python tools/agent-drive/render_shots.py
-(needs rich, and an SVG-to-PNG backend: rsvg-convert, cairosvg, qlmanage or playwright.)
+(needs rich, and an SVG-to-PNG backend: rsvg-convert, cairosvg, qlmanage or playwright.
+Pillow, if installed, tight-crops the letterbox border a square-thumbnail backend leaves.)
 """
 
 from __future__ import annotations
@@ -135,6 +136,26 @@ def render_png(pid: str, prompt_text: str, calls: list[str], answer: str, out: P
     if not _ts.to_png(svg, out):
         raise SystemExit(f"no SVG-to-PNG backend for {out.name}")
     svg.unlink()
+    _autocrop(out)
+
+
+def _autocrop(png: Path, pad: int = 16) -> None:
+    """Trim the solid letterbox border a square-thumbnail backend (qlmanage -s)
+    leaves around the terminal window, so the shot frames its content tightly.
+    Best effort: without Pillow, keep the full canvas rather than fail."""
+    try:
+        from PIL import Image, ImageChops
+    except Exception:  # noqa: BLE001 -- Pillow is an optional render-time extra
+        return
+    im = Image.open(png).convert("RGBA")
+    bg = Image.new("RGBA", im.size, im.getpixel((0, 0)))  # the corner = border fill
+    bbox = ImageChops.difference(im, bg).convert("L").getbbox()
+    if not bbox:
+        return
+    left, top, right, bottom = bbox
+    box = (max(0, left - pad), max(0, top - pad),
+           min(im.width, right + pad), min(im.height, bottom + pad))
+    im.crop(box).save(png)
 
 
 def model_label(model: str) -> str:
