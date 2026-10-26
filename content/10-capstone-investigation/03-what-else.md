@@ -81,6 +81,10 @@ one was asked to do. Call out any that ended without a clear answer.
 
 `list_agent_sessions` and `get_agent_session` make the assistant's own activity auditable.
 
+{{% notice note %}}
+This one reads its transcripts through the SOC Assistant connector (`connector-fsr-soc-assistant`). If that connector is not installed and configured on your box, the agent will report a connector error instead of sessions, which is the expected answer here, not a failure to debug. The other tasks on this page need nothing beyond the API-key agent.
+{{% /notice %}}
+
 ## Map a use case to a FortiSOAR design
 
 Starting from a sentence, not a schema.
