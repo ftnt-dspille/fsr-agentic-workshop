@@ -14,3 +14,7 @@ tools/agent-drive/.work/
 tools/agent-drive/__pycache__/
 tools/agent-drive/.sessions.json
 tools/proof-report.md
+
+# agent-shots: real Claude Code UI capture work dir (holds .mcp.json with the box API key)
+tools/agent-shots/.capwork/
+tools/agent-shots/__pycache__/
