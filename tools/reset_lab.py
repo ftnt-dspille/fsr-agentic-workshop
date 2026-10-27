@@ -38,6 +38,7 @@ MODULE_PREFIX = "agentlab_"
 MODULE_EXACT = "agentlab"
 USER_EMAIL_PREFIX = "agentlab_"
 COLLECTION_PREFIX = "Agent Lab"
+ALERT_NAME_PREFIX = "Agent Lab: "  # matches lab_setup.py's seeded demo alerts
 SCHEDULE_PREFIXES = ("agentlab_", "Agent Lab")
 CONNECTOR = "acme-threat-feed"
 CONFIRM_WORD = "RESET"
@@ -84,10 +85,12 @@ class Plan:
     modules: list[dict[str, Any]] = field(default_factory=list)  # {"name", "records": [uuid, ...]}
     collections: list[dict[str, Any]] = field(default_factory=list)
     schedules: list[str] = field(default_factory=list)
+    alerts: list[dict[str, Any]] = field(default_factory=list)  # {"uuid", "name"}
     connector_version: str | None = None
 
     def is_empty(self) -> bool:
-        return not (self.users or self.modules or self.collections or self.schedules or self.connector_version)
+        return not (self.users or self.modules or self.collections or self.schedules
+                    or self.alerts or self.connector_version)
 
 
 def collect_plan(client) -> Plan:
@@ -101,7 +104,13 @@ def collect_plan(client) -> Plan:
     for mod in client.modules.list():
         name = mod.get("plural") or ""
         if name == MODULE_EXACT or name.startswith(MODULE_PREFIX):
-            uuids = [r.get("uuid") for r in client.records(name).iterate(raw=True) if r.get("uuid")]
+            try:
+                uuids = [r.get("uuid") for r in client.records(name).iterate(raw=True) if r.get("uuid")]
+            except Exception as exc:
+                # A half-published module can 500 on record listing. Still try to
+                # delete it (delete_module drops the table), just with no purge.
+                print(f"WARN: cannot list records for module {name}: {exc}; will attempt delete anyway")
+                uuids = []
             plan.modules.append({"name": name, "records": uuids})
 
     for col in client.workflow_collections.list():
@@ -113,6 +122,11 @@ def collect_plan(client) -> Plan:
         name = task.get("name") or ""
         if name.startswith(SCHEDULE_PREFIXES):
             plan.schedules.append(name)
+
+    for alert in client.records("alerts").iterate(raw=True):
+        name = alert.get("name") or ""
+        if name.startswith(ALERT_NAME_PREFIX):
+            plan.alerts.append({"uuid": alert.get("uuid"), "name": name})
 
     plan.connector_version = client.connectors.resolve_version(CONNECTOR)
     return plan
@@ -129,6 +143,7 @@ def print_plan(plan: Plan) -> None:
             [f"{m['name']} ({len(m['records'])} record(s))" for m in plan.modules])
     section("playbook collections (delete)", [c["name"] for c in plan.collections])
     section("schedules (delete)", plan.schedules)
+    section("demo alerts (delete)", [a["name"] for a in plan.alerts])
     if plan.connector_version:
         print(f"connector {CONNECTOR} (uninstall): version {plan.connector_version}")
     else:
@@ -177,6 +192,14 @@ def execute(client, plan: Plan) -> int:
             failures += 1
             print(f"FAILED schedule {name}: {exc}")
 
+    if plan.alerts:
+        try:
+            client.records("alerts").delete_many([a["uuid"] for a in plan.alerts], hard=True)
+            print(f"deleted {len(plan.alerts)} demo alert(s)")
+        except Exception as exc:
+            failures += 1
+            print(f"FAILED demo alerts: {exc}")
+
     if plan.connector_version:
         try:
             client.connectors.uninstall(CONNECTOR, version=plan.connector_version)
@@ -191,10 +214,14 @@ def execute(client, plan: Plan) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LIVE, DESTRUCTIVE: remove the agentlab_ workshop objects from a FortiSOAR box.")
     ap.add_argument("--check-only", action="store_true", help="report what exists and change nothing")
+    ap.add_argument("--instance", help="pyfsr instance name in ~/.pyfsr/instances.toml")
     args = ap.parse_args(argv)
 
-    env_path = os.environ.get("FSR_ENV_FILE")
-    file_env = read_env_file(env_path)
+    if args.instance:
+        from lab_setup import read_instance  # same tools/ directory
+        file_env = read_instance(args.instance)
+    else:
+        file_env = read_env_file(os.environ.get("FSR_ENV_FILE"))
     client = build_client(file_env)
 
     plan = collect_plan(client)
