@@ -13,7 +13,9 @@ The agent authenticates to FortiSOAR with an API key. Create a dedicated one so 
 
 1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
 2. Open **System** > **Identity & Access Management** > **Access Keys**, on the **API Key** tab. Some versions name the tab or menu differently.
-3. Click **Add**, name it `agentlab key`, and assign a role with enough rights for the whole workshop. The labs do more than read and write records: chapter 7 **creates a module** (a schema change), chapter 9 **installs a connector**, and chapter 8 **publishes a playbook**. **Full App Permissions** alone covers record CRUD but not module creation, so pair it with **Application Administrator** (which carries the Application Editor and connector rights), or use a role your instructor confirms can manage modules, connectors and playbooks. In production, scope this down.
+3. Click **Add**, name it `agentlab key`, and assign a role with enough rights for the whole workshop. The labs do more than read and write records: chapter 7 **creates a module** (a schema change), chapter 9 **installs a connector**, and chapter 8 **publishes a playbook**. **Full App Permissions** alone covers record CRUD but not those, so pair it with **Application Administrator** (module schema and connectors), **Security Administrator** (roles and access), and **Playbook Administrator** (playbook publish) - or use a role your instructor confirms can manage modules, connectors and playbooks. In production, scope this down.
+
+> Operators: `tools/lab_setup.py grant` unions exactly those three roles onto the key's role from an admin login, so you do not have to click through the UI. See `tools/LAB_OPERATOR.md`.
 4. Set **Valid Till**. The form defaults to **1 day**, and a key that expires mid-class fails every later step. Set a period that covers the session.
 5. Save, then copy the key value.
 

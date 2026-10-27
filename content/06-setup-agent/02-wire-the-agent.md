@@ -14,7 +14,7 @@ Your agent talks to FortiSOAR through the `fsr-agentic-toolkit` MCP server, whic
 You need Python 3.10+ and [uv](https://docs.astral.sh/uv/) (or pip). Then:
 
 ```bash
-pip install fsr-agentic-toolkit==0.1.2
+pip install fsr-agentic-toolkit==0.1.4
 ```
 
 This also installs `pyfsr` (0.28.0 or newer), whose `pyfsr connector` commands you use in chapter 9.
@@ -26,25 +26,26 @@ This also installs `pyfsr` (0.28.0 or newer), whose `pyfsr connector` commands y
 `fsr-agentic-toolkit init` checks the box and prints the config snippet for your agent product:
 
 ```bash
-fsr-agentic-toolkit init --url fortisoar.example.com --api-key '<your-api-key>' --no-verify-ssl --skip-verify --readonly
+fsr-agentic-toolkit init --url fortisoar.example.com --api-key '<your-api-key>' --no-verify-ssl --readonly
 ```
 
 Replace `fortisoar.example.com` with your box's URL and `<your-api-key>` with the key you created on the previous page. `--readonly` starts the agent with a read-only tool surface for this chapter; chapter 7 has you remove it before the first write.
 
-You should see:
+`init` checks the connection first, then prints the snippet. You should see:
 
 ```text
+connected: soar-connector (ApiKey) @ https://fortisoar.example.com
 --- claude-code ---
 # .mcp.json (project root), or merge into ~/.claude.json
 { ... }
 ```
 
+The `connected:` line names the principal behind the key, not a human login - an API key is its own actor on the box, which is exactly why the audit log will attribute the agent's actions to it.
+
 <!-- capture: fsa06-03-agent-init -->
 ![fsa06-03-agent-init](fsa06-03-agent-init.png)
 
 {{% notice tip %}}
-`--skip-verify` is needed with an API key: the connection check calls an auth probe that API-key logins do not support, so `init` reports that it could not verify and prints the snippet anyway. An API-key connection proves out in step 4 through a read-only tool call, not through `whoami` (which needs that same auth probe).
-
 `--no-verify-ssl` is for lab boxes with self-signed certificates. `--readonly` (included above) starts the agent with a read-only tool surface; chapter 7 removes it before the first write.
 {{% /notice %}}
 
@@ -83,7 +84,7 @@ line on what stands out about each.
 **What success looks like:** the agent calls a read-only tool like `list_modules`, then queries the recent alerts, and answers with the module count and a short, grounded summary of the latest alerts. That is your first win: the connection works and the agent is already doing useful read-only work, before you grant it a single write.
 
 {{% notice tip %}}
-Notice what the agent did *not* reach for: `whoami`. With an **API-key** connection `whoami` fails (`Operation 'auth' is not supported with APIKeyAuth`), because the identity probe it uses is not available to API keys, and `appliance_info_identity` has no SSH target. To read your login id or the box version that way, point the MCP at a **user login** instead. Either way these are read-only tools and nothing on the box changes. A good agent says plainly when it cannot answer something rather than guessing - the same honesty you want in an investigation.
+If you ask the agent *who am I*, it calls `whoami` and gets back the key's own identity: `soar-connector (ApiKey)` and the box version, not a human login id, because an API key is its own actor and has no person record. That is the right mental model for the rest of the workshop - every write you are about to allow lands under this key, and the audit log says so. These are read-only tools and nothing on the box changes.
 {{% /notice %}}
 
 <!-- capture: fsa06-04-whoami-claude -->
