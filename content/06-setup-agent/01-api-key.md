@@ -13,7 +13,7 @@ The agent authenticates to FortiSOAR with an API key. Create a dedicated one so 
 
 1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
 2. Open **System** > **Identity & Access Management** > **Access Keys**, on the **API Key** tab. Some versions name the tab or menu differently.
-3. Click **Add**, name it `agentlab key`, and assign a role that can read and write the modules you will work with. For this workshop use **Full App Permissions**; in production, scope it down.
+3. Click **Add**, name it `agentlab key`, and assign a role with enough rights for the whole workshop. The labs do more than read and write records: chapter 7 **creates a module** (a schema change), chapter 9 **installs a connector**, and chapter 8 **publishes a playbook**. **Full App Permissions** alone covers record CRUD but not module creation, so pair it with **Application Administrator** (which carries the Application Editor and connector rights), or use a role your instructor confirms can manage modules, connectors and playbooks. In production, scope this down.
 4. Set **Valid Till**. The form defaults to **1 day**, and a key that expires mid-class fails every later step. Set a period that covers the session.
 5. Save, then copy the key value.
 
@@ -34,3 +34,4 @@ The key appears in the API Keys list with your chosen role. Keep the value handy
 |---|---|---|
 | No API Keys page under Settings | Your login lacks the Security read permission | Use an admin account or ask your instructor |
 | Key works for reads but writes return 403 | The key's role lacks Create/Update on the module | Edit the role, or assign Full App Permissions for the lab |
+| Creating a module returns 403 on `staging_model_metadatas` | The role has record CRUD but not module-schema rights | Add **Application Administrator** (Application Editor rights) to the key's role; Full App Permissions alone is not enough |
