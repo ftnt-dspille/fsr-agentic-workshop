@@ -14,8 +14,8 @@ To practice this safely, you break the playbook from chapter 8 on purpose, watch
 The agent cannot export a live playbook's YAML, so give it the YAML to publish - this is the chapter 8 playbook with the Tag Alert step pointed at a record that does not exist. Give your agent this prompt (paste the YAML as shown):
 
 ```text
-Let's practice diagnosing a failure. Publish this playbook with publish_playbook
-(it is the "Tag Agent Lab Alerts" playbook from earlier, deliberately broken:
+Let's practice diagnosing a failure. Publish this playbook (it is the
+"Tag Agent Lab Alerts" playbook from earlier, deliberately broken:
 the Tag Alert step updates a record that does not exist):
 
 collection: Agent Lab
@@ -44,8 +44,8 @@ playbooks:
         type: end
 
 Then create an alert named "Agent Lab - diag test" to trigger it, and wait for
-the run. Use diagnose_run on that run and tell me which step failed and the
-error verbatim. Finally, fix it: republish the same playbook with the Tag Alert
+the run. Diagnose that run and tell me which step failed and the error
+verbatim. Finally, fix it: republish the same playbook with the Tag Alert
 record set back to "{{ vars.input.records[0]['@id'] }}", and confirm it published.
 ```
 

@@ -33,11 +33,11 @@ Give your agent this prompt:
 
 ```text
 Package the connector (pyfsr connector package agentlab-greeter) and then
-install the resulting .tgz on the box with the install_connector tool.
-If install_connector fails with "already active", do not stop there: call
-install_connector again with the same .tgz and replace=true (this replaces
-only agentlab-greeter). Then configure it with server
-https://fortisoar.example.com and healthcheck it.
+install the resulting .tgz on the box. If the install fails because the
+connector is already active, do not stop there: install it again with the
+same .tgz and replace enabled (this replaces only agentlab-greeter). Then
+configure it with server https://fortisoar.example.com and confirm it is
+healthy.
 ```
 
 <!-- step: fsa09-04-deploy-connector -->

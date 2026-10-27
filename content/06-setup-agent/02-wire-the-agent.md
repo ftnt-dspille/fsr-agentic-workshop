@@ -74,8 +74,8 @@ You should see:
 Give your agent this prompt:
 
 ```text
-Using the fortisoar tools, list the modules on this box and then show me the
-few newest alerts, with one line on what stands out about each.
+List the modules on this box, then show me the few newest alerts, with one
+line on what stands out about each.
 ```
 
 <!-- step: fsa06-04-whoami -->

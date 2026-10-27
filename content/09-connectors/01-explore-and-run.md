@@ -13,8 +13,8 @@ Give your agent this prompt:
 
 ```text
 List the connectors installed on this box. Pick one that is configured and
-healthy (healthcheck it to prove that), list its operations, and explain
-what parameters its simplest read-only operation takes.
+healthy (confirm it is healthy), list its operations, and explain what
+parameters its simplest read-only operation takes.
 ```
 
 <!-- step: fsa09-01-discover-connectors -->

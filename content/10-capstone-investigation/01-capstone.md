@@ -62,9 +62,9 @@ Let it run. A good transcript reads like an analyst's notebook: each claim trace
 If your box has FortiSOAR's native AI Investigation configured (Part 1), run both on the same alert and compare:
 
 ```text
-Trigger a native FortiSOAR AI investigation of that same alert with the
-investigate_alert tool, wait for the verdict, and compare it with yours:
-where do you agree, where do you differ, and why?
+Trigger a native FortiSOAR AI investigation of that same alert, wait for the
+verdict, and compare it with yours: where do you agree, where do you differ,
+and why?
 ```
 
 <!-- step: fsa10-03-native-compare manual: runs a native FortiAI investigation for comparison; spends tokens -->

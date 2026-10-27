@@ -16,13 +16,11 @@ When the agent's first `provision_module` call comes back with `confirmation_req
 Give your agent this prompt:
 
 ```text
-Use the provision_module workflow to create a custom module named
-agentlab_assets (label "Agent Lab Assets") with these fields: hostname (text,
-required), ip_address (text), owner (text), criticality (picklist using the
-Severity picklist), and notes (rich text). Grant the Full App Permissions role
-access to it, and use a probe record with hostname build-server-01,
-criticality High to prove the module works. Show me the record it created and
-what the workflow verified.
+Create a custom module named agentlab_assets (label "Agent Lab Assets") with
+these fields: hostname (text, required), ip_address (text), owner (text),
+criticality (picklist using the Severity picklist), and notes (rich text).
+Then prove it works: create a record with hostname build-server-01,
+criticality High, and show me that record.
 ```
 
 <!-- step: fsa07-02-create-module -->
