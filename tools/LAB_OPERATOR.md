@@ -47,7 +47,19 @@ any remain.
 - `reset_lab.py` is **destructive** and refuses to run without a typed `RESET`.
   Run it yourself; it is not for CI or an agent.
 - If a module was left half-published (a `500` when listing its records), reset
-  still attempts `delete_module`, which drops the leftover table. If that too
-  fails, delete the module from the UI's module editor before the next run.
+  still attempts `delete_module`, which normally drops the leftover table. A
+  crashed publish can orphan the physical table so `delete_module` removes the
+  metadata but its re-publish fails on the table that is still there (the result
+  shows `"orphan_table": "<name>"`). Recover by dropping that one table through
+  FortiSOAR's own console (uses the app's DB connection, no credentials to
+  handle), on the box over SSH:
+
+  ```bash
+  sudo -u nginx php /opt/cyops-api/bin/console doctrine:query:sql \
+    "DROP TABLE IF EXISTS <name> CASCADE"
+  ```
+
+  Then re-run reset / seed. Owner-run; a leftover table only appears after a
+  publish crash, not in a normal run.
 - The demo alert names all start with `Agent Lab: ` so seed and reset can find
   exactly what the workshop created and nothing else.
