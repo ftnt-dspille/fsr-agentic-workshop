@@ -46,7 +46,7 @@ any remain.
 
 - `reset_lab.py` is **destructive** and refuses to run without a typed `RESET`.
   Run it yourself; it is not for CI or an agent.
-### Required after reset on FortiSOAR 8.0.1: sweep orphaned module tables
+### Orphaned module tables on FortiSOAR 8.0.1 (handled automatically)
 
 On 8.0.1, `delete_module` removes the module's metadata and registry entry but
 does **not** drop its physical tables or generated entity files - its own
@@ -57,31 +57,34 @@ module name: every `schema:update` sees `The table ... already exists`, the
 publish aborts before registering the module, and records return `500` (no
 entity normalizer) or `Access Denied` (no RBAC).
 
-So after `reset_lab.py` deletes the `agentlab_*` modules, sweep their leftover
-tables and entity files through FortiSOAR's own console (it uses the app's DB
-connection - no credentials to handle), on the box over SSH. For a module
-`agentlab_assets`, the leftovers are the table `agentlab_assets`, the relation
-tables `agentlabassets_team` and `agentlabassets_actor` (the relation name drops
-the underscore), and `src/Entity/Custom/AgentLabAsset*.php`:
+**`reset_lab.py --instance <name>` sweeps this automatically**: after it deletes
+each `agentlab_*` module it connects to the appliance (SSH target read from the
+pyfsr instance), drops the module's table and its `_team`/`_actor` relation
+tables, deletes the stale staging row, removes the generated entity classes, and
+regenerates the model/module code with `app:metadata:generate:*` +
+`cache:clear` + a php-fpm reload. A rerun then starts from a truly clean box. The
+sweep uses FortiSOAR's own console (the app's DB connection - no credentials
+handled) and is a safe no-op on 8.0.0.
+
+If you run reset **without** an appliance target (no `--instance`, no
+`FSR_SSH_HOST`/`FSR_SSH_KEY`), it cannot reach the box to sweep and prints a
+NOTE. In that case, run the same steps by hand for module `agentlab_assets`
+(leftovers: table `agentlab_assets`, relation tables `agentlabassets_team` and
+`agentlabassets_actor` - the relation name drops the underscore - and
+`src/Entity/Custom/AgentLabAsset*.php`):
 
 ```bash
 B="sudo -u nginx php /opt/cyops-api/bin/console"
-# drop the module table and its team/actor relation tables
 for t in agentlab_assets agentlabassets_team agentlabassets_actor; do
   $B doctrine:query:sql "DROP TABLE IF EXISTS $t CASCADE"
 done
-# remove the stale staging row, if any
 $B doctrine:query:sql "DELETE FROM staging_model_metadatas WHERE type='agentlab_assets'"
-# remove generated entity classes, then regenerate the model/module code clean
 sudo rm -f /opt/cyops-api/src/Entity/Custom/AgentLabAsset*.php
-$B app:metadata:generate:models
-$B app:metadata:generate:modules
-$B cache:clear --env=prod
-sudo systemctl reload php-fpm
+$B app:metadata:generate:models && $B app:metadata:generate:modules
+$B cache:clear --env=prod && sudo systemctl reload php-fpm
 ```
 
 Verify nothing is left: `doctrine:query:sql "SELECT tablename FROM pg_tables
-WHERE tablename LIKE '%agentlab%'"` should return no rows. Owner-run. Skip this
-whole step on 8.0.0, where `delete_module` is clean.
+WHERE tablename LIKE '%agentlab%'"` should return no rows.
 - The demo alert names all start with `Agent Lab: ` so seed and reset can find
   exactly what the workshop created and nothing else.

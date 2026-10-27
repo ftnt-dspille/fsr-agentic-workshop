@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -155,6 +156,95 @@ def chunks(items: list[str], size: int):
         yield items[i:i + size]
 
 
+# --- orphan sweep (FortiSOAR 8.0.1) --------------------------------------
+# On 8.0.1, delete_module removes a module's metadata and registry entry but
+# leaves its physical tables and generated entity files behind (its re-publish
+# schema:update exits non-zero on the drop). Those leftovers poison the next
+# create of the same name. We sweep them through the appliance console, which
+# uses the app's own DB connection (no credentials handled here). 8.0.0 does
+# not need this, and the sweep is a safe no-op there.
+
+CONSOLE = "/opt/cyops-api/bin/console"
+ENTITY_DIR = "/opt/cyops-api/src/Entity/Custom"
+
+
+def build_appliance(file_env: dict[str, str], instance_name: str | None):
+    try:
+        from pyfsr.appliance import Appliance
+    except Exception:
+        return None
+    if instance_name:
+        try:
+            return Appliance(instance=instance_name)
+        except Exception as exc:
+            print(f"WARN: cannot reach the appliance from instance {instance_name}: {exc}")
+            return None
+    host = setting("FSR_SSH_HOST", file_env)
+    if not host:
+        return None
+    try:
+        return Appliance(
+            host=host,
+            user=setting("FSR_SSH_USER", file_env, "csadmin"),
+            port=int(setting("FSR_SSH_PORT", file_env, "22") or "22"),
+            key_path=setting("FSR_SSH_KEY", file_env),
+            insecure_skip_host_key_check=True,
+        )
+    except Exception as exc:
+        print(f"WARN: cannot build appliance from FSR_SSH_*: {exc}")
+        return None
+
+
+def _console(ap, *args: str, timeout: float = 120.0) -> str:
+    return ap.run(["-u", "nginx", "php", CONSOLE, *args], sudo=True, timeout=timeout)
+
+
+def sweep_orphans(ap, module_names: list[str]) -> None:
+    """Drop leftover tables + entity files for each deleted module, then regenerate."""
+    touched = False
+    for mod in module_names:
+        stripped = mod.replace("_", "")
+        probe = (f"SELECT tablename FROM pg_tables WHERE tablename='{mod}' "
+                 f"OR tablename LIKE '{stripped}\\_%' ESCAPE '\\'")
+        try:
+            out = _console(ap, "doctrine:query:sql", probe, timeout=60)
+        except Exception as exc:
+            print(f"WARN: orphan probe failed for {mod}: {exc}")
+            continue
+        tables = re.findall(r'string\(\d+\)\s+"([^"]+)"', out)
+        for tbl in tables:
+            try:
+                _console(ap, "doctrine:query:sql", f'DROP TABLE IF EXISTS "{tbl}" CASCADE', timeout=60)
+                print(f"  dropped orphan table {tbl}")
+                touched = True
+            except Exception as exc:
+                print(f"  FAILED drop {tbl}: {exc}")
+        try:  # a stale staging row blocks the next publish of this name
+            _console(ap, "doctrine:query:sql",
+                     f"DELETE FROM staging_model_metadatas WHERE type='{mod}'", timeout=60)
+        except Exception:
+            pass
+        try:  # entity classes that reference this table
+            found = ap.run(["-u", "nginx", "grep", "-rl", "--", mod, ENTITY_DIR],
+                           sudo=True, timeout=60)
+            files = [ln.strip() for ln in found.splitlines() if ln.strip().endswith(".php")]
+            if files:
+                ap.run(["rm", "-f", *files], sudo=True, timeout=30)
+                print(f"  removed {len(files)} entity file(s) for {mod}")
+                touched = True
+        except Exception:
+            pass  # grep exits non-zero when nothing matches; that is fine
+    if touched:
+        try:
+            _console(ap, "app:metadata:generate:models", timeout=180)
+            _console(ap, "app:metadata:generate:modules", timeout=180)
+            _console(ap, "cache:clear", "--env=prod", timeout=120)
+            ap.run(["systemctl", "reload", "php-fpm"], sudo=True, timeout=30)
+            print("  regenerated models/modules, cleared cache, reloaded php-fpm")
+        except Exception as exc:
+            print(f"  WARN: post-sweep regenerate failed: {exc}")
+
+
 def execute(client, plan: Plan) -> int:
     failures = 0
 
@@ -239,6 +329,20 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     failures = execute(client, plan)
+
+    # On 8.0.1, delete_module orphans each module's tables and entity files;
+    # sweep them so the next run starts clean. Needs an appliance SSH target.
+    if plan.modules:
+        appliance = build_appliance(file_env, args.instance)
+        if appliance is not None:
+            print("sweeping orphaned module tables and entity files...")
+            sweep_orphans(appliance, [m["name"] for m in plan.modules])
+        else:
+            print("NOTE: no appliance SSH target (pass --instance, or set FSR_SSH_HOST/"
+                  "FSR_SSH_KEY). On 8.0.1 delete_module leaves orphaned tables; clean them "
+                  "with the console sweep in tools/LAB_OPERATOR.md, or the next create of the "
+                  "same module name will fail.")
+
     if failures:
         print(f"{failures} step(s) failed; re-run --check-only to see what is left")
         return 1
