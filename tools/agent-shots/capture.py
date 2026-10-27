@@ -163,7 +163,9 @@ def run_session(prompts: list[str], confirm: bool, work: Path) -> list[bytes]:
         return got
     drain(10); send("\x1b[B"); drain(1); send("\r"); drain(6)   # trust dialog
     for i, p in enumerate(prompts):
-        send(p); drain(1); send("\r")
+        # Bracketed paste so a blank line inside a prompt (e.g. a pasted YAML
+        # block) stays literal instead of submitting the prompt early.
+        send("\x1b[200~"); send(p); send("\x1b[201~"); drain(1); send("\r")
         start = time.time()
         while time.time() - start < 240:
             if not drain(10): break

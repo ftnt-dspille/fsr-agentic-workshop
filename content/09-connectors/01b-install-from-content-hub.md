@@ -13,10 +13,10 @@ Installing a connector puts executable code on the appliance, so this is a confi
 
 ## 1. Install
 
-Give your agent this prompt (name a connector your box's Content Hub offers that is not installed yet - a self-contained one such as **Cyber Triage Utilities**, **Code Snippet**, or **SMTP** avoids needing third-party credentials just to install):
+Give your agent this prompt. We use **whois-rdap** - a self-contained enrichment connector that looks up domain and IP registration over RDAP and needs no credentials - but the loop is the same for any connector your Content Hub offers; swap the name:
 
 ```text
-Install the <connector> connector from the Content Hub on this box. Tell me
+Install the whois-rdap connector from the Content Hub on this box. Tell me
 what you are about to install and its version before you do it, then install
 it and report whether it landed.
 ```
