@@ -79,8 +79,14 @@ def build_subs():
     # bare FQDN indicators (e.g. a phishing domain in alert data) -> <domain>,
     # keeping example.com and a safelist of product/vendor names visible.
     _SAFE = ("example.com", "example.org", "fortinet.com", "anthropic.com", "claude.com", "claude.ai")
+    # Jinja/code roots: a dotted token starting with one of these is an expression
+    # (vars.input.records, steps.X.data), NOT a domain -- never mask it.
+    _CODE = {"vars", "input", "inputs", "steps", "data", "output", "outputs", "params",
+             "env", "item", "self", "this", "result", "results", "record", "records",
+             "request", "response", "global", "resource", "arguments"}
     def _dom(m):
         d = m.group(0)
+        if d.split(".")[0].lower() in _CODE: return d
         return d if (d.lower().endswith(_SAFE) or d.lower() in ("e.g", "i.e")) else "<domain>"
     subs += [
         (re.compile(r"https?://(?!(?:[\w.-]*\.)?example\.com\b)[^\s\"'<>)\]]+"), "<url>"),
