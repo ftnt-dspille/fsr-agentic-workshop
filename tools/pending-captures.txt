@@ -3,3 +3,4 @@
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
 fsa09-05-dadjoke-installed  # dad-joke connector reframe; recapture when box is back
+fsa09-06-hub-connector-installed  # new Content Hub install page; capture in the box sweep
