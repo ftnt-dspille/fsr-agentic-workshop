@@ -2,10 +2,10 @@
 title: Build Your Own Connector
 linkTitle: Build One
 weight: 20
-description: "The agent scaffolds a connector, implements an operation, packages it, deploys it to the box, and runs it."
+description: "Hand the agent a goal and it builds a working FortiSOAR connector: scaffold, implement, package, deploy, run."
 ---
 
-The full loop: scaffold, implement, package, deploy, run. The agent does the coding on your workstation with the `pyfsr connector` CLI, installs the result through the confirm-gated `install_connector` tool, and proves it by running the new operation.
+You do not write the connector. You describe what it should do, and the agent builds it: scaffolds the project on your workstation with the `pyfsr connector` CLI, writes the operation code, packages it, installs it on the box, and proves it by running the new operation. The example here is a fun one - a connector that fetches a random dad joke - but the loop is the point: the same prompt shape builds a connector for any service you can describe, from a threat-intel feed to an internal ticketing API.
 
 {{% notice note %}}
 This lab writes code on your machine and installs it on the box. Run it in the lab working folder from chapter 6. For connector development at production depth (ingestion, output schemas, Content Hub publishing), see the separate FortiSOAR Connectors workshop.
@@ -16,60 +16,61 @@ This lab writes code on your machine and installs it on the box. Run it in the l
 Give your agent this prompt:
 
 ```text
-Using the pyfsr CLI (pyfsr connector scaffold), scaffold a connector named
-agentlab-greeter in this folder. Then edit it: rename the ping operation to
-greet, taking a "name" parameter and returning {"greeting": "Hello <name>
-from FortiSOAR"}. Keep info.json's operation list in sync with
-operations.py. Show me the diff of what you changed.
+Build me a FortiSOAR connector that fetches a random dad joke from the public
+icanhazdadjoke.com API. Scaffold it as agentlab-dadjoke with the pyfsr connector
+CLI, then implement a get_joke operation that GETs https://icanhazdadjoke.com
+with an Accept: application/json header and returns the joke text. Keep
+info.json's operation list in sync with operations.py. Show me the diff of what
+you changed.
 ```
 
 <!-- step: fsa09-03-scaffold-connector -->
 
-The scaffold ships a working skeleton (one `server` config field, one operation, a health check), so the agent edits a running starting point instead of writing boilerplate. Review the diff like you would any code review - `info.json`'s `operations` entry and the `operations.py` dict must agree on the operation name.
+The scaffold ships a working skeleton (one `server` config field, one operation, a health check), so the agent edits a running starting point instead of writing boilerplate. Review the diff like you would any code review - `info.json`'s `operations` entry and the `operations.py` dict must agree on the operation name. Nothing about this is dad-joke-specific: swap the API and the operation and the agent builds whatever connector you asked for.
 
 ## 2. Package and deploy
 
 Give your agent this prompt:
 
 ```text
-Package the connector (pyfsr connector package agentlab-greeter) and then
+Package the connector (pyfsr connector package agentlab-dadjoke) and then
 install the resulting .tgz on the box. If the install fails because the
 connector is already active, do not stop there: install it again with the
-same .tgz and replace enabled (this replaces only agentlab-greeter). Then
-configure it with server https://fortisoar.example.com and confirm it is
+same .tgz and replace enabled (this replaces only agentlab-dadjoke). Then
+configure it with server https://icanhazdadjoke.com and confirm it is
 healthy.
 ```
 
 <!-- step: fsa09-04-deploy-connector -->
 
-`install_connector` is confirm-gated (it puts executable code on the appliance): the agent must tell you what it is installing and get your go-ahead. The healthcheck after install closes the loop.
+Installing a connector is confirm-gated (it puts executable code on the appliance): the agent must tell you what it is installing and get your go-ahead. The healthcheck after install closes the loop.
 
 ## 3. Run it
 
 Give your agent this prompt:
 
 ```text
-Run the greet operation of agentlab-greeter with name "TEC Workshop" and
-show me the result.
+Run the get_joke operation of agentlab-dadjoke and show me the joke it
+returned.
 ```
 
 <!-- step: fsa09-05-run-own-connector -->
 
-**What success looks like:** `{"greeting": "Hello TEC Workshop from FortiSOAR"}` - produced by code your agent wrote, running inside FortiSOAR's connector runtime.
+**What success looks like:** a real dad joke comes back - produced by code your agent wrote, calling a live external API from inside FortiSOAR's connector runtime.
 
-**Verify in the UI:** **Connectors** now lists Agentlab Greeter v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
+**Verify in the UI:** **Connectors** now lists Agentlab Dadjoke v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
 
-<!-- capture: fsa09-05-greeter-installed -->
-![fsa09-05-greeter-installed](fsa09-05-greeter-installed.png)
+<!-- capture: fsa09-05-dadjoke-installed -->
+![fsa09-05-dadjoke-installed](fsa09-05-dadjoke-installed.png)
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| pyfsr: command not found | The CLI is in a venv the agent's shell does not see | `pip install fsr-agentic-toolkit==0.1.2` into the active environment |
+| pyfsr: command not found | The CLI is in a venv the agent's shell does not see | `pip install fsr-agentic-toolkit` into the active environment |
 | package fails: missing required file | A core file was renamed or deleted | info.json, connector.py, operations.py, requirements.txt must all exist |
 | Install succeeds, operation unknown | info.json and operations.py disagree | The operation name must match in both; repackage and redeploy (deploys replace) |
-| Healthcheck fails after configure | The scaffold's check requires the server field | Pass a server value when configuring |
+| Healthcheck or get_joke times out | The box cannot reach icanhazdadjoke.com | The connector runs on the appliance, which needs outbound HTTPS to the API. On an air-gapped box, point the connector at a service the box can reach instead |
 
 <!-- agent-drive:begin -->
 
