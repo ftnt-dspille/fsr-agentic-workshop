@@ -58,7 +58,7 @@ returned.
 
 **What success looks like:** a real dad joke comes back - produced by code your agent wrote, calling a live external API from inside FortiSOAR's connector runtime.
 
-**Verify in the UI:** **Connectors** now lists Agentlab Dadjoke v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
+**Verify in the UI:** **Connectors** now lists AgentLab Dad Joke v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
 
 <!-- capture: fsa09-05-dadjoke-installed -->
 ![fsa09-05-dadjoke-installed](fsa09-05-dadjoke-installed.png)
