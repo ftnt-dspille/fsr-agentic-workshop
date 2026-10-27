@@ -29,7 +29,7 @@ Set these in the MCP server's `env` block (see chapter 6):
 | `FSR_MCP_DENY_TOOLS` | Matching tools are hidden |
 | `FSR_MCP_OUTPUT_CAP` | Max characters per tool result (default 4000) |
 
-Confirm-gated regardless of settings: `delete_record`, `delete_module`, `delete_schedule`, `publish`, `create_user`, `install_connector`.
+Confirm-gated regardless of settings: `delete_record`, `delete_schedule`, `publish`, `create_user`, `install_connector`.
 
 ## Cleaning up a lab box
 

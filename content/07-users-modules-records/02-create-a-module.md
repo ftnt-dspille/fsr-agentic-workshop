@@ -57,7 +57,7 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 | Record create returns 403 after publish | The role grant did not apply | Ask the agent to rerun the workflow with the role named, or grant it in the UI: Identity & Access Management > Roles > Full App Permissions, read, create, update and delete on the module |
 | Module is not visible to the key after publish | The workflow stopped before publishing because other changes were staged | Read its report, clear or agree on the other staged changes, then rerun it |
 | Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
-| criticality arrives as plain text | Field was created as text, not a picklist binding | Delete the module (confirm-gated) and recreate; the field spec must name the picklist |
+| criticality arrives as plain text | Field was created as text, not a picklist binding | Name the Severity picklist in the field spec so it binds; fix an already-created field in the UI (Settings > Application Editor > Modules) |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
 
 <!-- agent-drive:begin -->
