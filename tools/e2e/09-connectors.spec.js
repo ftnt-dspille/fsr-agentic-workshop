@@ -1,6 +1,6 @@
 "use strict";
 // Chapter 9 proof: connector discovery and the full build loop - scaffold,
-// implement the greet operation, package, deploy, run - exactly as the pages
+// implement the get_joke operation, package, deploy, run - exactly as the pages
 // promise. API-level tier (prompts are proved by agent-drive).
 // NOTE: unrun until the live pass; needs FSR_BASE_URL + FSR_API_KEY, pyfsr
 // installed for python3, and the pyfsr CLI on PATH.
@@ -14,7 +14,7 @@ const { pyfsrTool, pyfsrEnv, wanted } = require("./lib/harness");
 test.describe.configure({ mode: "serial" });
 test.setTimeout(15 * 60 * 1000);
 
-const NAME = "agentlab-greeter";
+const NAME = "agentlab-dadjoke";
 
 function sh(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: "utf8", timeout: 5 * 60 * 1000, env: pyfsrEnv(), ...opts });
@@ -44,29 +44,27 @@ test("09-connectors", async () => {
 
   if (wanted("fsa09-03-scaffold-connector")) await test.step("fsa09-03-scaffold-connector", async () => {
     sh("pyfsr", ["connector", "scaffold", NAME, "--dir", conndir]);
-    // Implement the page's greet operation on top of the scaffold.
+    // Implement the page's get_joke operation on top of the scaffold.
     const opsPath = path.join(conndir, "operations.py");
     let ops = fs.readFileSync(opsPath, "utf8");
     ops = ops
-      .replace("def ping(config, params):", "def greet(config, params):")
+      .replace("def ping(config, params):", "def get_joke(config, params):")
       .replace(/return \{[^}]+\}/, (m) =>
         m.includes("reply")
-          ? 'return {"greeting": "Hello {0} from FortiSOAR".format(params.get("name", "world"))}'
+          ? 'import requests\n    r = requests.get(config.get("server", "https://icanhazdadjoke.com"), headers={"Accept": "application/json"}, timeout=30)\n    data = r.json()\n    return {"id": data.get("id"), "joke": data.get("joke")}'
           : m,
       )
-      .replace("'ping': ping,", "'greet': greet,");
+      .replace("'ping': ping,", "'get_joke': get_joke,");
     fs.writeFileSync(opsPath, ops);
     const infoPath = path.join(conndir, "info.json");
     const info = JSON.parse(fs.readFileSync(infoPath, "utf8"));
-    info.operations[0].operation = "greet";
-    info.operations[0].annotation = "greet";
-    info.operations[0].title = "Greet";
-    info.operations[0].parameters = [
-      { name: "name", title: "Name", type: "text", editable: true, visible: true, required: false },
-    ];
-    info.operations[0].output_schema = { greeting: "" };
+    info.operations[0].operation = "get_joke";
+    info.operations[0].annotation = "get_joke";
+    info.operations[0].title = "Get Joke";
+    info.operations[0].parameters = [];
+    info.operations[0].output_schema = { id: "", joke: "" };
     fs.writeFileSync(infoPath, JSON.stringify(info, null, 2));
-    expect(fs.readFileSync(opsPath, "utf8")).toContain("def greet");
+    expect(fs.readFileSync(opsPath, "utf8")).toContain("def get_joke");
   });
 
   let tgz;
@@ -80,7 +78,7 @@ test("09-connectors", async () => {
       expect(out.install).toBeTruthy();
       pyfsrTool("upsert_connector_configuration", {
         connector: NAME,
-        config: { server: "https://fortisoar.example.com" },
+        config: { server: "https://icanhazdadjoke.com" },
         name: "Default",
         default: true,
       });
@@ -92,9 +90,9 @@ test("09-connectors", async () => {
   if (wanted("fsa09-05-run-own-connector")) await test.step("fsa09-05-run-own-connector", async () => {
     const out = pyfsrTool("run_connector_operation", {
       connector: NAME,
-      operation: "greet",
-      params: { name: "TEC Workshop" },
+      operation: "get_joke",
+      params: {},
     });
-    expect(JSON.stringify(out)).toContain("Hello TEC Workshop from FortiSOAR");
+    expect(JSON.stringify(out)).toContain("joke");
   });
 });

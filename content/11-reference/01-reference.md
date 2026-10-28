@@ -36,7 +36,7 @@ Confirm-gated regardless of settings: `delete_record`, `delete_schedule`, `publi
 Everything this workshop creates is prefixed `agentlab` or named "Agent Lab". Either ask your agent to remove it (each delete is confirm-gated), or run the repo's reset tool:
 
 ```bash
-FSR_BASE_URL=fortisoar.example.com FSR_API_KEY='<your-api-key>' \
+FSR_BASE_URL=fortisoar.example.com FSR_USERNAME='<login-id>' FSR_PASSWORD='<password>' \
   python3 tools/reset_lab.py --check-only   # see what exists
 ```
 

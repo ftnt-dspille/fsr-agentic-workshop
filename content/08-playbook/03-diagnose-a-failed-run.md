@@ -7,21 +7,20 @@ description: "Break the playbook on purpose, then have the agent find the failin
 
 A playbook that runs is not a playbook that works. Sooner or later a run fails, and the question is always the same: which step, and why. The run log answers it eventually; the agent answers it in one prompt. It diffs the playbook's step graph against what actually executed, names the failing step and its error verbatim, and then fixes it.
 
-To practice this safely, you break the playbook from chapter 8 on purpose, watch it fail, diagnose it, and put it back.
+To practice this safely, you publish a dedicated practice playbook that is broken on purpose - a separate playbook, so the good "Tag Agent Lab Alerts" you built earlier is never touched - watch it fail, diagnose it, and fix it.
 
 ## 1. Ask the agent
 
-The agent cannot export a live playbook's YAML, so give it the YAML to publish - this is the chapter 8 playbook with the Tag Alert step pointed at a record that does not exist. Give your agent this prompt (paste the YAML as shown):
+Give the agent a deliberately broken practice playbook to publish - the Tag Alert step points at a record that does not exist. Give your agent this prompt (paste the YAML as shown):
 
 ```text
-Let's practice diagnosing a failure. Publish this playbook (it is the
-"Tag Agent Lab Alerts" playbook from earlier, deliberately broken:
-the Tag Alert step updates a record that does not exist):
+Let's practice diagnosing a failure. Publish this practice playbook
+(deliberately broken: the Tag Alert step updates a record that does not exist):
 
 collection: Agent Lab
 visible: true
 playbooks:
-  - name: Tag Agent Lab Alerts
+  - name: Agent Lab Diagnose Practice
     steps:
       - name: On Alert Created
         type: start_on_create
@@ -31,7 +30,7 @@ playbooks:
           filters:
             - field: name
               op: like
-              value: "Agent Lab%"
+              value: "Agent Lab diag%"
         next: Tag Alert
       - name: Tag Alert
         type: update_record
@@ -43,10 +42,11 @@ playbooks:
       - name: Done
         type: end
 
-Then create an alert named "Agent Lab - diag test" to trigger it, and wait for
+Then create an alert named "Agent Lab diag test" to trigger it, and wait for
 the run. Diagnose that run and tell me which step failed and the error
-verbatim. Finally, fix it: republish the same playbook with the Tag Alert
-record set back to "{{ vars.input.records[0]['@id'] }}", and confirm it published.
+verbatim. Finally, fix it: republish the same practice playbook with the Tag
+Alert record set back to "{{ vars.input.records[0]['@id'] }}", and confirm it
+published.
 ```
 
 <!-- step: fsa08-04-diagnose-run -->
@@ -85,7 +85,7 @@ The agent can do all four from one request. Your job is to read what it changed 
 | wait_for_playbook_run never returns failed | The broken playbook did not re-activate after republish | Ask the agent to confirm the playbook is active, then trigger a fresh alert |
 | diagnose_run says the run was not found | Diagnosing the wrong run, or the run is still in flight | Diagnose the newest run of the playbook by name, after the wait returns |
 | The fix did not take | The restore republished the broken YAML | Check the record reference the agent put back; it must be the triggering alert's id, not the all-zeros placeholder |
-| A later chapter's playbook misbehaves | The lab playbook was left broken | Re-run the fix step, or republish the correct YAML from chapter 8 page 1 |
+| The good "Tag Agent Lab Alerts" playbook changed | The practice YAML reused its name | It should not - the practice playbook is "Agent Lab Diagnose Practice", a separate playbook; publish that name, not the chapter 8 page 1 one |
 
 <!-- agent-drive:begin -->
 
@@ -97,9 +97,10 @@ The agent can do all four from one request. Your job is to read what it changed 
 
 ```text
   > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
-  > create_record {"module": "alerts", "data": {"name": "Agent Lab - diag test"}}
-  > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts"}
-  > diagnose_run {"playbook": "Tag Agent Lab Alerts", "run": "10638"}
+  > create_record {"module": "alerts", "data": {"name": "Agent Lab diag test"}}
+  > wait_for_playbook_run {"playbook": "Agent Lab Diagnose Practice"}
+  > debug_run {"playbook_or_id": "22065"}
+  > diagnose_run {"playbook": "Agent Lab Diagnose Practice", "run": "22065"}
   > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
 ```
 

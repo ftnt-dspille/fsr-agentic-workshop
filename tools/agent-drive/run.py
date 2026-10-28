@@ -60,6 +60,17 @@ PREAMBLE = (
     "asking. Be concise. Task:\n\n"
 )
 
+# Build chapters (those that grant Bash/Read/Write/Edit) need the agent to
+# scaffold and edit connector source, so they must NOT be told MCP-only.
+PREAMBLE_BUILD = (
+    "You are running unattended in a disposable FortiSOAR lab as part of a "
+    "workshop verification run. Use the fortisoar MCP tools together with the "
+    "pre-approved Bash (the pyfsr CLI) and the Read/Write/Edit file tools in "
+    "your working folder to scaffold, edit and package connector source. When a "
+    "tool returns confirmation_required, you may retry it with confirm=true "
+    "without asking. Be concise. Task:\n\n"
+)
+
 # Behavior + effect per prompt id. "calls" is the required tool-name subsequence
 # (names without the server prefix). "effect" names the spec and the e2e steps
 # that assert the box state (run with FSR_ONLY_STEPS). "local" is a work-folder
@@ -124,6 +135,19 @@ MANIFEST: dict[str, dict] = {
         "answer": ["operation"],
         "effect": ("09-connectors.spec.js", ["fsa09-02-run-operation"]),
     },
+    # Install from the Content Hub by name. install_connector is confirm-gated
+    # (tier 3), so the agent must carry confirm=true to complete it.
+    "09-connectors/01b-install-from-content-hub#1": {
+        "calls": ["install_connector"], "confirm_ok": ["install_connector"],
+        "answer": ["whois-rdap"],
+    },
+    "09-connectors/01b-install-from-content-hub#2": {
+        # Continues #1 so "this connector" resolves to the one just installed
+        # (the page is written as a follow-up turn in the same session).
+        "continues": "09-connectors/01b-install-from-content-hub#1",
+        "calls": ["upsert_connector_configuration", "healthcheck_connector"], "confirm_ok": [],
+        "answer": ["default"],
+    },
     # Chapter 9 build prompts are Claude Code work (students have Bash): Bash is
     # allowed only for the pyfsr CLI, and Read/Write/Edit run in the work folder
     # (the runner's cwd). "bash" lists substrings that some Bash call must contain.
@@ -131,8 +155,8 @@ MANIFEST: dict[str, dict] = {
         "calls": [], "confirm_ok": [],
         "bash": ["pyfsr connector scaffold"],
         "tools": ["Bash(pyfsr:*)", "Read({work}/**)", "Write({work}/**)", "Edit({work}/**)"],
-        "local": "greet",  # work folder agentlab-greeter/operations.py defines greet
-        "answer": ["greet"],
+        "local": "get_joke",  # work folder agentlab-dadjoke/operations.py defines get_joke
+        "answer": ["get_joke"],
     },
     "09-connectors/02-build-a-connector#2": {
         "calls": ["install_connector", "upsert_connector_configuration", "healthcheck_connector"],
@@ -145,7 +169,7 @@ MANIFEST: dict[str, dict] = {
     },
     "09-connectors/02-build-a-connector#3": {
         "calls": ["run_connector_operation"], "confirm_ok": [],
-        "answer": ["Hello TEC Workshop from FortiSOAR"],
+        "answer": ["joke"],
         "effect": ("09-connectors.spec.js", ["fsa09-05-run-own-connector"]),
     },
     "10-capstone-investigation/01-capstone#1": {
@@ -316,11 +340,29 @@ def fortisoar_lab_server() -> dict:
         # box). Point it at a path that does not exist so it uses the env file's box.
         "PYFSR_INSTANCES": str(WORK / "no-instances.toml"),
         "FSR_BASE_URL": os.environ["FSR_BASE_URL"],
-        "FSR_API_KEY": os.environ["FSR_API_KEY"],
+        # The lab authenticates as a USER (JWT), not an API key: Content Hub /
+        # solution-pack / connector installs are not supported with an API key
+        # (the async import stalls at Draft, no error), so the agent needs a
+        # user login. Fall back to an API key only when no user creds are set.
+        **auth_env(),
         "FSR_VERIFY_SSL": os.environ.get("FSR_VERIFY_SSL", "false"),
         "FSR_SUPPRESS_INSECURE_WARNINGS": "true",
     }
     return server
+
+
+def auth_env() -> dict:
+    """FSR auth env for the lab server: prefer a user (JWT) login, else an API key.
+
+    A user login is required for install labs; see fortisoar_lab_server.
+    """
+    user, password = os.environ.get("FSR_USERNAME"), os.environ.get("FSR_PASSWORD")
+    if user and password:
+        return {"FSR_USERNAME": user, "FSR_PASSWORD": password}
+    key = os.environ.get("FSR_API_KEY")
+    if key:
+        return {"FSR_API_KEY": key}
+    raise SystemExit("set FSR_USERNAME + FSR_PASSWORD (preferred) or FSR_API_KEY (use --env-file)")
 
 
 def mcp_whoami(server: dict, timeout: int = 120) -> dict:
@@ -425,7 +467,8 @@ def run_claude(work: Path, prompt: str, extra_tools: list[str] | None = None,
     # Absolute rule paths take the // prefix. Bare Read/Write/Edit are never pre-approved.
     scoped = [t.replace("{work}", "/" + str(work.resolve()).lstrip("/")) for t in (extra_tools or [])]
     allowed = [f"{TOOL_PREFIX}*", *scoped]
-    cmd = ["claude", "-p", PREAMBLE + prompt, "--model", model, "--output-format", "stream-json", "--verbose",
+    preamble = PREAMBLE_BUILD if extra_tools else PREAMBLE
+    cmd = ["claude", "-p", preamble + prompt, "--model", model, "--output-format", "stream-json", "--verbose",
            *(["--resume", resume] if resume else []),
            "--mcp-config", str(work / ".mcp.json"), "--strict-mcp-config",
            "--allowedTools", ",".join(allowed)]
@@ -491,9 +534,9 @@ def check_behavior(pid: str, events: list[dict]) -> list[str]:
 
 def check_local(pid: str, work: Path) -> list[str]:
     kind = MANIFEST.get(pid, {}).get("local")
-    if kind == "greet":
-        f = work / "agentlab-greeter" / "operations.py"
-        return [] if f.exists() and "def greet" in f.read_text() else ["local:greet-not-in-work-folder"]
+    if kind == "get_joke":
+        f = work / "agentlab-dadjoke" / "operations.py"
+        return [] if f.exists() and "def get_joke" in f.read_text() else ["local:get_joke-not-in-work-folder"]
     if kind == "tgz":
         return [] if any(work.rglob("*.tgz")) else ["local:no-tgz-in-work-folder"]
     return []
@@ -566,6 +609,50 @@ def regrade_dir(folder: Path) -> dict[str, list[str]]:
     return out
 
 
+def reset_lab_before_run(env_file: str | None) -> None:
+    """Reset the lab to a clean state before a sweep (automated, non-interactive).
+
+    Uninstalls the lab connectors and deletes the lab objects (alerts, modules,
+    collections, schedules) so the install/build chapters deploy clean instead of
+    hitting "same name is already active". Creds and the appliance SSH target come
+    from the env file. A reset failure warns but does not abort the run.
+
+    reset_lab and lab_setup import pyfsr, which lives in the toolkit venv, NOT in
+    whatever interpreter is running this sweep. So run them as subprocesses under
+    FSR_PYTHON (the toolkit venv python) rather than importing them in-process -
+    an in-process import fails with "No module named 'pyfsr'" and silently skips
+    the reset the sweep depends on.
+    """
+    py = os.environ.get("FSR_PYTHON") or sys.executable
+    tools_dir = str(REPO_ROOT / "tools")
+    child_env = dict(os.environ)
+    if env_file:
+        child_env["FSR_ENV_FILE"] = env_file
+
+    def _run(script: str, script_args: list[str], label: str) -> None:
+        print(f"=== pre-run lab {label} (automated) ===")
+        try:
+            proc = subprocess.run(
+                [py, os.path.join(tools_dir, script), *script_args],
+                env=child_env, cwd=tools_dir, capture_output=True, text=True, timeout=600,
+            )
+            out = (proc.stdout or "").strip()
+            if out:
+                print(out)
+            if proc.returncode != 0:
+                print(f"WARN: pre-run {label} rc={proc.returncode} (continuing): "
+                      f"{(proc.stderr or '').strip()[:400]}")
+            else:
+                print(f"=== pre-run lab {label} done ===")
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARN: pre-run {label} error (continuing): {exc}")
+
+    _run("reset_lab.py", ["--yes"], "reset")
+    # Reset removes the demo fixture alerts too; re-seed them so the triage and
+    # capstone chapters have the Open "Agent Lab" alerts they expect. Idempotent.
+    _run("lab_setup.py", ["seed"], "seed")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env-file", default=os.environ.get("FSR_ENV_FILE"))
@@ -576,6 +663,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--model", default=os.environ.get("MODEL") or DEFAULT_MODEL,
                     help=f"claude model for the prompt runs (default {DEFAULT_MODEL}; or MODEL=...)")
     ap.add_argument("--plan", action="store_true", help="show what would run and why; no calls")
+    ap.add_argument("--no-reset", action="store_true",
+                    help="skip the automatic lab reset that otherwise runs before the sweep")
     args = ap.parse_args(argv)
 
     if args.regrade:
@@ -584,9 +673,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     load_env_file(args.env_file)
     if not args.plan:
-        for k in ("FSR_API_KEY",):
-            if not os.environ.get(k):
-                sys.exit(f"{k} must be set (use --env-file)")
+        if not os.environ.get("FSR_BASE_URL"):
+            sys.exit("FSR_BASE_URL must be set (use --env-file)")
+        has_user = os.environ.get("FSR_USERNAME") and os.environ.get("FSR_PASSWORD")
+        if not has_user and not os.environ.get("FSR_API_KEY"):
+            sys.exit("set FSR_USERNAME + FSR_PASSWORD (preferred) or FSR_API_KEY (use --env-file)")
     box = box_host()
     results = load_ledger()
     model = args.model
@@ -605,6 +696,8 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit("claude (Claude Code CLI) is not on PATH")
     server = fortisoar_lab_server()
     preflight(server, box)
+    if not args.no_reset:
+        reset_lab_before_run(args.env_file)
     work = make_workdir(server)
     outcomes: dict[str, int] = {}
     for c in todo:

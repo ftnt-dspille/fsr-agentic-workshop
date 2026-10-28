@@ -55,3 +55,32 @@ The agent walks `default_connector_config` (the expected config shape), `upsert_
 | Install fails: already installed | The connector is present | Skip to configure, or reinstall with `replace` to move versions |
 | Health check is unhealthy | The connector needs real credentials or a reachable service | Give it valid config; a connector to an external API cannot be healthy without one |
 | 403 on install | The key's role cannot manage connectors | Add Application Administrator to the key's role (chapter 6) |
+
+<!-- agent-drive:begin -->
+
+<details><summary>What the agent did</summary>
+
+**`01b-install-from-content-hub#1`** (Sonnet run, sanitized)
+
+![09-connectors/01b-install-from-content-hub#1](agent-run-01b-install-from-content-hub-1.png)
+
+```text
+  > install_connector {"name": "whois-rdap"}
+  > list_connectors {}
+  > install_connector {"name": "whois-rdap", "confirm": true}
+  > list_connectors {}
+```
+
+**`01b-install-from-content-hub#2`** (Sonnet run, sanitized)
+
+![09-connectors/01b-install-from-content-hub#2](agent-run-01b-install-from-content-hub-2.png)
+
+```text
+  > default_connector_config {"connector": "whois-rdap"}
+  > upsert_connector_configuration {"connector": "whois-rdap", "name": "default", "config": {}, "default...
+  > healthcheck_connector {"connector": "whois-rdap"}
+```
+
+</details>
+
+<!-- agent-drive:end -->

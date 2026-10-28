@@ -5,7 +5,7 @@ weight: 20
 description: "Install your coding agent, point it at FortiSOAR over MCP, and prove the connection."
 ---
 
-Your agent talks to FortiSOAR through the `fsr-agentic-toolkit` MCP server, which builds on the open-source [pyfsr](https://github.com/ftnt-dspille/pyfsr) SDK. It needs two values: the box URL and the API key from the previous page.
+Your agent talks to FortiSOAR through the `fsr-agentic-toolkit` MCP server, which builds on the open-source [pyfsr](https://github.com/ftnt-dspille/pyfsr) SDK. It needs the box URL and the login from the previous page.
 
 ## 1. Install the tooling
 
@@ -26,21 +26,21 @@ This also installs `pyfsr` (0.28.0 or newer), whose `pyfsr connector` commands y
 `fsr-agentic-toolkit init` checks the box and prints the config snippet for your agent product:
 
 ```bash
-fsr-agentic-toolkit init --url fortisoar.example.com --api-key '<your-api-key>' --no-verify-ssl --readonly
+fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --password '<password>' --no-verify-ssl --readonly
 ```
 
-Replace `fortisoar.example.com` with your box's URL and `<your-api-key>` with the key you created on the previous page. `--readonly` starts the agent with a read-only tool surface for this chapter; chapter 7 has you remove it before the first write.
+Replace `fortisoar.example.com` with your box's URL and `<login-id>`/`<password>` with the login you created on the previous page. `--readonly` starts the agent with a read-only tool surface for this chapter; chapter 7 has you remove it before the first write.
 
 `init` checks the connection first, then prints the snippet. You should see:
 
 ```text
-connected: soar-connector (ApiKey) @ https://fortisoar.example.com
+connected: agentlab <agentlab@example.com> @ https://fortisoar.example.com
 --- claude-code ---
 # .mcp.json (project root), or merge into ~/.claude.json
 { ... }
 ```
 
-The `connected:` line names the principal behind the key, not a human login - an API key is its own actor on the box, which is exactly why the audit log will attribute the agent's actions to it.
+The `connected:` line names the login your agent authenticates as, which is exactly why the audit log will attribute the agent's actions to it.
 
 <!-- capture: fsa06-03-agent-init -->
 ![fsa06-03-agent-init](fsa06-03-agent-init.png)
@@ -84,7 +84,7 @@ line on what stands out about each.
 **What success looks like:** the agent calls a read-only tool like `list_modules`, then queries the recent alerts, and answers with the module count and a short, grounded summary of the latest alerts. That is your first win: the connection works and the agent is already doing useful read-only work, before you grant it a single write.
 
 {{% notice tip %}}
-If you ask the agent *who am I*, it calls `whoami` and gets back the key's own identity: `soar-connector (ApiKey)` and the box version, not a human login id, because an API key is its own actor and has no person record. That is the right mental model for the rest of the workshop - every write you are about to allow lands under this key, and the audit log says so. These are read-only tools and nothing on the box changes.
+If you ask the agent *who am I*, it calls `whoami` and gets back your login id and the box version. That is the right mental model for the rest of the workshop - every write you are about to allow lands under this login, and the audit log says so. These are read-only tools and nothing on the box changes.
 {{% /notice %}}
 
 <!-- capture: fsa06-04-whoami-claude -->
@@ -95,7 +95,7 @@ If you ask the agent *who am I*, it calls `whoami` and gets back the key's own i
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `init` fails with a certificate error | Self-signed box certificate | Add `--no-verify-ssl` |
-| `init` fails with 401 | Wrong or truncated API key | Re-copy the key; check for trailing whitespace |
+| `init` fails with 401 | Wrong login id or password | Re-check the credentials; watch for trailing whitespace |
 | Agent says it has no fortisoar tools | MCP config not loaded | Claude Code: `.mcp.json` must be in the folder you started `claude` in; check `/mcp` |
 | Tools listed but every call fails with a connection error | Workstation cannot reach the box | `curl -k https://fortisoar.example.com` from the same machine |
 | whoami works but the agent picks odd tools | Tool surface too wide for the task | Add `FSR_MCP_DENY_TOOLS=appliance_*` to the env block |
@@ -110,7 +110,6 @@ If you ask the agent *who am I*, it calls `whoami` and gets back the key's own i
 
 ```text
   > list_modules {}
-  > query_records {"module": "alerts", "limit": 5, "sort": [{"field": "createDate", "di...
   > query_records {"module": "alerts", "limit": 5, "sort": [{"field": "createDate", "di...
 ```
 

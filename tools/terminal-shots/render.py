@@ -105,8 +105,10 @@ def render_transcript(shot: str, lines: list[tuple[str, str]]) -> Path:
 
 def autocrop(png: Path, pad: int = 16) -> None:
     """Trim the solid letterbox border a square-thumbnail backend (qlmanage -s)
-    leaves around the terminal window, so the shot frames its content tightly.
-    Best effort: without Pillow, keep the full canvas rather than fail."""
+    leaves around the terminal window, then re-add `pad` px as a TRANSPARENT
+    border so the shot floats on the docs theme's own background (light or
+    dark) instead of carrying a baked-in white frame. Best effort: without
+    Pillow, keep the full canvas rather than fail."""
     try:
         from PIL import Image, ImageChops
     except Exception:  # noqa: BLE001 -- Pillow is an optional render-time extra
@@ -119,7 +121,10 @@ def autocrop(png: Path, pad: int = 16) -> None:
     left, top, right, bottom = bbox
     box = (max(0, left - pad), max(0, top - pad),
            min(im.width, right + pad), min(im.height, bottom + pad))
-    im.crop(box).save(png)
+    cropped = im.crop(box)
+    out = Image.new("RGBA", (cropped.width + 2 * pad, cropped.height + 2 * pad), (0, 0, 0, 0))
+    out.paste(cropped, (pad, pad))
+    out.save(png)
 
 
 def to_png(svg: Path, png: Path) -> bool:

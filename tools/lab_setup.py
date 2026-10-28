@@ -172,12 +172,15 @@ def build_client(env: dict[str, str], *, require_admin: bool = False):
         if not (user and password):
             sys.exit("lab_setup: grant needs FSR_USERNAME and FSR_PASSWORD (admin)")
         return FortiSOAR(base, username=user, password=password, verify_ssl=verify)
+    # Prefer a user (JWT) login: it is required for install labs (Content Hub /
+    # solution-pack / connector installs are not supported with an API key).
+    # Fall back to an API key only when no user creds are set.
+    if user and password:
+        return FortiSOAR(base, username=user, password=password, verify_ssl=verify)
     api_key = setting("FSR_API_KEY", env)
     if api_key:
         return FortiSOAR(base, api_key=api_key, verify_ssl=verify)
-    if user and password:
-        return FortiSOAR(base, username=user, password=password, verify_ssl=verify)
-    sys.exit("lab_setup: set FSR_API_KEY, or FSR_USERNAME and FSR_PASSWORD")
+    sys.exit("lab_setup: set FSR_USERNAME and FSR_PASSWORD (preferred), or FSR_API_KEY")
 
 
 # ---------------------------------------------------------------------------

@@ -92,11 +92,8 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 
 ```text
   > playbook_yaml_reference {}
-  > build_playbook {"goal": "On alert creation with name starting \"Agent Lab\", set des...
-  > playbook_yaml_reference {"topic": "start_on_create"}
   > playbook_yaml_reference {"topic": "update_record"}
-  > playbook_yaml_reference {"topic": "decision"}
-  > playbook_yaml_reference {"topic": "Routing"}
+  > playbook_yaml_reference {"topic": "start_on_create"}
   > playbook_yaml_reference {"topic": "Step types"}
   > compile_playbook_yaml {"yaml_text": "collection: Agent Lab description: Agent Lab playbooks...
 ```
@@ -106,8 +103,8 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 ![08-playbook/01-author-and-publish#2](agent-run-01-author-and-publish-2.png)
 
 ```text
-  > Bash {"command": "ls -la <repo>"}
-  > Bash {"command": "cd <repo> && find . -newer tools/agent-drive/run.py \\( ...
+  > publish_playbook {"yaml_text": "collection: Agent Lab description: Agent Lab playbooks...
+  > query_records {"module": "workflows", "filters": [{"field": "uuid", "operator": "eq...
 ```
 
 </details>

@@ -61,9 +61,8 @@ Ask the agent for the record's lifecycle (`record_lifecycle`) and you get the wh
 
 ```text
   > create_record {"module": "alerts", "data": {"name": "Agent Lab - suspicious login o...
-  > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts", "since": "<time>"}
-  > get_record {"module": "alerts", "ref": "da65b688-3081-4ff6-ab8a-c72c2553e121", "...
-  > diagnose_run {"playbook": "Tag Agent Lab Alerts", "run": "10523"}
+  > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts", "timeout": 120}
+  > get_record {"module": "alerts", "ref": "823a526b-bf35-4800-8aa8-612af2d442da", "...
 ```
 
 </details>

@@ -123,12 +123,27 @@ def child_env() -> dict:
         env["PATH"] = f"{Path(py).parent}{os.pathsep}{env.get('PATH','')}"
     return env
 
+def auth_env() -> dict:
+    """FSR auth for the lab server: prefer a user (JWT) login, else an API key.
+
+    The lab authenticates as a user because Content Hub / solution-pack /
+    connector installs are not supported with an API key (the import stalls at
+    Draft). Fall back to an API key only when no user creds are set.
+    """
+    user, password = os.environ.get("FSR_USERNAME"), os.environ.get("FSR_PASSWORD")
+    if user and password:
+        return {"FSR_USERNAME": user, "FSR_PASSWORD": password}
+    key = os.environ.get("FSR_API_KEY")
+    if key:
+        return {"FSR_API_KEY": key}
+    raise SystemExit("set FSR_USERNAME + FSR_PASSWORD (preferred) or FSR_API_KEY (use --env-file)")
+
 def write_cfg(work: Path) -> None:
     py = os.environ.get("FSR_PYTHON", "")
     exe = str(Path(py).parent / "fsr-agentic-toolkit") if py else "fsr-agentic-toolkit"
     cfg = {"mcpServers": {"fortisoar-lab": {"command": exe, "args": ["mcp"], "env": {
         "PYFSR_INSTANCES": str(work / "no-instances.toml"),
-        "FSR_BASE_URL": os.environ["FSR_BASE_URL"], "FSR_API_KEY": os.environ["FSR_API_KEY"],
+        "FSR_BASE_URL": os.environ["FSR_BASE_URL"], **auth_env(),
         "FSR_VERIFY_SSL": os.environ.get("FSR_VERIFY_SSL", "false"),
         "FSR_SUPPRESS_INSECURE_WARNINGS": "true"}}}}
     (work / ".mcp.json").write_text(json.dumps(cfg, indent=2)); (work / ".mcp.json").chmod(0o600)
@@ -278,8 +293,8 @@ def main(argv=None) -> int:
             else:
                 print(f"  skip {s['pid']}: no saved stream", flush=True)
         return 0
-    for req in ("FSR_BASE_URL", "FSR_API_KEY"):
-        if not os.environ.get(req): raise SystemExit(f"missing {req} (use --env-file)")
+    if not os.environ.get("FSR_BASE_URL"): raise SystemExit("missing FSR_BASE_URL (use --env-file)")
+    auth_env()  # validates FSR_USERNAME+FSR_PASSWORD (preferred) or FSR_API_KEY is set
     by_page: dict[Path, list[dict]] = {}
     for s in want: by_page.setdefault(s["out"].parent, []).append(s)
     for page_dir, group in by_page.items():

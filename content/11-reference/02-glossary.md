@@ -97,7 +97,7 @@ instance handling. No agent code of its own.
 adds the agent layer: the verbs plus seven ready-made **workflows**, served as an
 MCP server, a CLI, and a Python API. Its MCP server runs on your laptop, your
 coding agent starts it, and it translates the agent's tool calls into FortiSOAR
-REST calls (it needs two values: the box URL and an API key). It is what makes a
+REST calls (it needs the box URL and a user login). It is what makes a
 general coding agent competent on FortiSOAR, and it is the heart of Part 2. This
 is the one name the chapters use; you do not install a separate MCP server.
 

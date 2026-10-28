@@ -51,22 +51,41 @@ async function capture(page, chapter, captureId) {
 }
 
 /**
- * A Playwright APIRequestContext authenticated with the API key, for the
- * REST side of each proof (create the record, read the effect back).
- * Reads FSR_BASE_URL + FSR_API_KEY.
+ * A Playwright APIRequestContext authenticated for the REST side of each proof
+ * (create the record, read the effect back). Prefers a user login
+ * (FSR_USERNAME + FSR_PASSWORD -> a JWT Bearer); falls back to FSR_API_KEY.
+ * Reads FSR_BASE_URL.
  */
 async function apiContext(playwrightRequest) {
   const base = process.env.FSR_BASE_URL;
-  const key = process.env.FSR_API_KEY;
-  if (!base || !key) {
-    throw new Error("FSR_BASE_URL and FSR_API_KEY must be set for the API-level proofs");
+  if (!base) {
+    throw new Error("FSR_BASE_URL must be set for the API-level proofs");
   }
   const baseURL = base.startsWith("http") ? base : `https://${base}`;
+  const user = process.env.FSR_USERNAME;
+  const password = process.env.FSR_PASSWORD;
+  const key = process.env.FSR_API_KEY;
+  let authorization;
+  if (user && password) {
+    const boot = await playwrightRequest.newContext({ baseURL, ignoreHTTPSErrors: true });
+    const res = await boot.post("/auth/authenticate", {
+      data: { credentials: { loginid: user, password } },
+    });
+    if (!res.ok()) {
+      throw new Error(`auth/authenticate -> ${res.status()}: ${(await res.text()).slice(0, 200)}`);
+    }
+    authorization = `Bearer ${(await res.json()).token}`;
+    await boot.dispose();
+  } else if (key) {
+    authorization = `API-KEY ${key}`;
+  } else {
+    throw new Error("set FSR_USERNAME + FSR_PASSWORD (preferred) or FSR_API_KEY for the API-level proofs");
+  }
   return playwrightRequest.newContext({
     baseURL,
     ignoreHTTPSErrors: true,
     extraHTTPHeaders: {
-      Authorization: `API-KEY ${key}`,
+      Authorization: authorization,
       "Content-Type": "application/json",
     },
   });

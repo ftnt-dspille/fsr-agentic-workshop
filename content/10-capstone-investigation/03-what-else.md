@@ -7,7 +7,7 @@ description: "A menu of high-value tasks the same external agent handles well, w
 
 By now the agent has oriented, triaged in bulk, built a module, authored and published a playbook, built a connector and run an investigation. Those are the spine of the workshop, but they are not the limit. The same agent, the same `.mcp.json`, and the same read-only-then-gated discipline cover a much wider set of day-to-day FortiSOAR work.
 
-This page is a menu, not a lab. Each task below is one prompt away, works with the API-key agent you already set up, and is the kind of thing that is tedious to click through in the UI but natural to describe in a sentence. Try the ones that fit your environment.
+This page is a menu, not a lab. Each task below is one prompt away, works with the agent you already set up, and is the kind of thing that is tedious to click through in the UI but natural to describe in a sentence. Try the ones that fit your environment.
 
 {{% notice tip %}}
 Keep the agent read-only while you explore. Every task here that only reads (health sweeps, timelines, session reviews) is safe with `FSR_MCP_READONLY=1` on. Turn the guard off only for the ones that write, and let the confirm gate catch the tier-3 actions.
@@ -82,7 +82,7 @@ one was asked to do. Call out any that ended without a clear answer.
 `list_agent_sessions` and `get_agent_session` make the assistant's own activity auditable.
 
 {{% notice note %}}
-This one reads its transcripts through the SOC Assistant connector (`connector-fsr-soc-assistant`). If that connector is not installed and configured on your box, the agent will report a connector error instead of sessions, which is the expected answer here, not a failure to debug. The other tasks on this page need nothing beyond the API-key agent.
+This one reads its transcripts through the SOC Assistant connector (`connector-fsr-soc-assistant`). If that connector is not installed and configured on your box, the agent will report a connector error instead of sessions, which is the expected answer here, not a failure to debug. The other tasks on this page need nothing beyond the agent you already set up.
 {{% /notice %}}
 
 ## Map a use case to a FortiSOAR design

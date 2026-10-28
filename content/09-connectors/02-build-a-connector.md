@@ -81,9 +81,9 @@ returned.
 ![09-connectors/02-build-a-connector#1](agent-run-02-build-a-connector-1.png)
 
 ```text
-  > Bash {"command": "pyfsr connector scaffold --help; ls -la"}
-  > Bash {"command": "pyfsr connector scaffold agentlab-greeter && cd agentlab...
-  > Bash {"command": "python3 - <<'E' p='operations.py' s=open(p).read() a=s.i...
+  > Bash {"command": "pwd; ls -la; pyfsr connector --help 2>&1 | head -30"}
+  > Bash {"command": "cd agentlab-dadjoke && find . -type f | head -50; git st...
+  > Bash {"command": "cat operations.py connector.py info.json requirements.tx...
 ```
 
 **`02-build-a-connector#2`** (Sonnet run, sanitized)
@@ -91,11 +91,10 @@ returned.
 ![09-connectors/02-build-a-connector#2](agent-run-02-build-a-connector-2.png)
 
 ```text
-  > Bash {"command": "pyfsr connector package agentlab-greeter 2>&1 | tail -20...
+  > Bash {"command": "pyfsr connector package agentlab-dadjoke 2>&1 | tail -20...
   > install_connector {"path": "<repo>", "confirm": true}
-  > install_connector {"path": "<repo>", "confirm": true, "replace": true}
-  > upsert_connector_configuration {"connector": "agentlab-greeter", "name": "default", "config": {"serv...
-  > healthcheck_connector {"connector": "agentlab-greeter"}
+  > upsert_connector_configuration {"connector": "agentlab-dadjoke", "name": "default", "config": {"serv...
+  > healthcheck_connector {"connector": "agentlab-dadjoke", "config": "deb0520b-bb54-4550-95ed-...
 ```
 
 **`02-build-a-connector#3`** (Sonnet run, sanitized)
@@ -103,7 +102,7 @@ returned.
 ![09-connectors/02-build-a-connector#3](agent-run-02-build-a-connector-3.png)
 
 ```text
-  > run_connector_operation {"connector": "agentlab-greeter", "operation": "greet", "params": {"n...
+  > run_connector_operation {"connector": "agentlab-dadjoke", "operation": "get_joke"}
 ```
 
 </details>

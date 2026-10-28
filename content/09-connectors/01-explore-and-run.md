@@ -58,8 +58,8 @@ connector to evaluate 2+2 as a demonstration.
 
 ```text
   > list_connectors {}
-  > healthcheck_connector {"connector": "agentlab-greeter"}
-  > list_connector_operations {"connector": "agentlab-greeter"}
+  > healthcheck_connector {"connector": "cisa-advisory"}
+  > list_connector_operations {"connector": "cisa-advisory"}
 ```
 
 **`01-explore-and-run#2`** (Sonnet run, sanitized)
@@ -70,6 +70,8 @@ connector to evaluate 2+2 as a demonstration.
   > list_connectors {}
   > list_connector_operations {"connector": "code-snippet"}
   > run_connector_operation {"connector": "code-snippet", "operation": "python_inline_code_editor...
+  > list_connector_operations {"connector": "cyops_utilities"}
+  > run_connector_operation {"connector": "cyops_utilities", "operation": "xml_to_dictionary", "p...
 ```
 
 </details>

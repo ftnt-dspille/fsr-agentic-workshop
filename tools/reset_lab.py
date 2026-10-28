@@ -8,12 +8,13 @@ Removes everything the workshop created on a FortiSOAR box, identified by the
     modules               name "agentlab" or "agentlab_*"      -> records purged, then module deleted
     playbook collections  name starts with "Agent Lab"         -> collection deleted (hard)
     schedules             name starts with "agentlab_" or "Agent Lab" -> deleted
-    connector             acme-threat-feed, if configured      -> uninstalled
+    connectors            the lab connectors (CONNECTORS), if installed -> uninstalled
 
 Modes
 -----
     python3 tools/reset_lab.py --check-only   # report what exists, change nothing
     python3 tools/reset_lab.py                # print the plan, then ask you to type RESET
+    python3 tools/reset_lab.py --yes          # non-interactive (for automated pre-run reset)
 
 Connection comes from FSR_ENV_FILE (a KEY=VALUE file) or the process environment:
     FSR_BASE_URL      https://fortisoar.example.com
@@ -41,7 +42,12 @@ USER_EMAIL_PREFIX = "agentlab_"
 COLLECTION_PREFIX = "Agent Lab"
 ALERT_NAME_PREFIX = "Agent Lab: "  # matches lab_setup.py's seeded demo alerts
 SCHEDULE_PREFIXES = ("agentlab_", "Agent Lab")
-CONNECTOR = "acme-threat-feed"
+# Connectors the labs install (ch9): the one the student builds+installs, and the
+# one installed from the Content Hub. Uninstalling them lets the build/install
+# chapters run a clean deploy instead of hitting "same name is already active".
+# Override with FSR_LAB_CONNECTORS (comma-separated).
+CONNECTORS = [c.strip() for c in os.environ.get(
+    "FSR_LAB_CONNECTORS", "agentlab-dadjoke,whois-rdap").split(",") if c.strip()]
 CONFIRM_WORD = "RESET"
 DELETE_CHUNK = 100
 
@@ -70,14 +76,17 @@ def build_client(file_env: dict[str, str]):
     if not base:
         sys.exit("reset_lab: FSR_BASE_URL is required (set it in FSR_ENV_FILE or the environment)")
     verify = (setting("FSR_VERIFY_SSL", file_env, "1") or "1").lower() not in ("0", "false", "no")
+    # Prefer a user (JWT) login: it is required for install labs (Content Hub /
+    # solution-pack / connector installs are not supported with an API key).
+    # Fall back to an API key only when no user creds are set.
+    user = setting("FSR_USERNAME", file_env)
+    password = setting("FSR_PASSWORD", file_env)
+    if user and password:
+        return FortiSOAR(base, username=user, password=password, verify_ssl=verify)
     api_key = setting("FSR_API_KEY", file_env)
     if api_key:
         return FortiSOAR(base, api_key=api_key, verify_ssl=verify)
-    user = setting("FSR_USERNAME", file_env)
-    password = setting("FSR_PASSWORD", file_env)
-    if not (user and password):
-        sys.exit("reset_lab: set FSR_API_KEY, or FSR_USERNAME and FSR_PASSWORD")
-    return FortiSOAR(base, username=user, password=password, verify_ssl=verify)
+    sys.exit("reset_lab: set FSR_USERNAME and FSR_PASSWORD (preferred), or FSR_API_KEY")
 
 
 @dataclass
@@ -87,11 +96,11 @@ class Plan:
     collections: list[dict[str, Any]] = field(default_factory=list)
     schedules: list[str] = field(default_factory=list)
     alerts: list[dict[str, Any]] = field(default_factory=list)  # {"uuid", "name"}
-    connector_version: str | None = None
+    connectors: list[dict[str, Any]] = field(default_factory=list)  # {"name", "version"}
 
     def is_empty(self) -> bool:
         return not (self.users or self.modules or self.collections or self.schedules
-                    or self.alerts or self.connector_version)
+                    or self.alerts or self.connectors)
 
 
 def collect_plan(client) -> Plan:
@@ -129,7 +138,13 @@ def collect_plan(client) -> Plan:
         if name.startswith(ALERT_NAME_PREFIX):
             plan.alerts.append({"uuid": alert.get("uuid"), "name": name})
 
-    plan.connector_version = client.connectors.resolve_version(CONNECTOR)
+    for name in CONNECTORS:
+        try:
+            version = client.connectors.resolve_version(name)
+        except Exception:  # resolve can raise on an odd state; treat as not installed
+            version = None
+        if version:
+            plan.connectors.append({"name": name, "version": version})
     return plan
 
 
@@ -145,10 +160,11 @@ def print_plan(plan: Plan) -> None:
     section("playbook collections (delete)", [c["name"] for c in plan.collections])
     section("schedules (delete)", plan.schedules)
     section("demo alerts (delete)", [a["name"] for a in plan.alerts])
-    if plan.connector_version:
-        print(f"connector {CONNECTOR} (uninstall): version {plan.connector_version}")
+    if plan.connectors:
+        section("connectors (uninstall)",
+                [f"{c['name']} {c['version']}" for c in plan.connectors])
     else:
-        print(f"connector {CONNECTOR}: not configured")
+        print(f"connectors ({', '.join(CONNECTORS)}): none installed")
 
 
 def chunks(items: list[str], size: int):
@@ -290,13 +306,13 @@ def execute(client, plan: Plan) -> int:
             failures += 1
             print(f"FAILED demo alerts: {exc}")
 
-    if plan.connector_version:
+    for conn in plan.connectors:
         try:
-            client.connectors.uninstall(CONNECTOR, version=plan.connector_version)
-            print(f"uninstalled connector {CONNECTOR} {plan.connector_version}")
+            client.connectors.uninstall(conn["name"], version=conn["version"])
+            print(f"uninstalled connector {conn['name']} {conn['version']}")
         except Exception as exc:
             failures += 1
-            print(f"FAILED connector {CONNECTOR}: {exc}")
+            print(f"FAILED connector {conn['name']}: {exc}")
 
     return failures
 
@@ -305,6 +321,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LIVE, DESTRUCTIVE: remove the agentlab_ workshop objects from a FortiSOAR box.")
     ap.add_argument("--check-only", action="store_true", help="report what exists and change nothing")
     ap.add_argument("--instance", help="pyfsr instance name in ~/.pyfsr/instances.toml")
+    ap.add_argument("--yes", action="store_true",
+                    help="skip the RESET prompt (non-interactive; for automated pre-run reset). "
+                         "Also enabled by FSR_LAB_RESET_YES=1.")
     args = ap.parse_args(argv)
 
     if args.instance:
@@ -322,11 +341,14 @@ def main(argv: list[str] | None = None) -> int:
         print("nothing to remove")
         return 0
 
-    print()
-    typed = input(f"This deletes the objects above on the box. Type {CONFIRM_WORD} to continue: ").strip()
-    if typed != CONFIRM_WORD:
-        print("aborted; nothing changed")
-        return 1
+    if args.yes or os.environ.get("FSR_LAB_RESET_YES") == "1":
+        print(f"\n--yes: deleting the objects above without the {CONFIRM_WORD} prompt")
+    else:
+        print()
+        typed = input(f"This deletes the objects above on the box. Type {CONFIRM_WORD} to continue: ").strip()
+        if typed != CONFIRM_WORD:
+            print("aborted; nothing changed")
+            return 1
 
     failures = execute(client, plan)
 

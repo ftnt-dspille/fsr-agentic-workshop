@@ -55,7 +55,7 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Record create returns 403 after publish | The role grant did not apply | Ask the agent to rerun the workflow with the role named, or grant it in the UI: Identity & Access Management > Roles > Full App Permissions, read, create, update and delete on the module |
-| Module is not visible to the key after publish | The workflow stopped before publishing because other changes were staged | Read its report, clear or agree on the other staged changes, then rerun it |
+| Module is not visible to the login after publish | The workflow stopped before publishing because other changes were staged | Read its report, clear or agree on the other staged changes, then rerun it |
 | Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Name the Severity picklist in the field spec so it binds; fix an already-created field in the UI (Settings > Application Editor > Modules) |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
@@ -69,8 +69,12 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 ![07-users-modules-records/02-create-a-module#1](agent-run-02-create-a-module-1.png)
 
 ```text
-  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
-  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "fields": ...
+  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "plural": ...
+  > provision_module {"module": "agentlab_assets", "check_only": true}
+  > provision_module {"module": "agentlab_assets", "check_only": true, "confirm": true}
+  > provision_module {"module": "agentlab_assets", "confirm": true}
+  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
+  > get_record {"module": "agentlab_assets", "ref": "d942ea76-3559-40f0-bd9c-6424cda...
 ```
 
 </details>

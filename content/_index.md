@@ -31,7 +31,7 @@ For **Part 1** (in the FortiSOAR UI):
 
 For **Part 2** (on your own workstation), check each of these before chapter 6:
 
-- A FortiSOAR instance (8.0.1 or later), reachable over the network from your workstation, and a FortiSOAR API key for your account (you create a dedicated one in chapter 6).
+- A FortiSOAR instance (8.0.1 or later), reachable over the network from your workstation, and a FortiSOAR user login for the agent (you create a dedicated one in chapter 6).
 - **Python 3.10 or later.** Check: `python3 --version`.
 - **A coding agent.** Claude Code is the primary path: install it and sign in with an Anthropic account that has credits or a subscription (Part 2 makes real model calls). Check: `claude --version`. OpenCode or GitHub Copilot also work if you prefer.
 - Basic familiarity with FortiSOAR alerts, records and playbooks. New to these? The glossary in chapter 11 defines every term this workshop uses.
