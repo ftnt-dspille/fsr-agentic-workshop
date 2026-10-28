@@ -1,0 +1,19 @@
+# Temporary repo-local override of the shared TEC build-and-deploy pipeline.
+#
+# The shared pipeline (build-and-deploy.yaml@TEC/tec-project-shared-ci) pins the
+# Hugo builder image to a tag that is missing from the Harbor registry, so the
+# deploy job fails before it builds ("artifact ... not found"). We include the
+# same shared pipeline unchanged and override ONLY the builder image back to the
+# last tag that is present in Harbor and built this site. Everything else - the
+# build, the deploy target and its credentials, the semver-tag rule - still comes
+# from the shared file.
+#
+# Remove this file (and clear the project CI config path back to the shared file)
+# once the shared pipeline's image pin is available in Harbor again.
+
+include:
+  - project: 'TEC/tec-project-shared-ci'
+    file: 'build-and-deploy.yaml'
+
+"build and deploy":
+  image: svl-devops-harbor.fortilab.fortinet.com/tec/hugo-builder:v6.0.13
