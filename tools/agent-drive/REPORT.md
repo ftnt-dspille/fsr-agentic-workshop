@@ -95,7 +95,7 @@ Other round-2 facts:
 - Plural: `agentlab_assets` plural staged as "Agent Lab Assets" (was "Agent Lab Assetss", the default-"s" bug). `pending_changes()` held only that module before publish; publish ran; after publish pending is empty and the published plural is "Agent Lab Assets".
 - The plural publish overlapped with the Sonnet reruns. Note the 09-02#2 earlier failures came while the box was mid-update (503 "Wait For Update Across Cluster"), and the first 09-02#3 attempt was aborted by preflight on that 503 (preflight now falls back to the config check on any whoami error).
 - Stale connector: agentlab-greeter was removed by name, then active again on the next check, so the install path was exercised repeatedly.
-- 8.0.1 traces: the fsr801-beta alias is in the real registry file; its API port refused connections, so the trace check is BLOCKED (box down).
+- 8.0.1 traces: the live 8.0.1 appliance was unreachable (API port refused connections), so the trace check is BLOCKED (box down).
 - FortiAI token balance: 375,567 remaining monthly tokens, before and after the reruns (unchanged; these runs use Claude Code credits, not FortiAI tokens).
 - Chained prompts: `continues` resumes the prerequisite prompt's session (session ids in a gitignored .sessions.json). 08-01#1 had no session recorded before this change, so it was rerun to create one.
 - fsa10-02 capture: clipped to the Description block in the ui-captures spec; reruns write the cropped image. The image shows the scenario address 203.0.113.99 (RFC 5737 documentation space) and the page's example name web-server-01.
@@ -146,7 +146,7 @@ Strict workaround grading stays: a rerun on the toolkit release is graded the sa
 
 ## Traces (8.0.1)
 
-BLOCKED. The fsr801-beta alias is in the real registry file; its API port refused connections. The ch03 page does not yet state that traces need 8.0.1 or later. Retry when an 8.0.1 box is up.
+BLOCKED. The live 8.0.1 appliance was unreachable (API port refused connections). The ch03 page does not yet state that traces need 8.0.1 or later. Retry when an 8.0.1 box is up.
 
 ## T5: rerun on the released toolkit (Sonnet, claude-sonnet-5-5)
 
