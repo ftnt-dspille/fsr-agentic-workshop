@@ -4,7 +4,7 @@
 "class")}} {{end}}
 <img
   class="{{$class}}"
-  src="/images/icons/{{ $icon }}.svg"
+  src="{{ printf "images/icons/%s.svg" $icon | absURL }}"
   style="height: {{$size}}"
   alt=""
 />

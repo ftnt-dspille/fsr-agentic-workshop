@@ -13,7 +13,7 @@ enableEmoji = true
 
 ################################ BEGIN EDITING ################################
 # Display Title of the project
-title = "FortiSOAR Agentic Operations Workshop"
+title = "FortiSOAR Agentic Operations: Built-In AI and Your Own Coding Agents"
 
 [params]
 # Author of the site, will be used in meta information

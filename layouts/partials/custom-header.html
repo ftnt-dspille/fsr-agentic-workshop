@@ -1,3 +1,11 @@
+{{- $assetBase := absURL "" -}}
+{{- if site.Params.offlineBuild -}}
+  {{- $assetBase = "" -}}
+  {{- $dir := path.Dir .RelPermalink -}}
+  {{- range split (strings.Trim $dir "/") "/" -}}
+    {{- if ne . "" -}}{{- $assetBase = printf "../%s" $assetBase -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
 <style>
   :root {
     /* Colors */
@@ -80,7 +88,7 @@
     font-weight: 100 1000;
     font-stretch: 100%;
     font-display: swap;
-    src: url('/fonts/Inter-V.ttf');
+    src: url('{{ printf "%sfonts/Inter-V.ttf" $assetBase }}');
   }
   ::placeholder {
     /* Chrome, Firefox, Opera, Safari 10.1+ */
@@ -175,6 +183,10 @@
       --INTERNAL-BOX-BG-color: white;
       --INTERNAL-BOX-NEUTRAL-TEXT-color: black;
     }
+  }
+
+  #logo img {
+    content: url('{{ printf "%simages/white-logo.svg" $assetBase }}');
   }
 </style>
 
