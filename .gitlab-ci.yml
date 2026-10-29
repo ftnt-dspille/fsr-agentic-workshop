@@ -1,0 +1,15 @@
+# Repo-local override of the shared TEC build-and-deploy pipeline.
+#
+# The shared pipeline (build-and-deploy.yaml@TEC/tec-project-shared-ci) pins the
+# Hugo builder image to a tag that can be missing from the Harbor registry, which
+# fails the deploy job before it builds. We include the shared pipeline unchanged
+# and override ONLY the builder image, with no version tag, so it always uses the
+# newest builder on Harbor. The build, the deploy target and its credentials, and
+# the semver-tag rule still come from the shared file.
+
+include:
+  - project: 'TEC/tec-project-shared-ci'
+    file: 'build-and-deploy.yaml'
+
+"build and deploy":
+  image: svl-devops-harbor.fortilab.fortinet.com/tec/hugo-builder:latest
