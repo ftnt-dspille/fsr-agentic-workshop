@@ -2,20 +2,39 @@
 title: Orientation Tour
 linkTitle: Orientation Tour
 weight: 30
-description: "A read-only walk through the AI screens on your box: confirm AI is on, read the agent catalog, the MCP servers and an SOP, and ask the assistant one question."
+description: "A guided walk through the AI screens on your box: create an alert, confirm AI is on, read the agent catalog, the MCP servers and an SOP, and ask the assistant one question."
 ---
 
-This tour is read-only, with one exception: you will ask the AI Assistant a question about an alert. Nothing here should change data on the box. The goal is to know where things are before chapter 3 starts writing alert fields.
+This tour creates one practice alert and asks the AI Assistant a read-only question about it. The goal is to know where things are before chapter 3 starts writing alert fields.
 
-## 1. Seed the data first
+## 1. Create an alert in the UI
+
+<!-- step: fsa02-00-create-alert -->
+
+Open the **Alerts** module and choose **Add**. Fill in the alert form:
+
+- **Name:** a recognizable practice name, such as `Agent Lab - orientation` plus a unique suffix
+- **Description:** the JSON source payload from the example below
+- **Source:** `edr-sensor-01`
+- **Source ID:** `203.0.113.42`
+- Leave **Status**, **Severity**, and **Type** at their defaults for this first alert.
+
+Review the fields, choose **Save**, and confirm the new alert appears in the list.
+
+<!-- capture: fsa02-00-create-alert -->
+![fsa02-00-create-alert](fsa02-00-create-alert.png?height=600px)
+
+This screenshot shows the form before saving. The example uses the documentation-only `203.0.113.0/24` range, so the value is safe to reproduce in a public workshop.
+
+## 1.1 Create the remaining practice data
 
 Investigations need an alert with source data. Without it, the alert gets the generic `DEFAULT` SOP, and an SOP for its alert type never applies.
 
 {{% notice warning %}}
-An alert created by hand, or through the API, with no raw source data always gets the `DEFAULT` SOP. Type-specific SOPs only apply when the alert carries its source JSON. Put the raw payload in the alert's **source data** field when you seed it, or the SOP exercise in chapter 3 will not show what you expect.
+An alert created by hand, or through the API, with no raw source data always gets the `DEFAULT` SOP. Type-specific SOPs only apply when the alert carries its source JSON. Put the raw payload in the alert's **source data** field when you create it, or the SOP exercise in chapter 3 will not show what you expect.
 {{% /notice %}}
 
-Seed three to five alerts before chapter 3. In the FortiSOAR UI, open the **Alerts** module and choose **Add**; give the alert a name and a type, then paste a JSON payload into its **source data** field. Use realistic-looking values like the example below (the `203.0.113.0/24` range is reserved for documentation, so it is safe to use here):
+Create three to five alerts before chapter 3. Repeat the same **Add** flow and vary the name, type, source, and source ID. Use realistic-looking values like the example below:
 
 ```json
 {
@@ -42,8 +61,12 @@ Open the AI Configurations group of the left navigation and read what it shows. 
 2. Confirm there is no "AI feature not enabled" banner. The enablement switch and the token balance are under **System** > **System Configuration** > **FortiAI**, not in the AI Configurations group.
 3. If a token balance is shown there, note it. Do not change any setting.
 
-<!-- capture: fsa02-01-ai-area -->
-![fsa02-01-ai-area](fsa02-01-ai-area.png)
+The enablement page is under **System** > **System Configuration** > **FortiAI**. It
+shows whether the AI features are enabled and, on builds that expose it, the
+remaining token balance.
+
+<!-- capture: fsa02-01-ai-enabled -->
+![fsa02-01-ai-enabled](fsa02-01-ai-enabled.png?height=600px)
 
 **What success looks like**
 
@@ -58,14 +81,14 @@ Enabling AI features is an administrator task. If the banner appears, ask your i
 
 <!-- step: fsa02-02-agent-catalog manual: the catalog and its AI Agent filter are captured; reading each Triage and Insight agent LLM profile, MCP servers and masking setting is by hand -->
 
-Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Content Type. The catalog lists the shipped AI agents (23 on the build this page was checked against). Filter by tag, then open one agent tagged `Triage` and one tagged `Insight`. For each, write down:
+Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Content Type. The catalog lists the shipped AI agents; the total varies by build. Filter by tag, then open one agent tagged `Triage` and one tagged `Insight`. For each, write down:
 
 - the LLM profile it points to
 - the MCP servers it is allowed to use
 - its masking setting
 
-<!-- capture: fsa02-02-agent-list -->
-![fsa02-02-agent-list](fsa02-02-agent-list.png)
+<!-- capture: fsa02-02-agent-catalog -->
+![fsa02-02-agent-catalog](fsa02-02-agent-catalog.png?height=600px)
 
 **What success looks like**
 
@@ -76,16 +99,17 @@ Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Conten
 
 <!-- step: fsa02-03-mcp-servers -->
 
-Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. The build this page was checked against lists five, all active and all on the HTTP transport:
+Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. The 8.0.1 build this page was checked against lists six, all active and all on the HTTP transport:
 
 - **FortiSOAR Module Management**: reads and writes records and modules.
 - **SOC Framework**: alert and indicator tools.
 - **FortiSOAR Playbook Management**: runs playbooks and reports their status.
 - **Utility Tools**: helper tools.
-- **AWSEC2**: a connector-based server. It wraps an installed connector's operations as tools, so it is not one of the three FortiSOAR families.
+- **deepwiki**: a public documentation server.
+- **FortiSIEM**: a connector-backed server for FortiSIEM operations. It wraps installed connector operations as tools, so it is not one of the three FortiSOAR families.
 
-<!-- capture: fsa02-03-mcp-list -->
-![fsa02-03-mcp-list](fsa02-03-mcp-list.png)
+<!-- capture: fsa02-03-mcp-servers -->
+![fsa02-03-mcp-servers](fsa02-03-mcp-servers.png?height=600px)
 
 **What success looks like**
 
@@ -109,11 +133,14 @@ You will compare these with the questions the planner actually writes in chapter
 
 If you cannot find the SOP records under the AI configuration area, check the list view for the organizational context module.
 
+<!-- capture: fsa02-04-sop-compare -->
+![fsa02-04-sop-compare](fsa02-04-sop-compare.png?height=600px)
+
 ## 6. Ask the assistant a read-only question
 
-<!-- step: fsa02-05-assistant-readonly manual: a FortiAI chat turn; spends tokens -->
+<!-- step: fsa02-05-assistant-readonly manual: a FortiAI chat turn; spends tokens; automated when SPEND_AI=1 -->
 
-Open an alert you seeded in step 1. Use the AI Assistant on that alert and ask a question that only reads data, such as:
+Open the alert you created in step 1. Use the AI Assistant on that alert and ask a question that only reads data, such as:
 
 ```text
 Summarize the source data on this alert and list the indicators it contains.
@@ -126,6 +153,9 @@ Then ask one multi-step read-only question, such as asking for the alert's relat
 
 - The assistant answers from the alert's data, without inventing indicators.
 - You checked the alert afterward and nothing on it changed.
+
+<!-- capture: fsa02-05-assistant-readonly -->
+![fsa02-05-assistant-readonly](fsa02-05-assistant-readonly.png?height=600px)
 
 {{% notice warning %}}
 Keep this chapter read-only. Do not ask the assistant to block, close, assign or update anything on a shared box. Chapter 3 is where alerts start to change.

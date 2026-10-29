@@ -21,9 +21,13 @@ Insight agents are read-only. They have no write tools and no approval step, so 
 
 ## 2. Create an insight
 
-Open the AI Insights area from the AI navigation. Add a new insight. If a template is offered, pick one such as a high-risk alert review. Choose the role **SOC Manager**, or another role your build offers.
+Open the AI Insights area from the AI navigation. Choose **Add Insight**. If a template is offered, pick one such as **High Risk Active Alerts**. Then fill in the three required settings before anything can run:
 
-<!-- step: fsa03-07-create-insight manual: creates an AI insight that runs FortiAI; spends tokens -->
+1. **Intent Title:** a name you will recognize, such as `Workshop high risk alerts`.
+2. **Role:** choose **SOC Manager**, or another role your build offers.
+3. **Schedule:** open the **Schedule** section and pick a frequency such as **Weekly**. The insight cannot run until a schedule is set.
+
+<!-- step: fsa03-05-insight-plan manual: creates an AI insight that runs FortiAI; spends tokens -->
 
 Enter a question in plain language, for example:
 
@@ -31,14 +35,14 @@ Enter a question in plain language, for example:
 Which active alerts have the highest risk score, and which of them have no assigned owner?
 ```
 
-Do not run it yet. Move to the next step.
+Do not run it yet. The screenshot shows the form with the template's chain of thought and plan before you generate your own. Move to the next step.
 
 <!-- capture: fsa03-05-insight-plan -->
-![fsa03-05-insight-plan](fsa03-05-insight-plan.png)
+![fsa03-05-insight-plan](fsa03-05-insight-plan.png?height=600px)
 
 ## 3. Read the chain of thought and the plan
 
-<!-- step: fsa03-08-read-plan manual: reads the plan of a FortiAI insight run; needs the run -->
+<!-- step: fsa03-10-read-plan manual: reads the plan of a FortiAI insight run; needs the run -->
 
 Read the chain of thought, then the plan. Check that the plan's steps match the question. If a step fetches data you did not ask for, change the question, not the plan.
 
@@ -51,12 +55,12 @@ Do not edit the chain of thought in this exercise. In testing, editing it did no
 
 ## 4. Run, save and schedule
 
-<!-- step: fsa03-09-schedule-insight manual: schedules a FortiAI insight; spends tokens when it fires -->
+<!-- step: fsa03-06-insight-card manual: schedules a FortiAI insight; spends tokens when it fires -->
 
-Run the insight. When the summary card appears, read the summary and the suggested actions. Save it. If you schedule it, pick a short interval such as weekly and note who the schedule runs as.
+Choose **Generate Chain of Thoughts**, then **Generate a Plan**. **Execute** stays disabled until both are generated. Choose **Execute**. When the summary card appears, read the summary and the suggested actions. Save it. If you schedule it, pick a short interval such as weekly and note who the schedule runs as.
 
 <!-- capture: fsa03-06-insight-card -->
-![fsa03-06-insight-card](fsa03-06-insight-card.png)
+![fsa03-06-insight-card](fsa03-06-insight-card.png?height=600px)
 
 **What success looks like**
 

@@ -1,6 +1,7 @@
 public/
 node_modules/
 .env*
+docubot/labconfig.local.yaml
 dist/
 resources/_gen
 tools/e2e/node_modules/
@@ -18,3 +19,5 @@ tools/proof-report.md
 # agent-shots: real Claude Code UI capture work dir (holds .mcp.json with the box API key)
 tools/agent-shots/.capwork/
 tools/agent-shots/__pycache__/
+.docubot/state-*.json
+.docubot/test-output/

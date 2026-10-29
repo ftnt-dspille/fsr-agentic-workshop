@@ -79,6 +79,8 @@ defaultMarkdownHandler = "goldmark"
 # [markup.goldmark]
 # hrefTargetBlank = true
 [markup.goldmark.renderer]
+# Raw HTML is allowed so docubot can inject a size-capped capture image
+# (<img style="max-height: ...">) when a capture marker sets maxheight.
 unsafe = true
 # [services]
 # [services.googleAnalytics]

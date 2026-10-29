@@ -1,0 +1,37 @@
+# docubot lab configuration for the FortiSOAR Agentic Operations Workshop.
+# Cap every injected capture image's display height (px) so large screenshots
+# scale down to a readable size (proportional, no crop). A capture marker's own
+# `maxheight=` overrides this; `maxheight=0` opts that capture out.
+captureMaxHeight: 600
+
+# This workshop ships to a public repo, so lint also enforces content hygiene:
+# no en/em dashes, no real lab IPs or hostnames, no credential literals. Use
+# placeholders (fortisoar.example.com, <your-password>) in the Markdown.
+contentHygiene: true
+
+
+# Device names are stable keys the specs use; keep lab IPs and real passwords
+# OUT of this file — set them per machine with DOCUBOT_<DEVICE>_<FIELD> env vars
+# (e.g. DOCUBOT_SOAR_URL, DOCUBOT_SOAR_PASS). Placeholders only here.
+# For a private workstation overlay, copy the real device values to
+# docubot/labconfig.local.yaml. It is gitignored and merged automatically, so
+# normal runs do not need DOCUBOT_SOAR_* command-line overrides.
+devices:
+  # The FortiSOAR box UI. product: fortisoar gives the WAF-safe browser, the 8.0
+  # login + EULA gate and the AngularJS helpers (see docubot src/devices/fortisoar.ts).
+  soar:
+    type: gui
+    product: fortisoar
+    url: https://fortisoar.example.com
+    user: student
+    pass: <your-password>
+
+  # The student's own machine, where the Claude Code agent runs against the box
+  # over MCP. Used for the agent-TUI capture steps (local + capture.screen).
+  # cwd is the agent's working folder; env carries the box coordinates the agent
+  # and the effect-check tooling need. Override with DOCUBOT_LAPTOP_CWD etc.
+  laptop:
+    type: local
+    cwd: ./.agent-lab
+    env:
+      FSR_BASE_URL: https://fortisoar.example.com

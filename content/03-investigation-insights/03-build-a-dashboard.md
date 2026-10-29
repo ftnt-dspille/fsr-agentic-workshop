@@ -23,12 +23,12 @@ Build three widgets over the alert records:
 
 Some widgets come from the Content Hub. Check that they are installed before you start.
 
-<!-- step: fsa03-10-build-dashboard manual: builds a dashboard by hand in the UI; no spec yet -->
+<!-- step: fsa03-07-verdict-dashboard manual: builds a dashboard by hand in the UI; no spec yet -->
 
 Give the dashboard a name you will recognize, such as `Workshop Verdicts`, and add the three widgets. Filter the alert widgets to the seed alerts you created in chapter 2, so you can count them.
 
 <!-- capture: fsa03-07-verdict-dashboard -->
-![fsa03-07-verdict-dashboard](fsa03-07-verdict-dashboard.png)
+![fsa03-07-verdict-dashboard](fsa03-07-verdict-dashboard.png?height=600px)
 
 **What success looks like**
 

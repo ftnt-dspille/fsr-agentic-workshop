@@ -21,7 +21,7 @@ what you are about to install and its version before you do it, then install
 it and report whether it landed.
 ```
 
-<!-- step: fsa09-06-install-from-hub manual: agent-driven Content Hub install; the target connector depends on the box inventory, so this is proved by the live capture, not a fixed spec -->
+<!-- step: fsa09-06-install-from-hub -->
 
 Behind the prompt the agent calls `install_connector` with a **name** (not a local path): the toolkit resolves it against the box's Content Hub and installs the latest version, or the one you name. It is the same tool chapter 9's "build your own" lab uses with a `path` - name for the hub, path for a `.tgz` you built.
 
@@ -36,7 +36,7 @@ health check needs credentials I have not given you, stop and tell me exactly
 which fields it wants rather than guessing.
 ```
 
-<!-- step: fsa09-07-configure-and-health manual: agent-driven configure + health-check on the hub connector; box-specific, proved by the live capture -->
+<!-- step: fsa09-07-configure-and-health -->
 
 The agent walks `default_connector_config` (the expected config shape), `upsert_connector_configuration` (create or update the `default` config), and `healthcheck_connector`. A connector that reaches an external service will report unhealthy until you give it real credentials - that is the connector telling the truth, not a failure of the agent. A self-contained connector goes green on its own.
 
@@ -44,8 +44,8 @@ The agent walks `default_connector_config` (the expected config shape), `upsert_
 
 **Verify in the UI:** open **Connectors** (it opens the Content Hub on the Connectors filter). The connector now shows as installed, with the `default` configuration and its health state.
 
-<!-- capture: fsa09-06-hub-connector-installed -->
-![fsa09-06-hub-connector-installed](fsa09-06-hub-connector-installed.png)
+<!-- capture: fsa09-06-install-from-hub -->
+![fsa09-06-install-from-hub](fsa09-06-install-from-hub.png)
 
 ## Troubleshooting
 

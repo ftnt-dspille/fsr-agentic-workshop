@@ -12,14 +12,21 @@ Connectors are FortiSOAR's hands: every firewall, sandbox and ticket system is r
 Give your agent this prompt:
 
 ```text
-List the connectors installed on this box. Pick one that is configured and
-healthy (confirm it is healthy), list its operations, and explain what
-parameters its simplest read-only operation takes.
+List the connectors installed on this box and tell me how many there are,
+then name one that is configured and healthy (confirm it is healthy).
 ```
 
 <!-- step: fsa09-01-discover-connectors -->
 
-The agent should walk `list_connectors` (configured connectors show a config count), `healthcheck_connector` (green is `Available`), and `list_connector_operations` - which reads the live box, so the operations match the installed version exactly.
+The agent walks `list_connectors` (configured connectors show a config count) and `healthcheck_connector` (green is `Available`). The count it reports is read live from the box, so it is the real total - not a guess.
+
+<!-- capture: fsa09-01-discover-connectors -->
+![fsa09-01-discover-connectors](fsa09-01-discover-connectors.png?height=600px)
+
+**Verify the count in the UI:** open **Connectors** in the left navigation (it opens Content Hub on the Connectors filter). The total shown there matches the number the agent reported.
+
+<!-- capture: fsa09-01-discover-connectors-ui-count -->
+![fsa09-01-discover-connectors-ui-count](fsa09-01-discover-connectors-ui-count.png?height=600px)
 
 ## 2. Run an operation
 
@@ -35,10 +42,8 @@ connector to evaluate 2+2 as a demonstration.
 
 **What success looks like:** the agent names the operation it chose, shows the params it sent, and interprets the `data` payload rather than dumping it. A failed call is also a success for learning: the error dict carries the HTTP method, path and response body, which the agent should quote when explaining what went wrong.
 
-**Verify in the UI:** open **Connectors** in the left navigation (it opens Content Hub on the Connectors filter), find the connector, and check its health and configuration match what the agent claimed.
-
-<!-- capture: fsa09-02-connector-page -->
-![fsa09-02-connector-page](fsa09-02-connector-page.png)
+<!-- capture: fsa09-02-run-operation -->
+![fsa09-02-run-operation](fsa09-02-run-operation.png?height=600px)
 
 ## Troubleshooting
 
@@ -47,33 +52,3 @@ connector to evaluate 2+2 as a demonstration.
 | healthcheck says no-config | Connector installed but never configured | Pick another, or configure it (the agent can: default_connector_config then upsert_connector_configuration) |
 | Operation fails with a params error | Wrong parameter names | list_connector_operations shows each operation's exact parameter names and types |
 | run_connector_operation returns empty data | Some connectors are fire-and-forget | Not a failure; check the connector's own logs or pick a synchronous operation |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`01-explore-and-run#1`** (Sonnet run, sanitized)
-
-![09-connectors/01-explore-and-run#1](agent-run-01-explore-and-run-1.png)
-
-```text
-  > list_connectors {}
-  > healthcheck_connector {"connector": "cisa-advisory"}
-  > list_connector_operations {"connector": "cisa-advisory"}
-```
-
-**`01-explore-and-run#2`** (Sonnet run, sanitized)
-
-![09-connectors/01-explore-and-run#2](agent-run-01-explore-and-run-2.png)
-
-```text
-  > list_connectors {}
-  > list_connector_operations {"connector": "code-snippet"}
-  > run_connector_operation {"connector": "code-snippet", "operation": "python_inline_code_editor...
-  > list_connector_operations {"connector": "cyops_utilities"}
-  > run_connector_operation {"connector": "cyops_utilities", "operation": "xml_to_dictionary", "p...
-```
-
-</details>
-
-<!-- agent-drive:end -->
