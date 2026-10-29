@@ -25,7 +25,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 
 1. `create_record` on alerts (the trigger fires server-side),
 2. `wait_for_playbook_run` scoped to the playbook name,
-3. `diagnose_run` if anything looks off - it diffs the defined steps against what actually ran,
+3. `diagnose_playbook_run` if anything looks off - it diffs the defined steps against what actually ran,
 4. `get_record` on the alert: the description now reads "Triaged automatically by the Agent Lab playbook".
 
 ## 2. What success looks like
@@ -39,7 +39,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 ![fsa08-03-run-history](fsa08-03-run-history.png)
 
 {{% notice tip %}}
-Ask the agent for the record's lifecycle (`record_lifecycle`) and you get the whole story in one timeline: your create, the trigger, the playbook's update - each attributed and timestamped.
+Ask the agent for the record's lifecycle (`get_record_history`) and you get the whole story in one timeline: your create, the trigger, the playbook's update - each attributed and timestamped.
 {{% /notice %}}
 
 ## Troubleshooting
@@ -47,7 +47,7 @@ Ask the agent for the record's lifecycle (`record_lifecycle`) and you get the wh
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | wait_for_playbook_run times out | Trigger filter did not match | Alert name must start with "Agent Lab"; check the playbook's trigger filter |
-| Run failed at Tag Alert | The update step's record reference | diagnose_run names the failing step and error; common cause is a mangled Jinja reference |
+| Run failed at Tag Alert | The update step's record reference | diagnose_playbook_run names the failing step and error; common cause is a mangled Jinja reference |
 | Run finished but description unchanged | Updated the wrong record or wrong field | Check the run's step results via get_playbook_run; read the alert by uuid |
 | Nothing in Executed Playbooks | Playbook inactive | Activate it and create a fresh alert (triggers do not fire retroactively) |
 

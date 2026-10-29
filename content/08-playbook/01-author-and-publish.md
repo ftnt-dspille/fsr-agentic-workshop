@@ -72,6 +72,10 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 <!-- capture: fsa08-02-playbook-canvas -->
 ![fsa08-02-playbook-canvas](fsa08-02-playbook-canvas.png)
 
+{{% notice tip %}}
+Once you are comfortable with these two calls, page 4 collapses them - plus the run itself - into one tool, `run_playbook_yaml`, which is how you should test-run a new playbook.
+{{% /notice %}}
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |

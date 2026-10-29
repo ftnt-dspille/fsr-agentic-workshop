@@ -58,6 +58,11 @@ The `connected:` line names the login your agent authenticates as, which is exac
 3. Start `claude` in the folder and approve the new MCP server when prompted.
 4. Type `/mcp` to confirm the `fortisoar` server is connected and its tools are listed.
 {{% /tab %}}
+{{% tab title="Codex" %}}
+1. Run `fsr-agentic-toolkit init ... --codex` and merge the printed `[mcp_servers.fortisoar]` tables into `~/.codex/config.toml` (or add it with `codex mcp add`).
+2. Add `startup_timeout_sec = 60` to the `[mcp_servers.fortisoar]` table: the default is 10 seconds, which a first `uvx` start can exceed.
+3. Start `codex` and run `codex mcp list`; `fortisoar` should read `enabled`.
+{{% /tab %}}
 {{% tab title="OpenCode" %}}
 1. Run `fsr-agentic-toolkit init ... --opencode` and merge the printed `mcp` block into your project's `opencode.json`.
 2. Restart OpenCode in the project.

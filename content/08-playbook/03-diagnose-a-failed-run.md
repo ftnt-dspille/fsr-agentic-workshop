@@ -51,15 +51,15 @@ published.
 
 <!-- step: fsa08-04-diagnose-run -->
 
-Watch the tool sequence: `publish_playbook` (the broken version), `create_record` to trigger it, `wait_for_playbook_run` which comes back `failed`, then `diagnose_run`, and finally `publish_playbook` again to restore the good version.
+Watch the tool sequence: `publish_playbook` (the broken version), `create_record` to trigger it, `wait_for_playbook_run` which comes back `failed`, then `diagnose_playbook_run`, and finally `publish_playbook` again to restore the good version.
 
 {{% notice note %}}
-Use `diagnose_run`, not `debug_run`. `diagnose_run` reads a finished run and diffs it against the definition; it is the right tool for "why did this fail". (If your agent reaches for a compile-time debugger here, point it at `diagnose_run`.)
+Use `diagnose_playbook_run`, not `debug_playbook_run`. `diagnose_playbook_run` reads a finished run and diffs it against the definition; it is the right tool for "why did this fail". (If your agent reaches for a compile-time debugger here, point it at `diagnose_playbook_run`.)
 {{% /notice %}}
 
 ## 2. What the diagnosis tells you
 
-`diagnose_run` does not just say "it failed". It returns the whole picture:
+`diagnose_playbook_run` does not just say "it failed". It returns the whole picture:
 
 - **`failing_step`**: `Tag Alert` - the exact step, by name.
 - **`error_message`**: the platform's error verbatim, here a `404 Not Found` on the missing record.
@@ -72,7 +72,7 @@ That is the difference between "the run is red" and "the update step tried to wr
 This is the loop you will run for real whenever a playbook misbehaves:
 
 1. **Reproduce**: trigger the playbook so there is a fresh failed run to look at.
-2. **Diagnose**: `diagnose_run` names the step and the error.
+2. **Diagnose**: `diagnose_playbook_run` names the step and the error.
 3. **Fix**: change the one step the diagnosis named, republish, trigger again.
 4. **Confirm**: the run finishes and the effect lands (read the record back, as in page 2).
 
@@ -83,7 +83,7 @@ The agent can do all four from one request. Your job is to read what it changed 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | wait_for_playbook_run never returns failed | The broken playbook did not re-activate after republish | Ask the agent to confirm the playbook is active, then trigger a fresh alert |
-| diagnose_run says the run was not found | Diagnosing the wrong run, or the run is still in flight | Diagnose the newest run of the playbook by name, after the wait returns |
+| diagnose_playbook_run says the run was not found | Diagnosing the wrong run, or the run is still in flight | Diagnose the newest run of the playbook by name, after the wait returns |
 | The fix did not take | The restore republished the broken YAML | Check the record reference the agent put back; it must be the triggering alert's id, not the all-zeros placeholder |
 | The good "Tag Agent Lab Alerts" playbook changed | The practice YAML reused its name | It should not - the practice playbook is "Agent Lab Diagnose Practice", a separate playbook; publish that name, not the chapter 8 page 1 one |
 
