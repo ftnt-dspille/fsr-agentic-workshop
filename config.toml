@@ -78,6 +78,10 @@ section = ["HTML", "markdown"]
 defaultMarkdownHandler = "goldmark"
 # [markup.goldmark]
 # hrefTargetBlank = true
+# The builder's Relearn theme renders {{% children %}} as Markdown with a
+# {class="..."} attribute block; without this it shows up as literal text.
+[markup.goldmark.parser.attribute]
+block = true
 [markup.goldmark.renderer]
 # Raw HTML is allowed so docubot can inject a size-capped capture image
 # (<img style="max-height: ...">) when a capture marker sets maxheight.
