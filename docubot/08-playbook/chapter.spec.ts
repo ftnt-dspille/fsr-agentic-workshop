@@ -20,7 +20,7 @@
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import * as fs from 'fs';
 import * as path from 'path';
-import { expect, openPlaybookLogs, openRecord, test } from 'docubot';
+import { expect, openPlaybook, openPlaybookLogs, openRecord, test } from 'docubot';
 import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
@@ -30,6 +30,7 @@ const AGENT = process.env.SPEND_AI === '1';
 const TITLE = 'student@laptop: ~/agent-lab';
 
 const TAG_PLAYBOOK = 'Tag Agent Lab Alerts';
+const COLLECTION = 'Agent Lab';
 const PRACTICE_PLAYBOOK = 'Agent Lab Diagnose Practice';
 const PROBE_PLAYBOOK = 'Agent Lab Probe';
 const TAG_TEXT = 'Triaged automatically by the Agent Lab playbook';
@@ -125,9 +126,9 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     expect(wf, `${TAG_PLAYBOOK} not found on the box`).toBeTruthy();
     expect(wfActive(wf.uuid)).toBe(true);
 
-    // UI: open the playbook's designer canvas by the uuid just read back (live
-    // state, not a click path through the collection list), then check the steps.
-    await soar.goto(`${origin}/playbooks/${wf.uuid}`, { waitUntil: 'domcontentloaded' });
+    // UI: open the playbook's designer canvas in-app (collection -> playbook); a
+    // direct /playbooks/<uuid> deep-link does not load the designer on 8.0.
+    await openPlaybook(soar, origin, { collectionName: COLLECTION, playbookName: TAG_PLAYBOOK });
     const canvas = soar.locator('#designer-container');
     await expect(canvas, `designer canvas for ${TAG_PLAYBOOK} did not load`).toBeVisible({ timeout: 40_000 });
     await expect(canvas).toContainText('Tag Alert', { timeout: 30_000 });

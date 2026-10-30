@@ -1,9 +1,15 @@
 {
   "steps": [
     {
-      "id": "fsa08-03-trigger-and-verify",
+      "id": "fsa08-01-compile-yaml",
       "status": "passed",
-      "durationMs": 31643,
+      "durationMs": 64882,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/08-playbook/chapter.spec.ts"
+    },
+    {
+      "id": "fsa08-02-publish-playbook",
+      "status": "passed",
+      "durationMs": 43561,
       "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/08-playbook/chapter.spec.ts"
     }
   ]
