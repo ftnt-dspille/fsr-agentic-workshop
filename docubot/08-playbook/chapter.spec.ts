@@ -21,7 +21,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect, openPlaybook, openPlaybookLogs, openRecord, test } from 'docubot';
-import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
+import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+
+// Mask only truly sensitive values; the scrub backstop still refuses a real lab
+// IP, hostname, key or sensitive term. Designer/run-history pages show dates and
+// record/run UUIDs (read as key-like tokens but not secrets, and no real key
+// renders here), so those categories are skipped for these shots.
+const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 
 test.describe.configure({ mode: 'serial' });
 
@@ -132,7 +138,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     const canvas = soar.locator('#designer-container');
     await expect(canvas, `designer canvas for ${TAG_PLAYBOOK} did not load`).toBeVisible({ timeout: 40_000 });
     await expect(canvas).toContainText('Tag Alert', { timeout: 30_000 });
-    await capture.shot(soar, 'fsa08-02-publish-playbook-canvas', { mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa08-02-publish-playbook-canvas', SKIP_RECORD);
   });
 
   if (shouldRunStep('fsa08-03-trigger-and-verify')) await test.step('fsa08-03-trigger-and-verify', async () => {
@@ -172,8 +178,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     await openPlaybookLogs(soar, { select: 'Tag Agent Lab' });
     await capture.shot(soar, 'fsa08-03-trigger-and-verify-run-history', {
       target: soar.locator('#mySidenav'),
-      mask: uiMask(soar),
-      scrub: false,
+      ...SKIP_RECORD,
     });
   });
 
