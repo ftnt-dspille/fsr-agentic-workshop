@@ -64,7 +64,7 @@ Open the AI Configurations group of the left navigation and read what it shows. 
 <!-- capture: fsa02-01-ai-enabled -->
 ![fsa02-01-ai-enabled](fsa02-01-ai-enabled.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The AI area opens without an enablement banner.
 - You can say where the token balance appears, or that it is not shown on your build.
@@ -86,10 +86,17 @@ Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Conten
 <!-- capture: fsa02-02-agent-catalog -->
 ![fsa02-02-agent-catalog](fsa02-02-agent-catalog.png?height=600px)
 
-**What success looks like**
+Open one agent and switch to its **Configurations** tab. This is where the agent's settings live: the **LLM Provider** it reasons with, the **MCP Server** list it is allowed to call, and its optional **Masking Agent**. These three settings are what make one agent behave differently from another.
+
+<!-- step: fsa02-02-agent-settings -->
+
+<!-- capture: fsa02-02-agent-settings -->
+![fsa02-02-agent-settings](fsa02-02-agent-settings.png?height=600px)
+
+**You are done when**
 
 - You can say which tag routes an agent into an investigation and which routes it into insights.
-- You can name the MCP servers one `Triage` agent uses.
+- You can name the MCP servers one `Triage` agent uses, and read them off its Configurations tab.
 
 ## 4. Inspect the MCP servers
 
@@ -107,10 +114,18 @@ Any external or connector-backed server someone has registered (for example a Fo
 <!-- capture: fsa02-03-mcp-servers -->
 ![fsa02-03-mcp-servers](fsa02-03-mcp-servers.png?height=600px)
 
-**What success looks like**
+Open one server (for example **SOC Framework**) to see its detail: the transport, the on-box URL it serves, and its **Discovered Capabilities**, the actual tools it exposes. SOC Framework, for instance, lists `get_alert`, `enrich_indicator`, `hunt_ioc_siem` and the other alert and indicator tools an investigation calls.
+
+<!-- step: fsa02-03-mcp-server-detail -->
+
+<!-- capture: fsa02-03-mcp-server-detail -->
+![fsa02-03-mcp-server-detail](fsa02-03-mcp-server-detail.png?height=600px)
+
+**You are done when**
 
 - You can name the built-in servers and their purpose.
 - You can tell which servers are built in and which wrap a connector.
+- You can open a server and name a tool it exposes.
 
 If the names on your build differ, use what the list shows.
 
@@ -126,7 +141,7 @@ Open the organizational context records for investigation SOPs. Find the `DEFAUL
 
 You will compare these with the questions the planner actually writes in chapter 3. Come back to this step then.
 
-**What success looks like**
+**You are done when**
 
 - You can point to where an SOP's questions are stored.
 - You understand that SOP lookups are exact and case-sensitive. A subcategory that differs in case from the alert type does not match.
@@ -135,6 +150,13 @@ If you cannot find the SOP records under the AI configuration area, check the li
 
 <!-- capture: fsa02-04-sop-compare -->
 ![fsa02-04-sop-compare](fsa02-04-sop-compare.png?height=600px)
+
+Open one SOP record (for example **SOP - Malware Detection**) and read its **Questions** list. These are the exact questions an investigation of that alert type asks before it reaches a verdict. In chapter 3 you compare them with the questions the planner writes for a real alert.
+
+<!-- step: fsa02-04-sop-detail -->
+
+<!-- capture: fsa02-04-sop-detail -->
+![fsa02-04-sop-detail](fsa02-04-sop-detail.png?height=600px)
 
 ## 6. Ask the assistant a read-only question
 
@@ -149,7 +171,7 @@ Do not change anything.
 
 Then ask one multi-step read-only question, such as asking for the alert's related records and their status. This is a chat exercise. It is not an orchestrator run.
 
-**What success looks like**
+**You are done when**
 
 - The assistant answers from the alert's data, without inventing indicators.
 - You checked the alert afterward and nothing on it changed.

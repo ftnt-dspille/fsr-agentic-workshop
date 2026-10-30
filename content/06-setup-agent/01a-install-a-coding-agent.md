@@ -69,7 +69,7 @@ OpenCode 2 reaches MCP tools through a code tool, so the FortiSOAR tools appear 
 {{% /tab %}}
 {{% /tabs %}}
 
-**What success looks like:** the version command prints a version number and the agent starts and answers a plain question such as "what folder are you in?".
+**You are done when:** the version command prints a version number and the agent starts and answers a plain question such as "what folder are you in?".
 
 ## Versions checked
 

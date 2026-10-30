@@ -42,7 +42,7 @@ The agent can follow up with `describe_module` to show the five fields.
 The workflow's publish ships ALL staged schema changes on the appliance, not just yours. On a shared lab box, check with your neighbors (or your instructor) before letting the agent confirm it.
 {{% /notice %}}
 
-## 2. What success looks like
+## 2. You are done when
 
 - The workflow reports the publish finished and each phase it verified; no manual waiting.
 - `describe_module` lists your five fields with the right types, and the test record comes back with `hostname: build-server-01` and criticality resolved to the High picklist IRI.

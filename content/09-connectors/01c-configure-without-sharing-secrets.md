@@ -53,7 +53,7 @@ The call the agent makes looks like this. Notice there is no key in it:
 }
 ```
 
-**What success looks like:**
+**You are done when:**
 
 - The `check_only` call answers that it is ready to create the configuration and that one secret resolved, naming `env FSR_SECRET_VIRUSTOTAL__API_KEY` as its source and never its value.
 - The write reports the configuration was created and the healthcheck says `Available`.

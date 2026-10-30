@@ -64,7 +64,7 @@ Open any alert's detail page, open the AI Assistant, and ask for the reputation 
 Live indicators age out. FortiGuard can de-list an IP, after which the chat will answer "no reputation available" for it. Refresh the example with a currently-rated IP from your own FortiGuard feed (Fortinet FortiGuard Threat Intelligence connector, Fetch Threat Intel Feeds) before running the lab.
 {{% /notice %}}
 
-**What success looks like**
+**You are done when**
 
 - The answer names the intelligence source (FortiGuard) and the indicator's verdict.
 - The trace shows a `TOOL` call to the SOC Framework server's `enrich_indicator`, and the answer uses its result.

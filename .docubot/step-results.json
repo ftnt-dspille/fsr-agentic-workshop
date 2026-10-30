@@ -1,16 +1,10 @@
 {
   "steps": [
     {
-      "id": "fsa08-01-compile-yaml",
+      "id": "fsa02-05-assistant-readonly",
       "status": "passed",
-      "durationMs": 64882,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/08-playbook/chapter.spec.ts"
-    },
-    {
-      "id": "fsa08-02-publish-playbook",
-      "status": "passed",
-      "durationMs": 43561,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/08-playbook/chapter.spec.ts"
+      "durationMs": 30715,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/02-agentic-foundations/chapter.spec.ts"
     }
   ]
 }

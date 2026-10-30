@@ -52,7 +52,7 @@ Read the chain of thought, then the plan. Check that the plan's steps match the 
 
 Do not edit the chain of thought in this exercise. In testing, editing it did not reliably change the generated plan, and an edited run once failed because its filters did not match the data on the box.
 
-**What success looks like**
+**You are done when**
 
 - You can say, for each plan step, what data it fetches.
 - You can point to one step that would not answer the question, if your plan has one.
@@ -66,7 +66,7 @@ Choose **Generate Chain of Thoughts**, then **Generate a Plan**. **Execute** sta
 <!-- capture: fsa03-06-insight-card -->
 ![fsa03-06-insight-card](fsa03-06-insight-card.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The summary card shows a summary, suggested actions and an execution record.
 - The schedule names the creator, and you know that scheduled runs use the creator's access.

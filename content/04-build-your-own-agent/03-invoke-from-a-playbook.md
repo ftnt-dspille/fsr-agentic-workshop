@@ -50,7 +50,7 @@ The playbook below calls the hello agent, then a Decision step routes on its `co
 <!-- capture: fsa04-04-playbook-branch-decision -->
 ![fsa04-04-playbook-branch-decision](fsa04-04-playbook-branch-decision.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The Invoke AI Agent step returns the agent's answer under `data`, with `status` `Success`.
 - The Decision step takes the branch that matches the `confidence` value the agent returned.
@@ -64,7 +64,7 @@ Route B calls the agent's trigger route directly from a **Make FortiSOAR API Cal
 
 The trigger route is **asynchronous**. One call to `POST /ai/agents/{agent_name}/trigger` returns `202` with a `task_id`, not the answer. Add two more steps: poll `GET /ai/agents/{task_id}/status` until it reads `completed`, then read `GET /ai/agents/{task_id}/result`. An agent that needs MCP tools fails authorization against the built-in servers on this route, so route A is the better default.
 
-**What success looks like**
+**You are done when**
 
 - The trigger step returns a `task_id`.
 - A later step reads the result once the status is `completed`.
@@ -78,7 +78,7 @@ An upgrade can keep an agent's configuration but overwrite its code. Test that b
 
 Re-import the agent with replace. Note its ID before and after. Check that its allowlist and agent configuration are still in place. Run the playbook again.
 
-**What success looks like**
+**You are done when**
 
 - The playbook still calls the agent and gets an answer.
 - You recorded whether the agent ID changed.

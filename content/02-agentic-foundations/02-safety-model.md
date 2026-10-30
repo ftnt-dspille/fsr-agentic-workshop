@@ -42,7 +42,7 @@ Before you grant an agent write tools, answer two questions:
 
 If you cannot answer both, keep the agent read-only.
 
-## What success looks like
+## You are done when
 
 - You can name, for each path in the table, whether it reads, recommends or writes.
 - You can state the rule without looking at this page: AI recommends, playbooks with manual-input steps decide.

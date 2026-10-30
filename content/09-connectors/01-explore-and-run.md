@@ -40,7 +40,7 @@ connector to evaluate 2+2 as a demonstration.
 
 <!-- step: fsa09-02-run-operation -->
 
-**What success looks like:** the agent names the operation it chose, shows the params it sent, and interprets the `data` payload rather than dumping it. A failed call is also a success for learning: the error dict carries the HTTP method, path and response body, which the agent should quote when explaining what went wrong.
+**You are done when:** the agent names the operation it chose, shows the params it sent, and interprets the `data` payload rather than dumping it. A failed call is also a success for learning: the error dict carries the HTTP method, path and response body, which the agent should quote when explaining what went wrong.
 
 <!-- capture: fsa09-02-run-operation -->
 ![fsa09-02-run-operation](fsa09-02-run-operation.png?height=600px)

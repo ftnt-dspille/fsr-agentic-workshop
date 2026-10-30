@@ -71,7 +71,7 @@ curl -s -X POST http://localhost:8000/mcp/ \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
 ```
 
-**What success looks like**
+**You are done when**
 
 - The initialize response names the server and includes a session ID.
 - The tools list includes `get_forecast` with its input schema.
@@ -93,7 +93,7 @@ Only do this on a throwaway non-production box you own. Do not run it on a share
 
 Save a second copy of the server's definition, with `authentication` sent as a JSON object instead of a string. Watch the status route. Then fix the row by writing `authentication` back as a string, and check the status again.
 
-**What success looks like**
+**You are done when**
 
 - You saw the status route fail for every server, not only the broken one.
 - After the fix, every server reports its status normally.

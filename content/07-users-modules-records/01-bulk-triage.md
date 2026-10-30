@@ -33,7 +33,7 @@ Watch the shape of the work: one `query_records` to find the batch, then one `up
 Updating a record is a tier-2 write: the agent can do it once the read-only guard is off, without a per-record confirmation. You meet the confirm gate in the next lab, where creating a module is a heavier, tier-3 action. The lesson here is leverage: the agent did ten updates from one sentence. The lesson there is control: some actions it must ask about first.
 {{% /notice %}}
 
-## 2. What success looks like
+## 2. You are done when
 
 - The agent reports the number of alerts it moved and names each one.
 - Re-running the same prompt moves zero: the alerts are already Investigating, so the query returns nothing. The task is safely repeatable.

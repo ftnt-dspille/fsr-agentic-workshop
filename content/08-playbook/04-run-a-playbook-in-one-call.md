@@ -45,7 +45,7 @@ Tell me the status, each step's result, and whether anything was left on the box
 <!-- capture: fsa08-05-run-in-one-call -->
 ![fsa08-05-run-in-one-call](fsa08-05-run-in-one-call.png?height=600px)
 
-**What success looks like:**
+**You are done when:**
 
 - `status: answered`.
 - A finding for each stage: the playbook passed the check, it was published, it ran to completion, and cleanup removed what the call created.

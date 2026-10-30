@@ -49,7 +49,7 @@ its severity if your verdict warrants it. Do not close the alert.
 
 Let it run. A good transcript reads like an analyst's notebook: each claim traceable to a tool result, gaps stated honestly ("no reputation connector is configured, so the destination is unverified"), and a verdict that distinguishes evidence from inference.
 
-## 3. What success looks like
+## 3. You are done when
 
 - The agent correlated across modules: the asset record from chapter 7 (web-server-01, owner web-team, criticality Medium) appears in its reasoning.
 - The verdict cites evidence, including what it could NOT check.

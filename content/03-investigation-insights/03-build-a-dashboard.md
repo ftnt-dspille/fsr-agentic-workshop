@@ -30,7 +30,7 @@ Give the dashboard a name you will recognize, such as `Workshop Verdicts`, and a
 <!-- capture: fsa03-07-verdict-dashboard -->
 ![fsa03-07-verdict-dashboard](fsa03-07-verdict-dashboard.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The dashboard renders all three widgets.
 - Each widget is bound to the alert module, not to a static sample.
@@ -43,7 +43,7 @@ A chart that renders proves only that the page drew it. Check the numbers agains
 
 Count the seed alerts by hand, grouped by verdict and severity. Write the counts down. Compare them with what each widget shows.
 
-**What success looks like**
+**You are done when**
 
 - The verdict-by-severity counts match your hand count for every cell.
 - The funnel totals match the number of alerts you seeded.

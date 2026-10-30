@@ -72,7 +72,7 @@ The manifest below is the one shipped in this workshop's example bundle, and it 
 The full example bundle is downloadable at [`/examples/workshop_hello_agent/`](/examples/workshop_hello_agent/): `info.json`, `agent.py`, `prompt.yaml` and `config/memory.yaml`, the exact files that pass the 8.0.1 validator. The next page packages and uploads it.
 {{% /notice %}}
 
-## What success looks like
+## You are done when
 
 - You can name the job of each file in the bundle.
 - You can say why a missing `config/memory.yaml` gives an agent too much access, and why a missing manifest key can break lists for every user.

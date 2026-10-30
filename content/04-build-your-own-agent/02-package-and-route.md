@@ -74,7 +74,7 @@ The trigger, poll and result for the hello agent look like this (token, host and
 <!-- capture: fsa04-01-hello-agent-detail -->
 ![fsa04-01-hello-agent-detail](fsa04-01-hello-agent-detail.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The result is returned with `answer`, `confidence` and `evidence` keys.
 - The run shows as a task you can poll for its result.
@@ -120,7 +120,7 @@ Open the `TOOL_LIST` record. Add one row for your agent. Its description should 
 <!-- capture: fsa04-02-tool-list-row-record -->
 ![fsa04-02-tool-list-row-record](fsa04-02-tool-list-row-record.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - All nine defaults are still present, and your row is the tenth.
 - The record saves without an error.
@@ -131,7 +131,7 @@ Open the `TOOL_LIST` record. Add one row for your agent. Its description should 
 
 Run an investigation on a seeded alert that has the entity your agent needs. When the run finishes, open its trace and find the question your row produced. Then find the call to your agent.
 
-**What success looks like**
+**You are done when**
 
 - The trace shows a question for your row.
 - The question was answered by your agent, and the answer reached the summary or the next actions.

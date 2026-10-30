@@ -93,7 +93,7 @@ Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The 
 
 Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
-**What success looks like**
+**You are done when**
 
 - Validation returns the server's tool names, and the save returns a UUID.
 - The server appears in the MCP list.
@@ -105,7 +105,7 @@ Check the status of the server you just saved. Then check the status of one buil
 <!-- capture: fsa05-02-status-check-servers-page -->
 ![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - Your server reports active, with its tools.
 - A built-in server still reports its status normally.

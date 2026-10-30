@@ -57,7 +57,7 @@ playbooks:
         type: end
 ```
 
-**What success looks like:** `compile_playbook_yaml` returns `ok: true` with the playbook name listed. The compile is fully offline - nothing touched the box yet. If it returns errors, each one carries a code, message and path; let the agent fix the YAML and recompile.
+**You are done when:** `compile_playbook_yaml` returns `ok: true` with the playbook name listed. The compile is fully offline - nothing touched the box yet. If it returns errors, each one carries a code, message and path; let the agent fix the YAML and recompile.
 
 ## 2. Publish
 

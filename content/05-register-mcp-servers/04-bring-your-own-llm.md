@@ -34,7 +34,7 @@ Only on a non-production box, and only if your build supports it:
 3. Assign the profile to one agent through the agent's configuration, not its record.
 4. Run that agent. Open its trace and find the LLM span. Check the provider and the model it names.
 
-**What success looks like**
+**You are done when**
 
 - The test completion returns text.
 - The LLM span names the provider and the model you configured, not a default you did not choose.

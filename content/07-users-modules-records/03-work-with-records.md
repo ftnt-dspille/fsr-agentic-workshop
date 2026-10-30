@@ -28,7 +28,7 @@ and show me a table of what you found.
 
 The agent should reach for `get_or_create_record` or `upsert_record` (idempotent, matching on `hostname`) rather than blind `create_record` calls, and use `query_records` with a filter for the read-back. The addresses are TEST-NET documentation ranges, safe for lab content.
 
-## 2. What success looks like
+## 2. You are done when
 
 - Three records created on the first run; zero on a re-run (the agent reports they already exist).
 - The query returns db-server-01 and jump-host-01 (Critical + High), plus the build-server-01 test record from the previous page (also High), and not web-server-01.
@@ -53,7 +53,7 @@ record's uuid.
 <!-- capture: fsa07-04-record-lifecycle -->
 ![fsa07-04-record-lifecycle](fsa07-04-record-lifecycle.png?height=600px)
 
-**What success looks like:** a timeline from `record_lifecycle` whose create event is attributed to your agent's login. Every write your agent has made in this chapter is in the box's audit log under that identity - this is why chapter 6 told you to make a dedicated login.
+**You are done when:** a timeline from `record_lifecycle` whose create event is attributed to your agent's login. Every write your agent has made in this chapter is in the box's audit log under that identity - this is why chapter 6 told you to make a dedicated login.
 
 ## Troubleshooting
 

@@ -31,7 +31,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 3. `diagnose_playbook_run` if anything looks off - it diffs the defined steps against what actually ran,
 4. `get_record` on the alert: the description now reads "Triaged automatically by the Agent Lab playbook".
 
-## 2. What success looks like
+## 2. You are done when
 
 - The run reaches `finished` within a few seconds.
 - The alert's description changed - the read-back is the proof, not the run status.

@@ -42,7 +42,7 @@ Open an alert you seeded with source data and a known malicious indicator. Look 
 <!-- capture: fsa03-01-investigation-tab -->
 ![fsa03-01-investigation-tab](fsa03-01-investigation-tab.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The run finishes and the tab shows hypotheses, not an error.
 - You can say which indicator the run focused on.
@@ -61,7 +61,7 @@ Read the result before you decide anything. For each hypothesis, note:
 <!-- capture: fsa03-02-hypotheses -->
 ![fsa03-02-hypotheses](fsa03-02-hypotheses.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - You can explain why the verdict came out the way it did, from the evidence.
 - You can name at least one question that had no data, and say what that means for the verdict.
@@ -77,7 +77,7 @@ Open the alert record itself, not only the overview card. Find the three AI fiel
 <!-- capture: fsa03-03-alert-ai-fields -->
 ![fsa03-03-alert-ai-fields](fsa03-03-alert-ai-fields.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - The verdict, severity and summary on the record match the card.
 - Nothing else on the alert changed: status, owner and closure are untouched.
@@ -98,7 +98,7 @@ Pick an alert that looks benign, and that matches an activity you have approved.
 
 Expect an Inconclusive verdict more often than a Benign one. In testing, benign-looking alerts often ended Inconclusive. Then add an approved-activity record to the organizational context, with the exact category and subcategory, and run the investigation again. Compare the two results honestly. Whether the answer changes is the finding, either way.
 
-**What success looks like**
+**You are done when**
 
 - You recorded both verdicts.
 - You can say whether the approved-activity record changed a question's answer. Report the result even if it did not change.
@@ -109,7 +109,7 @@ Expect an Inconclusive verdict more often than a Benign one. In testing, benign-
 
 Create one alert by hand with no source data, and one with source JSON for the same alert type. Run an investigation on each. Look in the investigation plan or the trace to see which SOP was applied.
 
-**What success looks like**
+**You are done when**
 
 - The alert with source data shows its alert-type SOP.
 - The alert without source data shows the `DEFAULT` SOP.
@@ -133,7 +133,7 @@ Open the trace for your run from section 2. Find the normalization step and the 
 <!-- capture: fsa03-04-trace-steps -->
 ![fsa03-04-trace-steps](fsa03-04-trace-steps.png?height=600px)
 
-**What success looks like**
+**You are done when**
 
 - You found normalization, at least one tool call, and the verdict step in order.
 - You can say what the tool returned and whether the hypothesis used it.
