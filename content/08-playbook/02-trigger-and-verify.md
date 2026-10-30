@@ -39,7 +39,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 **Verify in the UI:** open the alert; its description shows the playbook's text. Then open **Automation** > **Executed Playbooks** (the run history) and find your run.
 
 <!-- capture: fsa08-03-trigger-and-verify-run-history -->
-![fsa08-03-trigger-and-verify-run-history](fsa08-03-trigger-and-verify-run-history.png)
+![fsa08-03-trigger-and-verify-run-history](fsa08-03-trigger-and-verify-run-history.png?height=600px)
 
 {{% notice tip %}}
 Ask the agent for the record's lifecycle (`get_record_history`) and you get the whole story in one timeline: your create, the trigger, the playbook's update - each attributed and timestamped.

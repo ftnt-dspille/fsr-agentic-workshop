@@ -8,9 +8,8 @@
 //
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
-import { expect, fieldAfterLabel, findAlert, goToModuleList, test } from 'docubot';
+import { expect, fieldAfterLabel, findAlert, goToModuleList, openRecord, readInvestigation, runInvestigation, selectDetailTab, test } from 'docubot';
 import { shouldRunStep, uiMask } from '../lib/agentlab';
-import { openDetail, openTab, readInvestigation, runInvestigation } from '../lib/alertDetail';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -30,12 +29,11 @@ async function maskRecordIds(page: any): Promise<void> {
 test('chapter 3 - investigation', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   const alert = await findAlert(soar, ALERT_RE, { search: 'Agent Lab - beaconing' });
   expect(alert, 'stage the chapter 3 lab alert first: tools/lab_setup.py seed').toBeTruthy();
-  await openDetail(soar, origin, 'alerts', alert!.id);
-  await openTab(soar, 'AI Investigation');
+  await openRecord(soar, 'alerts', alert!.id, { tab: null });
+  await selectDetailTab(soar, 'AI Investigation');
 
   // The one paid run for the chapter. Every capture below reuses its result.
   let inv = await readInvestigation(soar);
@@ -68,7 +66,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
   });
 
   if (shouldRunStep('fsa03-03-alert-ai-fields')) await test.step('fsa03-03-alert-ai-fields', async () => {
-    await openTab(soar, 'Alert Details');
+    await selectDetailTab(soar, 'Alert Details');
     await maskRecordIds(soar);
     // Effect, not card: the record itself carries the AI fields the card shows.
     await expect(soar.locator('#view-panel-content').getByText('AI Investigation Overview', { exact: true }).first()).toBeVisible();
@@ -78,7 +76,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
   if (shouldRunStep('fsa03-04-trace-steps')) await test.step('fsa03-04-trace-steps', async () => {
     // The trace view ships in 8.0.1 (absent on 8.0.0). The Traces node in the
     // swarm graph opens the Trace Flow panel.
-    await openTab(soar, 'AI Investigation');
+    await selectDetailTab(soar, 'AI Investigation');
     const node = soar.locator('#view-panel-content svg g#traceabilityWizard');
     if ((await node.count()) === 0) {
       console.log('[ch03] fsa03-04-trace-steps skipped: no Traces node on this build (8.0.1 only)');

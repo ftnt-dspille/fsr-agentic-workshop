@@ -20,9 +20,8 @@
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import * as fs from 'fs';
 import * as path from 'path';
-import { expect, test } from 'docubot';
+import { expect, openPlaybookLogs, openRecord, test } from 'docubot';
 import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
-import { openDetail, openPlaybookLogs } from '../lib/alertDetail';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -67,7 +66,13 @@ function members(res: any): any[] {
 
 const query = (module: string, filters: unknown[]): any[] => members(toolkit('query_records', { module, filters }));
 const playbookRows = (name: string) => query('workflows', [{ field: 'name', operator: 'eq', value: name }]);
-const isActive = (wf: any) => (wf.isActive !== undefined ? wf.isActive : wf.active);
+// query_records returns a projection that omits isActive, so read the active
+// state from the full record (get_record returns it).
+function wfActive(uuid: string): boolean {
+  const r: any = toolkit('get_record', { module: 'workflows', ref: uuid });
+  const rec = r?.record ?? r;
+  return rec?.isActive === true || rec?.active === true;
+}
 
 /** Publish the page-1 playbook only if the box does not already have it. */
 function ensureTagPlaybook(): void {
@@ -116,7 +121,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     // Effect: read the playbook back from the box; it exists and is active.
     const wf = playbookRows(TAG_PLAYBOOK)[0];
     expect(wf, `${TAG_PLAYBOOK} not found on the box`).toBeTruthy();
-    expect(isActive(wf)).toBe(true);
+    expect(wfActive(wf.uuid)).toBe(true);
 
     // UI: open the playbook's designer canvas by the uuid just read back (live
     // state, not a click path through the collection list), then check the steps.
@@ -158,8 +163,10 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     expect(JSON.stringify(alert)).toContain(TAG_TEXT);
 
     // UI: the alert's Executed Playbook Logs (historical) draw the run's step graph.
-    await openDetail(soar, origin, 'alerts', alertUuid);
-    await openPlaybookLogs(soar, { historical: true, select: 'Tag Agent Lab' });
+    await openRecord(soar, 'alerts', alertUuid, { tab: null });
+    // A run that just finished is listed under Recent Playbook Logs, not the
+    // Historical table (which only holds aged/persisted runs), so read Recent.
+    await openPlaybookLogs(soar, { select: 'Tag Agent Lab' });
     await capture.shot(soar, 'fsa08-03-trigger-and-verify-run-history', {
       target: soar.locator('#mySidenav'),
       mask: uiMask(soar),
@@ -186,7 +193,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
       expect(screen).toMatch(/Tag Alert/);
       const wf = playbookRows(PRACTICE_PLAYBOOK)[0];
       expect(wf, `${PRACTICE_PLAYBOOK} not found on the box`).toBeTruthy();
-      expect(isActive(wf)).toBe(true);
+      expect(wfActive(wf.uuid)).toBe(true);
       return;
     }
 

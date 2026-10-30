@@ -76,7 +76,7 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 **Verify in the UI:** open **Playbooks** in the left navigation. The "Agent Lab" collection holds "Tag Agent Lab Alerts"; open it and check the canvas shows the three steps with the on-create trigger.
 
 <!-- capture: fsa08-02-publish-playbook-canvas -->
-![fsa08-02-publish-playbook-canvas](fsa08-02-publish-playbook-canvas.png)
+![fsa08-02-publish-playbook-canvas](fsa08-02-publish-playbook-canvas.png?height=600px)
 
 {{% notice tip %}}
 Once you are comfortable with these two calls, page 4 collapses them - plus the run itself - into one tool, `run_playbook_yaml`, which is how you should test-run a new playbook.

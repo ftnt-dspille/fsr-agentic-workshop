@@ -16,9 +16,8 @@
 // Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
-import { expect, findAlert, test } from 'docubot';
+import { expect, findAlert, openRecord, test } from 'docubot';
 import { labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit, uiMask } from '../lib/agentlab';
-import { openDetail } from '../lib/alertDetail';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -140,7 +139,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
       expect(alert, 'capstone alert not found in the UI: stage it (fsa10-01) first').toBeTruthy();
       alertId = alert!.id;
     }
-    await openDetail(soar, new URL(soar.url()).origin, 'alerts', alertId!);
+    await openRecord(soar, 'alerts', alertId!, { tab: null });
     const findings = soar.locator('#view-panel-content').getByText(/verdict/i).first();
     await expect(findings, 'findings not rendered on the alert: run fsa10-02 with SPEND_AI=1').toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa10-02-investigate-findings-on-alert', {

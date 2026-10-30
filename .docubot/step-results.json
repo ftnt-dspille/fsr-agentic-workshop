@@ -1,10 +1,10 @@
 {
   "steps": [
     {
-      "id": "fsa05-01-validate-register",
+      "id": "fsa08-03-trigger-and-verify",
       "status": "passed",
-      "durationMs": 8935,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/05-register-mcp-servers/chapter.spec.ts"
+      "durationMs": 31643,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/08-playbook/chapter.spec.ts"
     }
   ]
 }
