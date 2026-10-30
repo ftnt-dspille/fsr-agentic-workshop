@@ -1,10 +1,22 @@
 {
   "steps": [
     {
-      "id": "fsa02-05-assistant-readonly",
+      "id": "fsa07-01-bulk-triage",
       "status": "passed",
-      "durationMs": 30715,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/02-agentic-foundations/chapter.spec.ts"
+      "durationMs": 107009,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/07-users-modules-records/chapter.spec.ts"
+    },
+    {
+      "id": "fsa07-03-seed-records",
+      "status": "passed",
+      "durationMs": 100972,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/07-users-modules-records/chapter.spec.ts"
+    },
+    {
+      "id": "fsa07-04-record-lifecycle",
+      "status": "passed",
+      "durationMs": 48716,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/07-users-modules-records/chapter.spec.ts"
     }
   ]
 }
