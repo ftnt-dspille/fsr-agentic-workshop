@@ -63,7 +63,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
   // this chapter reads. Investigation SOPs already ship on the box; demo alerts
   // give the correlation step (search for related alerts) something to find.
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
-    labSeed('seed');         // demo alerts ("Agent Lab: ..."), incl. an outbound-beacon alert
+    labSeed('seed');         // demo alerts ("Agent Lab - ..."), incl. an outbound-beacon alert
     labSeed('org-context');  // TOOL_LIST routing record the investigation reads
   });
 

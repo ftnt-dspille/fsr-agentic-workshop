@@ -40,7 +40,7 @@ MODULE_PREFIX = "agentlab_"
 MODULE_EXACT = "agentlab"
 USER_EMAIL_PREFIX = "agentlab_"
 COLLECTION_PREFIX = "Agent Lab"
-ALERT_NAME_PREFIX = "Agent Lab: "  # matches lab_setup.py's seeded demo alerts
+ALERT_NAME_PREFIX = "Agent Lab - "  # matches lab_setup.py's seeded demo alerts
 SCHEDULE_PREFIXES = ("agentlab_", "Agent Lab")
 # Connectors the labs install (ch9): the one the student builds+installs, and the
 # one installed from the Content Hub. Uninstalling them lets the build/install

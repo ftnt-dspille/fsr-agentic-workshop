@@ -40,7 +40,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 # What the labs need. Change these in one place.
 
-ALERT_NAME_PREFIX = "Agent Lab: "  # reset_lab.py removes alerts with this prefix
+ALERT_NAME_PREFIX = "Agent Lab - "  # reset_lab.py removes alerts with this prefix; matches the chapters' "Agent Lab - ..." names
 
 # Repeatable lab artifacts. These are the same files students download and import
 # (the "working version"); the seeders below install them so a rerun is one
@@ -78,6 +78,19 @@ DEMO_ALERTS: list[dict[str, Any]] = [
                        "4,000 km apart. MFA satisfied on both. Session tokens "
                        "not yet revoked.",
         "sourceIp": "203.0.113.58",
+    },
+    {
+        # The AI-investigation subject for chapters 3 and 10. The name and the C2
+        # address match what those chapters search for and assert on; keep them in
+        # step if you rename it.
+        "name": "beaconing from web-server-01",
+        "type": "Malware",
+        "severity": "High",
+        "source": "Firewall",
+        "description": "Hourly HTTPS beacons from web-server-01 to 203.0.113.99 "
+                       "since 02:00 UTC. Regular interval, low data volume, "
+                       "destination in a feed-flagged command-and-control range.",
+        "sourceIp": "203.0.113.99",
     },
     {
         "name": "Outbound beacon to known C2 range from 10-net host",

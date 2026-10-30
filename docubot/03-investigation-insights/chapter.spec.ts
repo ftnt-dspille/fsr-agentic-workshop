@@ -9,7 +9,7 @@
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
 import { expect, fieldAfterLabel, findAlert, goToModuleList, openRecord, readInvestigation, runInvestigation, selectDetailTab, test } from 'docubot';
-import { shouldRunStep, uiMask } from '../lib/agentlab';
+import { labSeed, shouldRunStep, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -28,6 +28,9 @@ async function maskRecordIds(page: any): Promise<void> {
 
 test('chapter 3 - investigation', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
+  // CONFIGURE: seed the demo alerts (incl. "Agent Lab - beaconing from
+  // web-server-01", this chapter's subject) when asked. Idempotent.
+  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('seed'); });
   const soar = await gui('soar');
 
   const alert = await findAlert(soar, ALERT_RE, { search: 'Agent Lab - beaconing' });
