@@ -135,7 +135,41 @@ export function promptFor(chapter: string, page: string, n = 1): string {
 }
 
 /** Keys the Claude Code TUI needs; named so the driving code reads clearly. */
-const KEY = { down: '\x1b[B', enter: '\r', shiftTab: '\x1b[Z' };
+const KEY = { down: '\x1b[B', enter: '\r', shiftTab: '\x1b[Z', space: ' ' };
+
+/** The server-side write-approval elicitation (toolkit verbs/approval.py, 0.1.9+). */
+const APPROVAL_PROMPT = /requests your input|Approve this change:/i;
+// The caret line while the checkbox is unchecked; ☐ is U+2610, replaced by a
+// checked glyph once toggled, so "no longer unchecked" is the robust tick test.
+const APPROVAL_UNCHECKED = /Approve this change:\s*☐/;
+
+/**
+ * Answer the MCP write-approval form the toolkit server raises before a write:
+ * a boolean "Approve this change" checkbox (caret starts on it), then an
+ * Accept/Decline row. Tick the box (Space), move to Accept (Down), submit
+ * (Enter) - the same keys the footer advertises. Self-correcting on the tick,
+ * so a missed keystroke does not silently decline the write.
+ */
+async function answerApprovalGate(term: LocalSession): Promise<boolean> {
+  // Act only on a LIVE form: the unticked checkbox (U+2610) is on screen. If it
+  // is not, the "requests your input" text is just lingering in the buffer after
+  // an answer already given - do not send stray keystrokes into the chat input.
+  if (!APPROVAL_UNCHECKED.test(term.plainScreen())) return false;
+  for (let i = 0; i < 3 && APPROVAL_UNCHECKED.test(term.plainScreen()); i++) {
+    term.write(KEY.space);
+    await settle(500);
+  }
+  if (APPROVAL_UNCHECKED.test(term.plainScreen())) {
+    throw new Error('write-approval gate: could not tick "Approve this change"');
+  }
+  term.write(KEY.down); // caret from the checkbox to the Accept button
+  await settle(500);
+  term.write(KEY.enter); // activate Accept
+  // Wait for the form to leave the viewport so the next race does not re-match
+  // the same prompt (bounded; the model's continued output scrolls it off).
+  for (let j = 0; j < 20 && /Accept\s+Decline/.test(term.plainScreen()); j++) await settle(500);
+  return true;
+}
 
 /**
  * A small bounded real delay. Used ONLY for the trust menu: Ink attaches its
@@ -242,6 +276,24 @@ export async function agentTurn(
     term.type(opts.confirm);
     term.enter();
   }
-  await term.waitIdle({ quietMs: opts.quietMs ?? 2_500, timeoutMs });
+  // The turn ends by going idle, but it can first pause on the server's write-
+  // approval form while the TUI's spinner keeps animating - so the screen is
+  // NOT idle while the prompt waits. Race idle against the approval prompt
+  // (matched on poll, spinner or not): answer each approval and race again; a
+  // turn with no write just wins the idle race and returns.
+  const quietMs = opts.quietMs ?? 2_500;
+  for (let guard = 0; guard < 12; guard++) {
+    const outcome = await Promise.race([
+      term.waitIdle({ quietMs, timeoutMs }).then(() => 'idle').catch(() => 'idle'),
+      term.waitFor(APPROVAL_PROMPT, { timeoutMs }).then(() => 'approval').catch(() => 'timeout'),
+    ]);
+    if (outcome !== 'approval') break;
+    // A lingering (already-answered) prompt matches too; only a live form is
+    // answered. If there is nothing fresh to answer, finish on the next idle.
+    if (!(await answerApprovalGate(term))) {
+      await term.waitIdle({ quietMs, timeoutMs }).catch(() => {});
+      break;
+    }
+  }
   return term.screen();
 }
