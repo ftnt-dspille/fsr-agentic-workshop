@@ -22,16 +22,18 @@ The import below is for the v1 MCP Python SDK. The v2 SDK renamed `FastMCP` to `
 # server.py - read-only lab server, no network calls
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("weather-lab", instructions="Read-only forecast lookups for the lab.")
+mcp = FastMCP("fortinet-weather", instructions="Read-only weather lookups for Fortinet office cities.")
 
+# Fixed table keyed by Fortinet office city (HQ is Sunnyvale, California).
 FORECASTS = {
-    "lab-city-a": "Sunny, 21 C",
-    "lab-city-b": "Rain, 14 C",
+    "Sunnyvale": "Sunny, 24 C",
+    "Ottawa": "Snow, -6 C",
+    "Burnaby": "Rain, 11 C",
 }
 
 @mcp.tool()
 def get_forecast(city: str) -> dict:
-    """Return the forecast for a known lab city. Read-only."""
+    """Return the weather for a Fortinet office city (for example Sunnyvale). Read-only."""
     text = FORECASTS.get(city)
     if text is None:
         return {"status": "error", "result": None, "error": "unknown city"}
@@ -40,7 +42,9 @@ def get_forecast(city: str) -> dict:
 app = mcp.streamable_http_app()
 ```
 
-Copy `server.py` to the appliance and serve it on a local port with an ASGI server, for example `uvicorn server:app --port 8000` (install `mcp` and `uvicorn` into a virtualenv on the box, not into the system Python). Bind to localhost only. If you must run it anywhere other than the box itself, put it behind TLS termination before any other system can reach it.
+The full example is downloadable at [`/examples/mcp-servers/weather-lab/`](/examples/mcp-servers/weather-lab/): `server.py`, `requirements.txt` and a `README.md` with the run and register steps.
+
+Copy `server.py` to the appliance and serve it on a local port with an ASGI server, for example `uvicorn server:app --host localhost --port 8000` (install `mcp` and `uvicorn` into a virtualenv on the box, not into the system Python). Bind to localhost only. If you must run it anywhere other than the box itself, put it behind TLS termination before any other system can reach it.
 
 The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents expect that shape, and some shipped agents break on a bare value.
 

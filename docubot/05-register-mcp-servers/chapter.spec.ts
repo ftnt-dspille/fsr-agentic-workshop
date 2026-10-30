@@ -23,8 +23,12 @@
 //   DOCUBOT_CH05_GRANT=1   fsa05-04: save the MCP Server selection on the agent
 //                          named by DOCUBOT_CH05_AGENT (default Alert Investigation).
 //                          Without it the form is filled and captured, never saved.
-//   SPEND_AI=1             fsa05-05: ask the granted agent the DeepWiki question
-//                          (spends FortiAI credits). Needs DOCUBOT_CH05_GRANT=1.
+//   SPEND_AI=1             fsa05-05: ask the chat for an IP's reputation and prove
+//                          the enrich_indicator tool fired (spends FortiAI credits).
+//                          Uses the built-in SOC Framework server the chat already
+//                          has, so it does NOT need the DeepWiki grant. Point
+//                          REPUTATION_IP at an IP your FortiGuard feed currently
+//                          rates (default 204.168.212.68 - live IPs age out).
 //
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
@@ -38,8 +42,12 @@ const SERVER_URL = 'https://mcp.deepwiki.com/mcp';
 const LIST = '/ai-configuration/mcp-servers';
 const BUILT_IN = ['FortiSOAR Module Management', 'FortiSOAR Playbook Management', 'SOC Framework', 'Utility Tools'];
 const AGENT = process.env.DOCUBOT_CH05_AGENT || 'Alert Investigation';
-const QUESTION =
-  'Using your tools, what does the modelcontextprotocol/python-sdk repository say FastMCP is called in v2?';
+// fsa05-05 proves a granted tool runs, in-domain, through the chat. The chat is
+// domain-guarded, so it will not ask an off-domain remote server (DeepWiki); it
+// WILL enrich an indicator with the built-in SOC Framework enrich_indicator tool.
+// REPUTATION_IP must be an IP FortiGuard currently rates (live IPs de-list).
+const REPUTATION_IP = process.env.REPUTATION_IP || '204.168.212.68';
+const QUESTION = `What is the reputation of the IP ${REPUTATION_IP}? Use your tools to enrich this indicator.`;
 
 interface McpRow { '@id'?: string; uuid?: string; name?: string; active?: boolean }
 
@@ -167,7 +175,10 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       const tile = soar.locator('.mp-tile-container').filter({ hasText: AGENT }).first();
       await expect(tile, `agent "${AGENT}" is in the catalog`).toBeVisible({ timeout: 30_000 });
       await tile.click();
-      await soar.getByText(/^Configurations$/i).last().click();
+      // The detail panel loads async; wait for the Configurations tab before clicking.
+      const configTab = soar.getByText(/^Configurations$/i).last();
+      await configTab.waitFor({ state: 'visible', timeout: 30_000 });
+      await configTab.click();
       const configType = soar.locator('#csForm-config_type');
       await configType.waitFor({ state: 'visible', timeout: 20_000 });
       await configType.selectOption({ label: 'Custom Configuration' });
@@ -188,30 +199,63 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
         return;
       }
-      await soar.getByRole('button', { name: /^Save$/ }).first().click();
+      // Save stays disabled until every required field (name, LLM provider, MCP
+      // server, masking agent) is set; wait for it to enable before clicking. The
+      // button carries a leading icon, so match it by its primary class + text,
+      // not an exact accessible name.
+      const saveBtn = soar.locator('button.btn-primary').filter({ hasText: /^\s*Save\s*$/ }).filter({ visible: true }).first();
+      await expect(saveBtn, 'the config form is invalid: a required field is unset').toBeEnabled({ timeout: 30_000 });
+      await saveBtn.click();
       await soar.waitForTimeout(2_000);
-      // Effect: reopen the agent, switch to Custom, and confirm the server stuck.
-      await soar.reload({ waitUntil: 'domcontentloaded' });
-      await soar.getByText(/^Configurations$/i).last().click();
-      await soar.locator('#csForm-config_type').selectOption({ label: 'Custom Configuration' }).catch(() => undefined);
-      await expect(soar.locator('#csForm-mcp_server')).toHaveValue(/.+/, { timeout: 20_000 });
+      // Verify the write, not the card: read the saved config back through the app
+      // API. The config route keys on the agent's INTERNAL name (e.g.
+      // alert-investigation), which the agent list carries beside the display label.
+      const serverUuid = (await mcpRows(soar)).find((r) => r.name === NAME)?.uuid;
+      const agents = await apiViaApp<any[]>(soar, 'GET', '/ai/agent/');
+      const row = (agents || []).find((a: any) => a?.label === AGENT || a?.name === AGENT);
+      expect(row, `agent "${AGENT}" not found in /ai/agent/`).toBeTruthy();
+      const cfg = await apiViaApp<any>(soar, 'GET', `/ai/agent/config/${encodeURIComponent(row.name)}/${row.version}`);
+      expect(cfg?.config?.config_type, 'the saved config is the custom one').toBe('custom');
+      expect(JSON.stringify(cfg?.config?.mcp_server || []), 'the lab server is granted on the agent').toContain(String(serverUuid));
     });
 
-    if (shouldRunStep('fsa05-05-agent-uses-remote')) await test.step('fsa05-05-agent-uses-remote', async () => {
-      // Spends FortiAI credits and needs the grant saved by fsa05-04.
-      if (process.env.SPEND_AI !== '1' || process.env.DOCUBOT_CH05_GRANT !== '1') {
-        console.log('[ch05] fsa05-05 skipped: set SPEND_AI=1 and DOCUBOT_CH05_GRANT=1 (spends FortiAI credits)');
+    if (shouldRunStep('fsa05-05-chat-runs-tool')) await test.step('fsa05-05-chat-runs-tool', async () => {
+      // Spends FortiAI credits. Uses the built-in SOC Framework server the chat
+      // already carries, so it does NOT need the DeepWiki grant from fsa05-04.
+      if (process.env.SPEND_AI !== '1') {
+        console.log('[ch05] fsa05-05 skipped: set SPEND_AI=1 (spends FortiAI credits)');
         return;
       }
-      // UNVERIFIED flow: asked through the FortiSOAR AI assistant. If the granted
-      // agent has its own run surface the lead should swap this for it, and add
-      // an openTracePanel assertion that the trace shows a call to the lab server.
-      await soar.goto(`${origin}/dashboard`, { waitUntil: 'domcontentloaded' });
+      // The AI Assistant launcher only appears on a record-detail page, so open
+      // one alert's detail. query_records through the app's own session.
+      const alerts = await apiViaApp<any>(soar, 'GET', '/api/3/alerts?$limit=1');
+      const alertIri = (alerts && (alerts['hydra:member'] || alerts.data || [])[0]?.['@id']) as string | undefined;
+      expect(alertIri, 'need at least one alert to open the AI Assistant from').toBeTruthy();
+      const alertUuid = alertIri!.split('/').pop();
+      await soar.goto(`${origin}/modules/view-panel/alerts/${alertUuid}`, { waitUntil: 'domcontentloaded' });
+
       const { drawer } = await askFortiSOARAssistant(soar, QUESTION);
-      await expect(drawer).toContainText(/FastMCP|MCPServer/i);
-      await capture.shot(soar, 'fsa05-05-agent-uses-remote-answer', { mask: uiMask(soar), scrub: false });
-      // The server must still be healthy after the calls.
-      expect(JSON.stringify(await apiViaApp(soar, 'GET', '/api/ai/mcp/status'))).toContain(NAME);
+      // The answer must name the intelligence source and a verdict, not just echo
+      // the question. If this fails with "no reputation", the IP has de-listed -
+      // refresh REPUTATION_IP from the FortiGuard feed (see the chapter note).
+      await expect(drawer).toContainText(/reputation|fortiguard|malicious|phishing|command-and-control|malware/i);
+      await capture.shot(soar, 'fsa05-05-chat-runs-tool-answer', { mask: uiMask(soar), scrub: false });
+
+      // Prove the tool actually fired: the latest Chat Assistant trace must carry a
+      // TOOL span for enrich_indicator. Read through the app's own session.
+      const traces = await apiViaApp<any>(soar, 'GET', '/ai/traces/?limit=5');
+      const chat = ((traces?.traces || []) as any[]).find((t) => t?.name === 'Chat Assistant');
+      expect(chat?.trace_id, 'a Chat Assistant trace was recorded for the turn').toBeTruthy();
+      const spans = await apiViaApp<any>(soar, 'GET', `/ai/traces/${chat.trace_id}/spans`);
+      const toolSpans = ((spans?.spans || spans || []) as any[]).filter(
+        (s) => String(s?.span_type).toUpperCase() === 'TOOL',
+      );
+      const enrich = toolSpans.find((s) => s?.name === 'enrich_indicator');
+      expect(enrich, 'the chat called the enrich_indicator tool').toBeTruthy();
+      expect(
+        JSON.stringify(enrich?.output || {}),
+        'the enrich_indicator result came from the SOC Framework server',
+      ).toContain('SOC Framework');
     });
   } finally {
     // Leave the box as found, even when a step failed.

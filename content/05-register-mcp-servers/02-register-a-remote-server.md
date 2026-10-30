@@ -47,20 +47,29 @@ The grant is at the server level. An agent that does not list a server in the MC
 <!-- capture: fsa05-04-grant-allowlist-agent-config -->
 ![fsa05-04-grant-allowlist-agent-config](fsa05-04-grant-allowlist-agent-config.png?height=600px)
 
-## 4. Prove it through the agent
+## 4. Prove a granted tool actually runs
 
-<!-- step: fsa05-05-agent-uses-remote -->
+Registration and validation already proved the remote server end to end: validation ran the real MCP handshake and listed the server's tools without saving anything. The last thing to see is a granted tool firing from a real question, with the trace to prove it.
 
-Ask the granted agent a question only the remote server can answer (for DeepWiki: "Using your tools, what does the modelcontextprotocol/python-sdk repository say FastMCP is called in v2?"). Then open the agent's trace.
+Do this with an **in-domain** question. The AI Assistant chat runs on a domain-guarded agent: it answers security questions and declines anything off-domain before it ever reaches a tool, so a general-purpose remote server like DeepWiki is the wrong thing to ask it about. (That server is still proven, by the validation handshake above.) The chat already carries FortiSOAR's built-in SOC Framework server, whose `enrich_indicator` tool looks an indicator up against configured threat intelligence such as FortiGuard. Asking for an indicator's reputation is squarely in-domain, so the guard lets it through and you get to watch a real tool call.
 
-<!-- capture: fsa05-05-agent-uses-remote-answer -->
-![fsa05-05-agent-uses-remote-answer](fsa05-05-agent-uses-remote-answer.png)
+<!-- step: fsa05-05-chat-runs-tool -->
+
+Open any alert's detail page, open the AI Assistant, and ask for the reputation of an IP your box's FortiGuard feed currently rates (one tagged Malware CnC works well): "What is the reputation of the IP `<ip>`? Use your tools to enrich this indicator." The chat answers with the FortiGuard verdict, then open the trace to see the `enrich_indicator` tool call behind it.
+
+<!-- capture: fsa05-05-chat-runs-tool-answer -->
+![fsa05-05-chat-runs-tool-answer](fsa05-05-chat-runs-tool-answer.png?height=600px)
+
+{{% notice note %}}
+Live indicators age out. FortiGuard can de-list an IP, after which the chat will answer "no reputation available" for it. Refresh the example with a currently-rated IP from your own FortiGuard feed (Fortinet FortiGuard Threat Intelligence connector, Fetch Threat Intel Feeds) before running the lab.
+{{% /notice %}}
 
 **What success looks like**
 
-- The trace shows a tool call routed to the registered server, and the answer uses its result.
-- Asking for a tool the allowlist does not name is refused.
-- The server's status page still shows healthy after the calls.
+- The answer names the intelligence source (FortiGuard) and the indicator's verdict.
+- The trace shows a `TOOL` call to the SOC Framework server's `enrich_indicator`, and the answer uses its result.
+- Asking for a tool the agent was not granted, or an off-domain question, is refused.
+- Every registered server's status page still shows healthy after the calls.
 
 ## Troubleshooting
 
