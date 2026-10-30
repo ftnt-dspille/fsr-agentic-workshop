@@ -8,7 +8,7 @@
 //
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
-import { expect, fieldAfterLabel, findAlert, goToModuleList, openRecord, readInvestigation, runInvestigation, selectDetailTab, test } from 'docubot';
+import { expect, fieldAfterLabel, findAlert, goToModuleList, openRecord, readInvestigation, runInvestigation, selectDetailTab, test, waitForInvestigation } from 'docubot';
 import { labSeed, shouldRunStep, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
@@ -40,12 +40,16 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
 
   // The one paid run for the chapter. Every capture below reuses its result.
   let inv = await readInvestigation(soar);
-  if (inv.state === 'not-run') {
+  if (inv.state !== 'done') {
     if (!SPEND) {
-      console.log('[ch03] no finished investigation on the lab alert; set SPEND_AI=1 to run one');
-      test.skip(true, 'investigation not run and SPEND_AI is not set');
+      console.log(`[ch03] investigation is "${inv.state}" on the lab alert; set SPEND_AI=1 to run/finish one`);
+      test.skip(true, 'no finished investigation and SPEND_AI is not set');
     }
-    inv = await runInvestigation(soar, { wait: true });
+    // not-run: start it and wait. running: a prior session's run is still
+    // in flight (no Begin button, no verdict yet) - just wait it out.
+    inv = inv.state === 'not-run'
+      ? await runInvestigation(soar, { wait: true })
+      : await waitForInvestigation(soar);
   }
   expect(inv.state, 'the investigation must reach a verdict before it is captured').toBe('done');
   expect(inv.hypotheses.length, 'a finished investigation lists hypotheses').toBeGreaterThan(0);

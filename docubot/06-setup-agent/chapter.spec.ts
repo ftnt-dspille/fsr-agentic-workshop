@@ -13,7 +13,7 @@
 //
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
-import { expect, test, type AgentShotRun } from 'docubot';
+import { expect, goToState, test, type AgentShotRun } from 'docubot';
 import { promptFor, shouldRunStep, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
@@ -33,14 +33,17 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
   test.setTimeout(15 * 60 * 1000);
 
   // --- SOAR page: the Users list, where the agent's login is created (System > IAM
-  // > Users). NB: /users is the correct route; the old fsa06-01-api-key-page shot
-  // captured the Access Keys page, which the "Create a Login" prose never describes. ---
+  // > People). The list is the ui-router state main.iam.people (URL /iam/people);
+  // a hard goto to a bare path bootstraps only the app chrome, so navigate in-app. ---
   if (shouldRunStep('fsa06-01-create-user')) await test.step('fsa06-01-create-user', async () => {
     const soar = await gui('soar');
-    const origin = new URL(soar.url()).origin;
-    await soar.goto(`${origin}/users`, { waitUntil: 'domcontentloaded' });
-    await expect(soar.getByText(/Users/i).first()).toBeVisible({ timeout: 30_000 });
-    await capture.shot(soar, 'fsa06-01-create-user', { mask: uiMask(soar) });
+    await goToState(soar, 'main.iam.people');
+    // Anchor on a VISIBLE People/Users element: a bare text match hits a hidden
+    // nav <li> and never becomes visible.
+    await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+    // The People grid lists user email addresses; mask them for public-repo hygiene.
+    const emailMask = soar.getByText(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    await capture.shot(soar, 'fsa06-01-create-user', { mask: [...uiMask(soar), emailMask] });
   });
 
   // --- TUI pages: the write-approval prompt in each agent (real screenshots). ---
