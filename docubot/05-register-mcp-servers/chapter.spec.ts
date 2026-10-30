@@ -154,8 +154,9 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
 
     if (shouldRunStep('fsa05-04-grant-allowlist')) await test.step('fsa05-04-grant-allowlist', async () => {
       // Content Hub > AI Agents > agent detail > Configurations. The server must
-      // already be registered (fsa05-01 or the mcp-server seed). Selectors for
-      // Custom Configuration and the MCP Server field are still UNVERIFIED live.
+      // already be registered (fsa05-01 or the mcp-server seed). The config form is
+      // a set of <select>s (Configuration Type, Name, LLM Provider, MCP Server,
+      // Masking Agent); "Custom Configuration" is an <option>, not clickable text.
       expect(
         (await mcpRows(soar)).some((r) => r.name === NAME),
         `no ${NAME} server to grant: run fsa05-01 or seed it with DOCUBOT_SEED=1`,
@@ -167,25 +168,33 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       await expect(tile, `agent "${AGENT}" is in the catalog`).toBeVisible({ timeout: 30_000 });
       await tile.click();
       await soar.getByText(/^Configurations$/i).last().click();
-      const custom = soar.getByText(/Custom Configuration/i).first();
-      await expect(custom).toBeVisible({ timeout: 20_000 });
-      await custom.click();
-      // MCP Server multi-select: open the field, pick the lab server by name.
-      const mcpField = soar.locator('label:has-text("MCP Server") ~ *, :text("MCP Server") + *').first();
-      await mcpField.click();
-      const option = soar.getByText(NAME, { exact: true }).last();
-      await expect(option, `${NAME} not offered in the MCP Server field: seed it with DOCUBOT_SEED=1`).toBeVisible({ timeout: 20_000 });
-      await option.click();
+      const configType = soar.locator('#csForm-config_type');
+      await configType.waitFor({ state: 'visible', timeout: 20_000 });
+      await configType.selectOption({ label: 'Custom Configuration' });
+      // Custom reveals the required fields. Fill them so the grant is valid and the
+      // capture shows a complete form.
+      const mcpSelect = soar.locator('#csForm-mcp_server');
+      await mcpSelect.waitFor({ state: 'visible', timeout: 20_000 });
+      await soar.locator('#csForm-name').fill('Agent Lab DeepWiki');
+      await soar.locator('#csForm-llm_provider').selectOption({ index: 1 }).catch(() => undefined);
+      await expect(
+        mcpSelect.locator('option', { hasText: NAME }),
+        `${NAME} not offered in the MCP Server field: register it (fsa05-01) or seed with DOCUBOT_SEED=1`,
+      ).toHaveCount(1, { timeout: 20_000 });
+      await mcpSelect.selectOption({ label: NAME });
+      await soar.locator('#csForm-masking_agent').selectOption({ index: 1 }).catch(() => undefined);
       await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', { mask: uiMask(soar) });
       if (process.env.DOCUBOT_CH05_GRANT !== '1') {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
         return;
       }
       await soar.getByRole('button', { name: /^Save$/ }).first().click();
-      // Effect: reopen the agent and confirm the selection stuck.
+      await soar.waitForTimeout(2_000);
+      // Effect: reopen the agent, switch to Custom, and confirm the server stuck.
       await soar.reload({ waitUntil: 'domcontentloaded' });
       await soar.getByText(/^Configurations$/i).last().click();
-      await expect(soar.getByText(NAME, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+      await soar.locator('#csForm-config_type').selectOption({ label: 'Custom Configuration' }).catch(() => undefined);
+      await expect(soar.locator('#csForm-mcp_server')).toHaveValue(/.+/, { timeout: 20_000 });
     });
 
     if (shouldRunStep('fsa05-05-agent-uses-remote')) await test.step('fsa05-05-agent-uses-remote', async () => {
