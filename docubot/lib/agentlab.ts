@@ -137,11 +137,16 @@ export function promptFor(chapter: string, page: string, n = 1): string {
 /** Keys the Claude Code TUI needs; named so the driving code reads clearly. */
 const KEY = { down: '\x1b[B', enter: '\r', shiftTab: '\x1b[Z', space: ' ' };
 
-/** The server-side write-approval elicitation (toolkit verbs/approval.py, 0.1.9+). */
-const APPROVAL_PROMPT = /requests your input|Approve this change:/i;
-// The caret line while the checkbox is unchecked; ☐ is U+2610, replaced by a
-// checked glyph once toggled, so "no longer unchecked" is the robust tick test.
+// The server-side write-approval elicitation (toolkit verbs/approval.py, 0.1.9+).
+// The caret line while the checkbox is unchecked; U+2610 is replaced by a checked
+// glyph once toggled, so "still unchecked" is the robust live-form / tick test.
 const APPROVAL_UNCHECKED = /Approve this change:\s*☐/;
+
+// Claude Code's turn-complete status line, e.g. "Cooked for 38s . done" (the verb
+// varies: Cooked/Brewed/Churned/...). Counting it over the full scrollback marks
+// a turn's end even for a reused session that already shows an earlier "done".
+const TURN_DONE = /for \d+s[^\n]*\bdone\b/gi;
+const turnDoneCount = (term: LocalSession): number => (term.screen().match(TURN_DONE) || []).length;
 
 /**
  * Answer the MCP write-approval form the toolkit server raises before a write:
@@ -276,24 +281,26 @@ export async function agentTurn(
     term.type(opts.confirm);
     term.enter();
   }
-  // The turn ends by going idle, but it can first pause on the server's write-
-  // approval form while the TUI's spinner keeps animating - so the screen is
-  // NOT idle while the prompt waits. Race idle against the approval prompt
-  // (matched on poll, spinner or not): answer each approval and race again; a
-  // turn with no write just wins the idle race and returns.
-  const quietMs = opts.quietMs ?? 2_500;
-  for (let guard = 0; guard < 12; guard++) {
-    const outcome = await Promise.race([
-      term.waitIdle({ quietMs, timeoutMs }).then(() => 'idle').catch(() => 'idle'),
-      term.waitFor(APPROVAL_PROMPT, { timeoutMs }).then(() => 'approval').catch(() => 'timeout'),
-    ]);
-    if (outcome !== 'approval') break;
-    // A lingering (already-answered) prompt matches too; only a live form is
-    // answered. If there is nothing fresh to answer, finish on the next idle.
-    if (!(await answerApprovalGate(term))) {
-      await term.waitIdle({ quietMs, timeoutMs }).catch(() => {});
-      break;
+  // Wait for the turn to actually COMPLETE, not merely go quiet: a fresh agent's
+  // initial thinking gap is quiet but not done (that returned the bare startup
+  // banner), and a write pauses on the approval form while the spinner animates
+  // (never idle). The reliable completion signal is Claude Code's status line
+  // "<verb> for <N>s . done"; count it against a baseline so a reused agent's
+  // earlier "done" does not false-trigger. A live approval form (unticked box)
+  // is answered as it appears; after the last answer the turn's own "done"
+  // ends the wait.
+  const base = turnDoneCount(term);
+  const deadline = Date.now() + timeoutMs;
+  gate: for (let guard = 0; guard < 12; guard++) {
+    while (Date.now() < deadline) {
+      await settle(600);
+      if (APPROVAL_UNCHECKED.test(term.plainScreen())) {
+        await answerApprovalGate(term);
+        continue gate; // re-enter the wait for the next approval or completion
+      }
+      if (turnDoneCount(term) > base) break gate;
     }
+    break; // timeout
   }
   return term.screen();
 }
