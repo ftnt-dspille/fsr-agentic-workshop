@@ -1,9 +1,11 @@
 // Chapter 7 - users, modules and records (Part 2: the agent WRITES to the box).
 // Four documented steps: bulk triage, create a custom module, seed records, read
 // the record lifecycle. Each step has two halves:
-//   1. the agent half: a real Claude Code TUI turn driven by the page's OWN
-//      prompt (promptFor) and captured with capture.screen. It spends credits,
-//      so it runs only when DOCUBOT_AGENT_STEPS=1.
+//   1. the agent half (PRIMARY): a real Claude Code TUI turn driven by the
+//      page's OWN prompt (promptFor) and captured with capture.screen. It spends
+//      credits, so it runs when SPEND_AI=1 (the workshop-wide spend gate). With
+//      SPEND_AI unset the TUI captures are skipped (logged, not green) and the
+//      toolkit performs the write instead so the effect half still has work.
 //   2. the effect half: fsr-agentic-toolkit calls (the same tools the agent
 //      uses) that read the box and prove the write really happened. Always on.
 //      When the agent half is off, the effect half first performs the same write
@@ -14,17 +16,22 @@
 // and tools/e2e/captures/ch07.spec.js. Verify on a box with
 // `docubot run --chapter 07-users-modules-records`.
 //
+// Env: SPEND_AI=1 for the agent captures; DOCUBOT_SEED=1 seeds the Agent Lab
+// alerts (labSeed('seed')); DOCUBOT_MCP_CONFIG for startAgent. The module and
+// records are CREATED by the agent in steps 02/03, so they are not pre-seeded.
+//
 // Prerequisites: the read-only guard is OFF in DOCUBOT_MCP_CONFIG (no
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
 // fsa07-01 (the spec seeds two marker alerts itself if none are Open).
 import { expect, goToModuleList, test } from 'docubot';
-import { agentTurn, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
+import type { Page } from '@playwright/test';
+import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
 const CHAPTER = '07-users-modules-records';
 const MODULE = 'agentlab_assets';
-const RUN_AGENT = process.env.DOCUBOT_AGENT_STEPS === '1';
+const RUN_AGENT = process.env.SPEND_AI === '1';
 const TITLE = { title: 'student@laptop: ~/agent-lab' };
 
 /** First array found in a toolkit result (shape differs between tools). */
@@ -55,6 +62,19 @@ function moduleExists(): boolean {
   }
 }
 
+/**
+ * Filter a module grid on its own column filter (pagination-proof; never a bare
+ * getByText on the first page) and return the matching row. Field names are the
+ * ui-grid column names; verify on a live box.
+ */
+async function gridRow(soar: Page, field: string, value: string, hint: string) {
+  const filter = soar.locator(`input[name="${field}"][placeholder="Search" i]`).first();
+  if (await filter.waitFor({ timeout: 15_000 }).then(() => true).catch(() => false)) await filter.fill(value);
+  const row = soar.locator('.ui-grid-row').filter({ hasText: value }).first();
+  await expect(row, hint).toBeVisible({ timeout: 30_000 });
+  return row;
+}
+
 const SEEDS = [
   { hostname: 'db-server-01', ip_address: '203.0.113.10', owner: 'dba-team', criticality: 'Critical' },
   { hostname: 'web-server-01', ip_address: '203.0.113.20', owner: 'web-team', criticality: 'Medium' },
@@ -63,6 +83,14 @@ const SEEDS = [
 
 test('chapter 7 - users, modules and records', async ({ gui, local, capture }) => {
   test.setTimeout(30 * 60 * 1000);
+
+  // CONFIGURE: gated so a plain capture run never mutates the box. Seeds the
+  // five "Agent Lab" demo alerts that fsa07-01 triages (idempotent). The custom
+  // module and its records are built by the agent itself in 02/03.
+  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+    labSeed('seed');
+  });
+  if (!RUN_AGENT) console.log('[ch07] agent-TUI captures skipped: set SPEND_AI=1 (spends credits); effect checks still run');
 
   if (shouldRunStep('fsa07-01-bulk-triage')) await test.step('fsa07-01-bulk-triage', async () => {
     const lab = () => query('alerts', [{ field: 'name', operator: 'like', value: 'Agent Lab' }])
@@ -138,11 +166,12 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     // the app state, so the module appears without a manual browser reload.
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
-    await expect(soar.getByText('build-server-01').first()).toBeVisible({ timeout: 30_000 });
+    await gridRow(soar, 'hostname', 'build-server-01', 'no build-server-01 row: the module step did not create it');
     await capture.shot(soar, 'fsa07-02-create-module-ui', { mask: uiMask(soar), scrub: false });
   });
 
   if (shouldRunStep('fsa07-03-seed-records')) await test.step('fsa07-03-seed-records', async () => {
+    expect(moduleExists(), 'agentlab_assets missing: run fsa07-02 first').toBe(true);
     const hostnames = () => query(MODULE, [{ field: 'hostname', operator: 'like', value: '-' }]).map((r) => r.hostname);
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
@@ -172,7 +201,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     // is relaxed for this shot only.
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
-    await expect(soar.getByText('db-server-01').first()).toBeVisible({ timeout: 30_000 });
+    await gridRow(soar, 'hostname', 'db-server-01', 'no db-server-01 row: run fsa07-03 (agent or toolkit) first');
     await capture.shot(soar, 'fsa07-03-seed-records-grid', { mask: uiMask(soar), scrub: false });
   });
 

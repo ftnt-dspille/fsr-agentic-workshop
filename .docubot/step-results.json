@@ -1,10 +1,16 @@
 {
   "steps": [
     {
-      "id": "fsa04-02-tool-list-row",
+      "id": "fsa05-01-validate-register",
       "status": "passed",
-      "durationMs": 4276,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/04-build-your-own-agent/chapter.spec.ts"
+      "durationMs": 8940,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/05-register-mcp-servers/chapter.spec.ts"
+    },
+    {
+      "id": "fsa05-02-status-check",
+      "status": "passed",
+      "durationMs": 8896,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/05-register-mcp-servers/chapter.spec.ts"
     }
   ]
 }

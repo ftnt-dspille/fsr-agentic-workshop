@@ -1,0 +1,24 @@
+collection: Agent Lab
+visible: true
+playbooks:
+  - name: Tag Agent Lab Alerts
+    steps:
+      - name: On Alert Created
+        type: start_on_create
+        module: alerts
+        when:
+          logic: AND
+          filters:
+            - field: name
+              op: like
+              value: "Agent Lab%"
+        next: Tag Alert
+      - name: Tag Alert
+        type: update_record
+        module: alerts
+        record: "{{ vars.input.records[0]['@id'] }}"
+        fields:
+          description: "Triaged automatically by the Agent Lab playbook"
+        next: Done
+      - name: Done
+        type: end

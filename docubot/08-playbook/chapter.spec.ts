@@ -1,31 +1,33 @@
 // Chapter 8 - playbook: author and publish, trigger and verify, diagnose a failed
 // run, run a playbook in one call. Every documented step is automated.
 //
-// Two layers, so the chapter is provable without spending credits:
+// Part 2 chapter: an external coding agent drives the box. Layers:
 //   * ALWAYS ON: toolkit(...) effect-checks (the same tools the agent calls)
-//     seed and prove the real box effect - the playbook compiled, is published
-//     and active, the trigger produced a finished run that changed the alert,
-//     the broken run is diagnosed to the right step, the one-call run answered.
+//     prove the real box effect - the playbook compiled, is published and
+//     active, the trigger produced a finished run that changed the alert, the
+//     broken run is diagnosed to the right step, the one-call run answered.
 //     Browser shots (playbook canvas, run history) are free and always on.
-//   * OPT-IN (DOCUBOT_RUN_AGENT=1): the student's prompts, read straight from the
-//     pages with promptFor, are driven in a real Claude Code TUI and captured with
-//     capture.screen. These spend model credits. With the flag set the agent does
-//     the work and the spec only verifies the effect (it does not republish the
-//     page YAML, which would collide with the agent's copy).
+//   * PRIMARY CAPTURE (SPEND_AI=1): the student's prompts, read straight from
+//     the pages with promptFor, are driven in a real Claude Code TUI and
+//     captured with capture.screen. These spend model credits. With the flag
+//     set the agent does the work and the spec only verifies the effect (it
+//     does not republish the page YAML, which would collide with the agent's
+//     copy). Without it the TUI shots are skipped, not faked.
+//   * DOCUBOT_SEED=1: CONFIGURE step seeds the page-1 playbook from the shipped
+//     artifact (static/examples/playbooks) when the agent is NOT building it.
 //
-// Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG). Authored
-// against tools/e2e/08-playbook.spec.js and tools/e2e/captures/ch08.spec.js;
-// verify on a box with `docubot run --chapter 08-playbook`.
+// Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
+// Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect, test } from 'docubot';
-import { agentTurn, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
+import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
 import { openDetail, openPlaybookLogs } from '../lib/alertDetail';
 
 test.describe.configure({ mode: 'serial' });
 
 const CHAPTER = '08-playbook';
-const AGENT = process.env.DOCUBOT_RUN_AGENT === '1';
+const AGENT = process.env.SPEND_AI === '1';
 const TITLE = 'student@laptop: ~/agent-lab';
 
 const TAG_PLAYBOOK = 'Tag Agent Lab Alerts';
@@ -79,6 +81,13 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
 
+  // CONFIGURE: seed prerequisites (read-only run without the flag). When the agent
+  // builds the playbook (SPEND_AI=1) nothing is pre-seeded, so its publish is the
+  // real first publish; otherwise the shipped page-1 playbook is installed.
+  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+    if (!AGENT) labSeed('playbooks');
+  });
+
   // One agent session carries pages 1's two prompts (the second says "you just
   // compiled"); every other step starts fresh because its prompt is self-contained.
   let agent: Awaited<ReturnType<typeof startAgent>> | undefined;
@@ -109,10 +118,12 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     expect(wf, `${TAG_PLAYBOOK} not found on the box`).toBeTruthy();
     expect(isActive(wf)).toBe(true);
 
-    // UI: Playbooks > Agent Lab > Tag Agent Lab Alerts shows the canvas.
-    await soar.goto(`${origin}/playbooks`, { waitUntil: 'domcontentloaded' });
-    await soar.getByText('Agent Lab', { exact: false }).first().click();
-    await soar.getByText(TAG_PLAYBOOK, { exact: false }).first().click();
+    // UI: open the playbook's designer canvas by the uuid just read back (live
+    // state, not a click path through the collection list), then check the steps.
+    await soar.goto(`${origin}/playbooks/${wf.uuid}`, { waitUntil: 'domcontentloaded' });
+    const canvas = soar.locator('#designer-container');
+    await expect(canvas, `designer canvas for ${TAG_PLAYBOOK} did not load`).toBeVisible({ timeout: 40_000 });
+    await expect(canvas).toContainText('Tag Alert', { timeout: 30_000 });
     await capture.shot(soar, 'fsa08-02-publish-playbook-canvas', { mask: uiMask(soar), scrub: false });
   });
 

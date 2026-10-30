@@ -12,6 +12,13 @@
 // Cleanup: the lab server is removed at the end so the box is left as found,
 // unless DOCUBOT_KEEP_LAB=1 (keep it to inspect the registration by hand).
 //
+// Seeding (DOCUBOT_SEED=1): the CONFIGURE step runs `lab_setup.py mcp-server`
+// (static/examples/mcp-servers/agentlab-deepwiki.json) ONLY when fsa05-01 is not
+// running, so a selective rerun of fsa05-02..05 has the server it reads. When
+// fsa05-01 runs it registers the server itself through the UI (that is the
+// capture), so seeding first would be deleted by the leftover cleanup. The
+// agent grant stays a UI action (fsa05-04); there is no seeder for it.
+//
 // Opt-ins (everything else is free and read/registration only):
 //   DOCUBOT_CH05_GRANT=1   fsa05-04: save the MCP Server selection on the agent
 //                          named by DOCUBOT_CH05_AGENT (default Alert Investigation).
@@ -22,7 +29,7 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import { apiViaApp, askFortiSOARAssistant, expect, test } from 'docubot';
-import { shouldRunStep, uiMask } from '../lib/agentlab';
+import { labSeed, shouldRunStep, uiMask } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -61,7 +68,21 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     await expect(soar.getByText(/MCP Servers?/i).first()).toBeVisible({ timeout: 30_000 });
   };
 
+  const listRow = (name: string) => soar.locator('.ui-grid-row, tr').filter({ hasText: name }).first();
+
+  /** Narrow the servers grid by its Name column when the grid has one, then wait on the matched row. */
+  const expectServerRow = async (name: string, why: string) => {
+    const search = soar.locator('input[name="name"][placeholder="Search" i]').first();
+    if (await search.isVisible().catch(() => false)) await search.fill(name);
+    await expect(listRow(name), why).toBeVisible({ timeout: 30_000 });
+  };
+
   try {
+    if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+      // fsa05-01 builds the server by hand; only seed it for runs that skip that step.
+      if (!shouldRunStep('fsa05-01-validate-register')) labSeed('mcp-server');
+    });
+
     // A leftover from an interrupted run would make the name collide.
     if (ownsLab) await removeLabServer(soar);
 
@@ -103,11 +124,17 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       expect(status).toContain(NAME);
       expect(status, 'status route lists a built-in server too').toMatch(/Utility Tools|SOC Framework|Module Management/);
       const row = (await mcpRows(soar)).find((r) => r.name === NAME);
+      expect(row, `no ${NAME} row: run fsa05-01 or seed it with DOCUBOT_SEED=1`).toBeTruthy();
       expect(row?.active, 'registered server is active').toBe(true);
 
       await openList();
-      await expect(soar.getByText(NAME, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
-      for (const builtIn of BUILT_IN) await expect(soar.getByText(builtIn).first()).toBeVisible();
+      await expectServerRow(NAME, `no ${NAME} row on the MCP Servers page: run fsa05-01 or seed it with DOCUBOT_SEED=1`);
+      for (const builtIn of BUILT_IN) {
+        await expectServerRow(builtIn, `built-in server "${builtIn}" missing from the list (box build without it?)`);
+      }
+      // Leave the grid unfiltered for the capture.
+      const nameFilter = soar.locator('input[name="name"][placeholder="Search" i]').first();
+      if (await nameFilter.isVisible().catch(() => false)) await nameFilter.fill('');
       // The Url column is the server address: masked by uiMask (leaf URL text).
       await capture.shot(soar, 'fsa05-02-status-check-servers-page', { mask: uiMask(soar) });
     });
@@ -116,7 +143,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // Registration itself was proven by fsa05-01; this step reads the stored
       // row back and checks it is the remote (external, http) shape.
       const row: any = (await mcpRows(soar)).find((r) => r.name === NAME);
-      expect(row, 'lab server row exists').toBeTruthy();
+      expect(row, `no ${NAME} row: run fsa05-01 or seed it with DOCUBOT_SEED=1`).toBeTruthy();
       expect(row.type).toBe('external');
       expect(row.transport).toBe('http');
       // authentication must be stored as a string (the JSON-string rule), never an object.
@@ -124,9 +151,13 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     });
 
     if (shouldRunStep('fsa05-04-grant-allowlist')) await test.step('fsa05-04-grant-allowlist', async () => {
-      // Content Hub > AI Agents > agent detail > Configurations. UNVERIFIED
-      // selectors below (Custom Configuration, MCP Server field): the lead fixes
-      // them live. Catalog and tab navigation mirror docubot fsr-ui aiAgents.ts.
+      // Content Hub > AI Agents > agent detail > Configurations. The server must
+      // already be registered (fsa05-01 or the mcp-server seed). Selectors for
+      // Custom Configuration and the MCP Server field are still UNVERIFIED live.
+      expect(
+        (await mcpRows(soar)).some((r) => r.name === NAME),
+        `no ${NAME} server to grant: run fsa05-01 or seed it with DOCUBOT_SEED=1`,
+      ).toBe(true);
       await soar.goto(`${origin}/content-hub/my-content/?contentType=ai_agent&searchText=${encodeURIComponent(AGENT)}`, {
         waitUntil: 'domcontentloaded',
       });
@@ -140,7 +171,9 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // MCP Server multi-select: open the field, pick the lab server by name.
       const mcpField = soar.locator('label:has-text("MCP Server") ~ *, :text("MCP Server") + *').first();
       await mcpField.click();
-      await soar.getByText(NAME, { exact: true }).last().click();
+      const option = soar.getByText(NAME, { exact: true }).last();
+      await expect(option, `${NAME} not offered in the MCP Server field: seed it with DOCUBOT_SEED=1`).toBeVisible({ timeout: 20_000 });
+      await option.click();
       await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', { mask: uiMask(soar) });
       if (process.env.DOCUBOT_CH05_GRANT !== '1') {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');

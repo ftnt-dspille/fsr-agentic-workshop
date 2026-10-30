@@ -45,7 +45,7 @@ Select the server, pick an LLM Provider, and **Save**.
 The grant is at the server level. An agent that does not list a server in the MCP Server field cannot call it, however healthy that server is. Which tools from a selected server the agent may call is set by the agent's own tool allowlist in its bundle, not in this panel. An agent with no allowlist in its bundle gets every tool from every server selected here, so for anything beyond a lab, pin an explicit allowlist in the bundle.
 
 <!-- capture: fsa05-04-grant-allowlist-agent-config -->
-![fsa05-04-grant-allowlist-agent-config](fsa05-04-grant-allowlist-agent-config.png)
+![fsa05-04-grant-allowlist-agent-config](fsa05-04-grant-allowlist-agent-config.png?height=600px)
 
 ## 4. Prove it through the agent
 

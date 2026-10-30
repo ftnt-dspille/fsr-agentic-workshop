@@ -51,6 +51,10 @@ EXAMPLES = REPO_ROOT / "static" / "examples"
 ORG_CONTEXT_DIR = EXAMPLES / "org-context"   # *.json org-context records (TOOL_LIST, ...)
 AGENT_BUNDLE = EXAMPLES / "workshop_hello_agent"  # chapter 4 custom agent bundle
 AGENT_NAME = "workshop_hello_agent"
+MCP_DIR = EXAMPLES / "mcp-servers"           # *.json external MCP server registrations (ch5)
+PLAYBOOK_DIR = EXAMPLES / "playbooks"        # *.yaml fsr_playbooks definitions (ch8)
+MODULE_DIR = EXAMPLES / "modules"            # *.json custom module definitions (ch7)
+RECORDS_DIR = EXAMPLES / "records"           # *.json record seeds per module (ch7)
 
 # The demo alerts chapter 6 onward investigate. Picklist fields (type, status,
 # severity, source) are given by name; pyfsr resolves them to IRIs on create.
@@ -344,6 +348,82 @@ def cmd_install_agent(client) -> int:
 
 
 # ---------------------------------------------------------------------------
+# mcp-server (ch5: register external MCP servers), records (ch7 record seeds)
+
+def cmd_mcp_server(client) -> int:
+    """Register the shipped external MCP servers (idempotent by name).
+
+    Reads static/examples/mcp-servers/*.json and POSTs /api/3/mcp_configurations
+    via pyfsr. `authentication` must be a JSON STRING (an object is stored as the
+    text "Array" and breaks the status route for every server), so serialize it
+    if the artifact left it as an object. Create-only. Does not grant the server
+    to an agent; that stays a ch5 UI step.
+    """
+    if not MCP_DIR.is_dir():
+        print(f"mcp-server: no artifacts in {MCP_DIR}")
+        return 0
+    res = client.get("/api/3/mcp_configurations", params={"$limit": 200})
+    members = res.get("hydra:member", res) if isinstance(res, dict) else res
+    have = {r.get("name") for r in (members or [])}
+    created = skipped = failed = 0
+    for path in sorted(MCP_DIR.glob("*.json")):
+        spec = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(spec.get("authentication"), str):
+            spec["authentication"] = json.dumps(spec.get("authentication") or {"type": "none"})
+        if spec.get("name") in have:
+            print(f"skip (exists): {spec['name']}")
+            skipped += 1
+            continue
+        try:
+            client.post("/api/3/mcp_configurations", data=spec)
+            print(f"created: {spec['name']}")
+            created += 1
+        except Exception as exc:
+            print(f"FAILED: {spec.get('name')}: {exc}")
+            failed += 1
+    print(f"\nmcp-server: {created} created, {skipped} already present, {failed} failed")
+    return 1 if failed else 0
+
+
+def cmd_lab_records(client) -> int:
+    """Seed records from static/examples/records/*.json (idempotent by key field).
+
+    Each artifact gives {module, key, records}. Uses pyfsr's generic record
+    create with picklist resolution. Create-only: an existing key is skipped.
+    Requires the record's module to exist (seed it first).
+    """
+    if not RECORDS_DIR.is_dir():
+        print(f"records: no artifacts in {RECORDS_DIR}")
+        return 0
+    created = skipped = failed = 0
+    for path in sorted(RECORDS_DIR.glob("*.json")):
+        spec = json.loads(path.read_text(encoding="utf-8"))
+        mod, key = spec["module"], spec["key"]
+        try:
+            res = client.get(f"/api/3/{mod}", params={"$limit": 500})
+            members = res.get("hydra:member", res) if isinstance(res, dict) else res
+            have = {r.get(key) for r in (members or [])}
+        except Exception as exc:
+            print(f"FAILED: list {mod}: {exc} (does the module exist? seed lab-module first)")
+            failed += 1
+            continue
+        for rec in spec["records"]:
+            if rec.get(key) in have:
+                print(f"skip (exists): {mod}/{rec[key]}")
+                skipped += 1
+                continue
+            try:
+                client.records(mod).create(resolve_picklists=True, **rec)
+                print(f"created: {mod}/{rec[key]}")
+                created += 1
+            except Exception as exc:
+                print(f"FAILED: {mod}/{rec.get(key)}: {exc}")
+                failed += 1
+    print(f"\nrecords: {created} created, {skipped} already present, {failed} failed")
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
 # check
 
 def cmd_check(client) -> int:
@@ -411,6 +491,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("seed", help="create the demo alerts (idempotent)")
     sub.add_parser("org-context", help="create the shipped org-context records, e.g. TOOL_LIST (idempotent)")
     sub.add_parser("install-agent", help="import the chapter-4 hello agent bundle (idempotent)")
+    sub.add_parser("mcp-server", help="register the shipped external MCP servers (idempotent)")
+    sub.add_parser("records", help="seed records from static/examples/records (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
     args = ap.parse_args(argv)
 
@@ -425,6 +507,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_org_context(client)
     if args.cmd == "install-agent":
         return cmd_install_agent(client)
+    if args.cmd == "mcp-server":
+        return cmd_mcp_server(client)
+    if args.cmd == "records":
+        return cmd_lab_records(client)
     return cmd_check(client)
 
 

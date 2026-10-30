@@ -7,11 +7,17 @@
 // investigation already finished on the box, so the always-on proof is the
 // record itself, never a card. Skipped captures log a line, never a fake pass.
 //
+// Gates (all opt-in; a bare run is read-only and spends nothing):
+//   DOCUBOT_SEED=1  CONFIGURE step: lab_setup.py seed (demo alerts) + org-context.
+//                   The capstone alert itself is staged below (agent prompt under
+//                   SPEND_AI, else the free toolkit), never by the seeder.
+//   SPEND_AI=1      agent-TUI turns (stage prompt + investigation). PRIMARY capture.
+//
 // Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, findAlert, test } from 'docubot';
-import { promptFor, shouldRunStep, startAgent, agentTurn, toolkit, uiMask } from '../lib/agentlab';
+import { labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit, uiMask } from '../lib/agentlab';
 import { openDetail } from '../lib/alertDetail';
 
 test.describe.configure({ mode: 'serial' });
@@ -22,14 +28,14 @@ const ALERT_RE = /Agent Lab - beaconing from web-server-01/i;
 const CHAPTER = '10-capstone-investigation';
 const PAGE = '01-capstone';
 
-interface StagedAlert { name?: string; severity?: unknown; description?: string }
+interface StagedAlert { uuid?: string; name?: string; severity?: unknown; description?: string }
 
 /** Every staged capstone alert, read back through the toolkit (not the card). */
 function stagedAlerts(): StagedAlert[] {
   const out = toolkit('search_records', {
     module: 'alerts',
     term: 'Agent Lab - beaconing',
-    fields: ['name', 'severity', 'description'],
+    fields: ['uuid', 'name', 'severity', 'description'],
     summary: false,
   });
   // The result envelope is not pinned: collect every object that looks like an alert.
@@ -54,8 +60,17 @@ function hasFindings(a: StagedAlert): boolean {
 test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
   test.setTimeout(45 * 60 * 1000);
 
+  // CONFIGURE: repeatable seed (idempotent, create-if-absent) of the box state
+  // this chapter reads. Investigation SOPs already ship on the box; demo alerts
+  // give the correlation step (search for related alerts) something to find.
+  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+    labSeed('seed');         // demo alerts ("Agent Lab: ..."), incl. an outbound-beacon alert
+    labSeed('org-context');  // TOOL_LIST routing record the investigation reads
+  });
+
   if (shouldRunStep('fsa10-01-stage-alert')) await test.step('fsa10-01-stage-alert', async () => {
     const since = new Date().toISOString();
+    let staged = SPEND;
     if (SPEND) {
       // The page's own staging prompt, driven in a real agent TUI.
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
@@ -64,6 +79,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     } else {
       console.log('[ch10] fsa10-01-stage-alert: seeding via the toolkit; the agent capture needs SPEND_AI=1');
       if (stagedAlerts().length === 0) {
+        staged = true;
         const created = toolkit('create_record', {
           module: 'alerts',
           data: {
@@ -78,8 +94,19 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     }
     // Effect-check: the alert exists, and the chapter 8 playbook picked it up.
     expect(stagedAlerts().length, 'the capstone alert was not staged').toBeGreaterThan(0);
-    const run = toolkit('wait_for_playbook_run', { playbook: 'Tag Agent Lab Alerts', since, timeout: 120 });
-    expect(JSON.stringify(run)).toContain('finished');
+    // Only a freshly staged alert triggers the ch08 playbook; a reused alert has
+    // no new run to wait for, so that check is reported as not run.
+    if (staged) {
+      let run: any;
+      try {
+        run = toolkit('wait_for_playbook_run', { playbook: 'Tag Agent Lab Alerts', since, timeout: 120 });
+      } catch (err) {
+        throw new Error(`ch08 playbook "Tag Agent Lab Alerts" did not run (publish it first, chapter 8): ${err}`);
+      }
+      expect(JSON.stringify(run)).toContain('finished');
+    } else {
+      console.log('[ch10] fsa10-01-stage-alert: alert already staged; playbook-pickup check NOT run');
+    }
   });
 
   if (shouldRunStep('fsa10-02-investigate')) await test.step('fsa10-02-investigate', async () => {
@@ -104,12 +131,18 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     expect(written.some((a) => a.severity != null)).toBe(true);
 
     // UI view of the write-back: the description on the alert detail panel.
+    // The title is not unique across reruns, so open the exact alert the toolkit
+    // read back with findings (live state); fall back to the grid search by name.
     const soar = await gui('soar');
-    const alert = await findAlert(soar, ALERT_RE, { search: 'Agent Lab - beaconing' });
-    expect(alert, 'capstone alert not found in the UI').toBeTruthy();
-    await openDetail(soar, new URL(soar.url()).origin, 'alerts', alert!.id);
+    let alertId = written.find((a) => a.uuid)?.uuid;
+    if (!alertId) {
+      const alert = await findAlert(soar, ALERT_RE, { search: 'Agent Lab - beaconing' });
+      expect(alert, 'capstone alert not found in the UI: stage it (fsa10-01) first').toBeTruthy();
+      alertId = alert!.id;
+    }
+    await openDetail(soar, new URL(soar.url()).origin, 'alerts', alertId!);
     const findings = soar.locator('#view-panel-content').getByText(/verdict/i).first();
-    await expect(findings).toBeVisible({ timeout: 30_000 });
+    await expect(findings, 'findings not rendered on the alert: run fsa10-02 with SPEND_AI=1').toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa10-02-investigate-findings-on-alert', {
       highlight: findings,
       mask: uiMask(soar),

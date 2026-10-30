@@ -89,7 +89,7 @@ The registration has four steps. Do not skip the first one.
 Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. The filled form looks like this:
 
 <!-- capture: fsa05-01-validate-register-connect-form -->
-![fsa05-01-validate-register-connect-form](fsa05-01-validate-register-connect-form.png)
+![fsa05-01-validate-register-connect-form](fsa05-01-validate-register-connect-form.png?height=600px)
 
 Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
 
@@ -103,7 +103,7 @@ Click **Test Connection** first, and read the tool names it returns. Only then c
 Check the status of the server you just saved. Then check the status of one built-in server, to confirm the status route still works for everyone.
 
 <!-- capture: fsa05-02-status-check-servers-page -->
-![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png)
+![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png?height=600px)
 
 **What success looks like**
 

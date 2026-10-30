@@ -1,0 +1,9 @@
+{
+  "module": "agentlab_assets",
+  "key": "hostname",
+  "records": [
+    { "hostname": "db-server-01", "ip_address": "203.0.113.10", "owner": "dba-team", "criticality": "Critical" },
+    { "hostname": "web-server-01", "ip_address": "203.0.113.20", "owner": "web-team", "criticality": "Medium" },
+    { "hostname": "jump-host-01", "ip_address": "203.0.113.30", "owner": "secops", "criticality": "High" }
+  ]
+}

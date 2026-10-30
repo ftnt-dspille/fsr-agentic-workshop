@@ -1,0 +1,13 @@
+{
+  "module": "agentlab_assets",
+  "label": "Agent Lab Assets",
+  "fields": [
+    { "name": "hostname", "type": "text", "required": true },
+    { "name": "ip_address", "type": "text" },
+    { "name": "owner", "type": "text" },
+    { "name": "criticality", "type": "picklist", "picklist": "Severity" },
+    { "name": "notes", "type": "richtext" }
+  ],
+  "grant_role": "Full App Permissions",
+  "permissions": ["read", "create", "update", "delete"]
+}

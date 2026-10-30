@@ -1,0 +1,9 @@
+{
+  "name": "agentlab-deepwiki",
+  "description": "Lab: DeepWiki remote server (public, no credentials)",
+  "type": "external",
+  "transport": "http",
+  "url": "https://mcp.deepwiki.com/mcp",
+  "active": true,
+  "authentication": "{\"type\": \"none\"}"
+}

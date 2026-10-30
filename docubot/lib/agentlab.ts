@@ -102,6 +102,7 @@ export function sh(cmd: string, args: string[], cwd?: string): string {
  * chapter's build flag; it is a no-op worth skipping on a read-only run.
  *
  * @param cmd a lab_setup.py subcommand: 'seed' | 'org-context' | 'install-agent'
+ *   | 'mcp-server' | 'records' (and chapter seeders as they are added)
  */
 export function labSeed(cmd: string): string {
   const py = process.env.FSR_PYTHON || process.env.DOCUBOT_PYTHON || 'python3';
