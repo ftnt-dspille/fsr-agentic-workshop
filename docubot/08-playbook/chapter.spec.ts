@@ -113,7 +113,9 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
   if (shouldRunStep('fsa08-02-publish-playbook')) await test.step('fsa08-02-publish-playbook', async () => {
     if (AGENT) {
       agent = agent ?? (await freshAgent());
-      const screen = await agentTurn(agent, promptFor(CHAPTER, '01-author-and-publish', 2));
+      // Publish + read-back to a live box legitimately runs longer than the
+      // default 5 min turn budget; give it the same headroom as the diagnose turn.
+      const screen = await agentTurn(agent, promptFor(CHAPTER, '01-author-and-publish', 2), { timeoutMs: 10 * 60 * 1000 });
       await capture.screen('fsa08-02-publish-playbook', screen, { title: TITLE });
     } else {
       ensureTagPlaybook();

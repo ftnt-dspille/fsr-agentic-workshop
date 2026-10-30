@@ -24,6 +24,10 @@ help:
 
 # Selection: default runs prompts with no pass recorded for this text and box.
 # CHAPTER=<dir>, PROMPT=<id>, FORCE=1 select explicitly. FSR_ENV_FILE=<env> is required.
+agent-mcp-config:
+	@if [ -z "$(FSR_ENV_FILE)" ]; then echo "needs a box env file: FSR_ENV_FILE=.env.<box> make agent-mcp-config"; exit 2; fi
+	$(PYTHON) tools/write_agent_mcp.py --env-file "$(FSR_ENV_FILE)" --out "$(if $(MCP_OUT),$(MCP_OUT),.agent-lab/.mcp.json)"
+
 agent-drive:
 	@if [ -z "$(FSR_ENV_FILE)" ]; then echo "needs a live box: FSR_ENV_FILE=... make agent-drive"; exit 2; fi
 	$(PYTHON) tools/agent-drive/run.py --env-file "$(FSR_ENV_FILE)" $(if $(CHAPTER),--chapter $(CHAPTER)) $(if $(PROMPT),--prompt $(PROMPT)) $(if $(FORCE),--force) $(if $(MODEL),--model $(MODEL))
