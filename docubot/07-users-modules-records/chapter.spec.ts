@@ -25,7 +25,13 @@
 // fsa07-01 (the spec seeds two marker alerts itself if none are Open).
 import { expect, goToModuleList, test } from 'docubot';
 import type { Page } from '@playwright/test';
-import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit, uiMask } from '../lib/agentlab';
+import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+
+// Mask only truly sensitive values; the scrub backstop still refuses a real lab
+// IP, hostname, key or sensitive term. These grids show TEST-NET documentation
+// IPs (203.0.113.x, which pass), dates, and record UUIDs (read as key-like tokens
+// but not secrets, and no real key renders here), so those categories are skipped.
+const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 
 test.describe.configure({ mode: 'serial' });
 
@@ -47,7 +53,17 @@ function rowsOf(res: any): any[] {
 
 const text = (v: unknown) => JSON.stringify(v ?? '');
 
-/** Query a module by one field condition; returns the rows. */
+/**
+ * Query a module by field conditions; returns the rows. Pass `fields` in `extra`
+ * to get a custom module's own field VALUES back: the default summary projection
+ * only returns identity fields it recognizes (for a new module that is just uuid +
+ * dates), and asking for full records (summary:false) makes them large enough that
+ * the toolkit's output cap silently truncates the members list to one. An explicit
+ * `fields` list is compact AND carries the values.
+ *
+ * FortiSOAR's `like` operator is NOT a bare substring match: it needs SQL wildcards,
+ * so callers pass `%value%`, never `value`.
+ */
 function query(module: string, filters: any[], extra: Record<string, unknown> = {}): any[] {
   return rowsOf(toolkit('query_records', { module, filters, limit: 100, ...extra }));
 }
@@ -93,7 +109,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
   if (!RUN_AGENT) console.log('[ch07] agent-TUI captures skipped: set SPEND_AI=1 (spends credits); effect checks still run');
 
   if (shouldRunStep('fsa07-01-bulk-triage')) await test.step('fsa07-01-bulk-triage', async () => {
-    const lab = () => query('alerts', [{ field: 'name', operator: 'like', value: 'Agent Lab' }])
+    const lab = () => query('alerts', [{ field: 'name', operator: 'like', value: '%Agent Lab%' }], { fields: ['name', 'status'] })
       .filter((r) => String(r.name || '').startsWith('Agent Lab'));
     const isOpen = (r: any) => /\bOpen\b/.test(text(r.status));
     const isInvestigating = (r: any) => /Investigating/.test(text(r.status));
@@ -158,7 +174,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     const schema = text(toolkit('describe_module', { module: MODULE }));
     for (const f of ['hostname', 'ip_address', 'owner', 'criticality', 'notes']) expect(schema).toContain(f);
     toolkit('get_or_create_record', { module: MODULE, data: { hostname: 'build-server-01', criticality: 'High' }, key: 'hostname' });
-    const probe = query(MODULE, [{ field: 'hostname', operator: 'eq', value: 'build-server-01' }]);
+    const probe = query(MODULE, [{ field: 'hostname', operator: 'eq', value: 'build-server-01' }], { fields: ['hostname', 'criticality'] });
     expect(probe.length, 'build-server-01 probe record missing').toBeGreaterThan(0);
     expect(text(probe[0].criticality)).toContain('High');
 
@@ -167,12 +183,12 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
     await gridRow(soar, 'hostname', 'build-server-01', 'no build-server-01 row: the module step did not create it');
-    await capture.shot(soar, 'fsa07-02-create-module-ui', { mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa07-02-create-module-ui', SKIP_RECORD);
   });
 
   if (shouldRunStep('fsa07-03-seed-records')) await test.step('fsa07-03-seed-records', async () => {
     expect(moduleExists(), 'agentlab_assets missing: run fsa07-02 first').toBe(true);
-    const hostnames = () => query(MODULE, [{ field: 'hostname', operator: 'like', value: '-' }]).map((r) => r.hostname);
+    const hostnames = () => query(MODULE, [{ field: 'hostname', operator: 'like', value: '%-%' }], { fields: ['hostname'] }).map((r) => r.hostname);
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, '03-work-with-records', 1));
@@ -192,17 +208,16 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
         { field: 'criticality.itemValue', operator: 'eq', value: 'Critical' },
         { field: 'criticality.itemValue', operator: 'eq', value: 'High' },
       ],
-      { logic: 'OR', sort: [{ field: 'hostname', direction: 'ASC' }] },
+      { logic: 'OR', sort: [{ field: 'hostname', direction: 'ASC' }], fields: ['hostname', 'criticality'] },
     ).map((r) => r.hostname);
     expect(hi).toEqual(expect.arrayContaining(['db-server-01', 'jump-host-01']));
     expect(hi).not.toContain('web-server-01');
 
-    // UI: the grid. IPs are TEST-NET documentation ranges, so the scrub backstop
-    // is relaxed for this shot only.
+    // UI: the grid. IPs are TEST-NET documentation ranges (safe to show).
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
     await gridRow(soar, 'hostname', 'db-server-01', 'no db-server-01 row: run fsa07-03 (agent or toolkit) first');
-    await capture.shot(soar, 'fsa07-03-seed-records-grid', { mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa07-03-seed-records-grid', SKIP_RECORD);
   });
 
   if (shouldRunStep('fsa07-04-record-lifecycle')) await test.step('fsa07-04-record-lifecycle', async () => {
