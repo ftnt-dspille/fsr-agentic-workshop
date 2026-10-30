@@ -16,7 +16,7 @@
 // TOOL_LIST view. Authored OFFLINE from the pre-docubot spec
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
-import { apiViaApp, expect, findAlert, openAlertAiInvestigation, openTracePanel, runInvestigation, test } from 'docubot';
+import { apiViaApp, expect, findAlert, openAlertAiInvestigation, openTracePanel, runInvestigation, test, waitForInvestigation } from 'docubot';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -95,9 +95,10 @@ async function triggerHello(soar: Page, entity: string): Promise<{ taskId: strin
   return { taskId, result };
 }
 
-/** Read the agent's id from the agent list (used to record whether replace changes it). */
+/** Read the agent's id from the agent list (GET /ai/agent/, singular: the management route;
+ *  used to record whether replace changes it). */
 async function agentId(soar: Page): Promise<string | null> {
-  const list: any = await apiViaApp(soar, 'GET', '/ai/agents');
+  const list: any = await apiViaApp(soar, 'GET', '/ai/agent/');
   const rows: any[] = Array.isArray(list) ? list : list?.items || list?.agents || list?.['hydra:member'] || [];
   const hit = rows.find((a) => a && (a.name === AGENT || a.agent_name === AGENT));
   return hit ? String(hit.id ?? hit.uuid ?? hit.agent_id ?? '') || null : null;
@@ -192,10 +193,15 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       console.log('[ch04] fsa04-03-route-check skipped: set SPEND_AI=1 to run a FortiAI investigation');
       return;
     }
-    const alert = await findAlert(soar, /Agent Lab/i, { search: 'Agent Lab' });
-    expect(alert, 'seed an Agent Lab alert that carries the entity the agent needs').toBeTruthy();
+    // A seeded alert no other chapter investigates (ch03 and ch10 own "beaconing from web-server-01").
+    const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
+    expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
     await openAlertAiInvestigation(soar, origin, alert!.id);
-    const inv = await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 });
+    // A rerun finds the investigation already finished (no Begin button): read it, do not spend again.
+    const begin = await soar.locator('#view-panel-content #showTriagId').waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
+    const inv = begin
+      ? await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 })
+      : await waitForInvestigation(soar, { timeoutMs: 60_000 });
     expect(inv.state).toBe('done');
     const trace = await openTracePanel(soar);
     expect(trace.length).toBeGreaterThan(0);
@@ -224,7 +230,10 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     await pb.click();
     await soar.waitForSelector('.jsplumb-draggable, [class*="workflow-step"], #designer-container', { timeout: 30_000 });
     await expect(soar.getByText(/Invoke AI Agent|Decision/i).first()).toBeVisible({ timeout: 20_000 });
-    await capture.shot(soar, 'fsa04-04-playbook-branch-decision', { mask: uiMask(soar) });
+    // The designer header carries a "Last Modified <date> by <user>" line: mask it (privacy scan).
+    await capture.shot(soar, 'fsa04-04-playbook-branch-decision', {
+      mask: [...uiMask(soar), soar.locator('xpath=//*[not(*) and contains(normalize-space(.), "Last Modified")]')],
+    });
   });
 
   // Page 03 s4: route B, the raw async trigger API. The effect is the documented

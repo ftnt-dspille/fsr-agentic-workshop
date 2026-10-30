@@ -308,12 +308,9 @@ def cmd_org_context(client) -> int:
 
 def agent_installed(client, name: str) -> bool:
     try:
-        res = client.get("/ai/agents")
+        return any(a.name == name for a in client.ai.list_agents())
     except Exception:
         return False
-    rows = res if isinstance(res, list) else (
-        res.get("items") or res.get("agents") or res.get("hydra:member") or res.get("members") or [])
-    return any((r.get("name") == name or r.get("agent_name") == name) for r in rows if isinstance(r, dict))
 
 
 def zip_bundle(bundle_dir: Path) -> Path:
@@ -340,21 +337,12 @@ def cmd_install_agent(client) -> int:
     if agent_installed(client, AGENT_NAME):
         print(f"skip (installed): {AGENT_NAME}")
         return 0
-    zip_path = zip_bundle(AGENT_BUNDLE)
-    base = client.base_url if hasattr(client, "base_url") else None
     try:
-        with open(zip_path, "rb") as fh:
-            # pyfsr exposes a requests session with auth headers already set.
-            resp = client.session.post(
-                f"{base}/ai/agent/import",
-                params={"replace": "true"},
-                files={"file": (zip_path.name, fh, "application/zip")},
-                verify=client.verify_ssl if hasattr(client, "verify_ssl") else False,
-            )
-        ok = getattr(resp, "status_code", 0) in (200, 201, 202)
-        print(f"install-agent: {AGENT_NAME} -> HTTP {getattr(resp, 'status_code', '?')}"
-              + ("" if ok else f" :: {getattr(resp, 'text', '')[:300]}"))
-        return 0 if ok else 1
+        # pyfsr posts the multipart upload straight to fsr-ai (the /api/ai gateway
+        # drops multipart bodies), then activates the agent.
+        rec = client.ai.install_agent(str(AGENT_BUNDLE), replace=True, activate=True)
+        print(f"install-agent: {AGENT_NAME} installed (active={getattr(rec, 'active', '?')})")
+        return 0
     except Exception as exc:
         print(f"install-agent FAILED: {exc}")
         return 1
