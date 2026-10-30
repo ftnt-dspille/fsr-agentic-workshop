@@ -21,7 +21,14 @@ import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { labSeed, sh, shouldRunStep, uiMask } from '../lib/agentlab';
+import { labSeed, sh, shouldRunStep } from '../lib/agentlab';
+
+// Mask only truly sensitive values; the scrub backstop still refuses a real lab
+// IP, hostname, key or sensitive term. On-screen dates are legitimate content.
+// Record/agent/designer pages show record UUIDs, which read as key-like tokens but
+// are not secrets (and these pages never show a real key), so they skip that too.
+const SKIP = { scrubSkip: ['date-or-time'] };
+const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 
 test.describe.configure({ mode: 'serial' });
 
@@ -128,7 +135,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       return;
     }
     await expect(soar.getByText(/Replace existing version/i).first()).toBeVisible({ timeout: 20_000 });
-    await capture.shot(soar, 'fsa04-00-upload-agent-dialog', { mask: uiMask(soar) });
+    await capture.shot(soar, 'fsa04-00-upload-agent-dialog', SKIP);
     // Package the example bundle exactly as the page tells the student to.
     if (build()) {
       sh('zip', ['-r', zip, AGENT], EXAMPLES);
@@ -148,7 +155,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     await soar.locator('.mp-tile-container').filter({ hasText: AGENT_LABEL }).first().click();
     await soar.waitForFunction(() => /[?&]uuid=/i.test(location.href), null, { timeout: 15_000 }).catch(() => undefined);
     await expect(soar.getByText(AGENT_LABEL).first()).toBeVisible({ timeout: 20_000 });
-    await capture.shot(soar, 'fsa04-01-hello-agent-detail', { mask: uiMask(soar) });
+    await capture.shot(soar, 'fsa04-01-hello-agent-detail', SKIP_RECORD);
 
     const { result } = await triggerHello(soar, 'host-01.example.com');
     expect(result.answer).toContain('hello from the workshop agent for entity: host-01.example.com');
@@ -183,7 +190,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     for (const label of DEFAULT_TOOL_ROWS) {
       await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
     }
-    await capture.shot(soar, 'fsa04-02-tool-list-row-record', { mask: uiMask(soar) });
+    await capture.shot(soar, 'fsa04-02-tool-list-row-record', SKIP_RECORD);
   });
 
   // Page 02 s5: a real investigation, then the trace shows a question answered by
@@ -230,10 +237,9 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     await pb.click();
     await soar.waitForSelector('.jsplumb-draggable, [class*="workflow-step"], #designer-container', { timeout: 30_000 });
     await expect(soar.getByText(/Invoke AI Agent|Decision/i).first()).toBeVisible({ timeout: 20_000 });
-    // The designer header carries a "Last Modified <date> by <user>" line: mask it (privacy scan).
-    await capture.shot(soar, 'fsa04-04-playbook-branch-decision', {
-      mask: [...uiMask(soar), soar.locator('xpath=//*[not(*) and contains(normalize-space(.), "Last Modified")]')],
-    });
+    // The designer header carries a "Last Modified <date> by <user>" line; the date
+    // is benign content and the user name is a display name, so leave them visible.
+    await capture.shot(soar, 'fsa04-04-playbook-branch-decision', SKIP_RECORD);
   });
 
   // Page 03 s4: route B, the raw async trigger API. The effect is the documented

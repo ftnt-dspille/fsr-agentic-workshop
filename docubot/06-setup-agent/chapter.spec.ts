@@ -14,7 +14,7 @@
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
 import { expect, goToState, test, type AgentShotRun } from 'docubot';
-import { promptFor, shouldRunStep, uiMask } from '../lib/agentlab';
+import { promptFor, shouldRunStep } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -41,9 +41,10 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
     // Anchor on a VISIBLE People/Users element: a bare text match hits a hidden
     // nav <li> and never becomes visible.
     await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
-    // The People grid lists user email addresses; mask them for public-repo hygiene.
-    const emailMask = soar.getByText(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
-    await capture.shot(soar, 'fsa06-01-create-user', { mask: [...uiMask(soar), emailMask] });
+    // The People grid lists user email addresses; these are not lab secrets, so
+    // leave them visible (the scan skips email/date). The backstop still refuses a
+    // real lab IP, hostname, key or sensitive term.
+    await capture.shot(soar, 'fsa06-01-create-user', { scrubSkip: ['email', 'date-or-time'] });
   });
 
   // --- TUI pages: the write-approval prompt in each agent (real screenshots). ---
