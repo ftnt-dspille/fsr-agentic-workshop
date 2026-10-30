@@ -5,7 +5,7 @@ weight: 10
 description: "What an agent is in FortiSOAR: a code bundle with a manifest, a class, prompts and an allowlist, and the rules that make it import cleanly."
 ---
 
-An agent in FortiSOAR is a code bundle, not a point-and-click designer. You write a small package on your laptop, upload it, and then configure it in the UI: its LLM profile, its MCP servers and its masking. This page explains what goes in the bundle and which rules stop it from importing cleanly. The next page packages, uploads and routes one.
+An agent in FortiSOAR is a code bundle, not a point-and-click designer. You write a small package on your laptop, upload it, and then configure it in the UI: its LLM profile, its MCP servers and its masking. This page covers what goes in the bundle and the rules that stop it importing cleanly. The next page packages, uploads and routes one.
 
 ## 1. Know the bundle layout
 
@@ -20,11 +20,11 @@ An agent in FortiSOAR is a code bundle, not a point-and-click designer. You writ
 
 ## 2. Write the manifest carefully
 
-A manifest is short, and most import failures come from one missing or mistyped key.
+Most import failures come from one missing or mistyped manifest key.
 
 - The `name` must equal the name of the top folder in the zip.
 - `agentclass` must match a class in `agent.py`, and be unique across every installed agent. Do not reuse a built-in class name.
-- Declare every key, even when its value is empty. A key you leave out is stored as null, and a null can break list calls for every user, not only your agent. Use an empty list for `tags` and an empty string for an unused field, rather than omitting them.
+- Declare every key, even when its value is empty. A key you leave out is stored as null, and a null can break list calls for every user, not only your agent. Use an empty list or an empty string instead of omitting it.
 - Tags are routing. Use `Triage` for an agent that investigations should route to, and `Insight` for one that insight planning should use. Do not tag a custom agent `Assistant`. That tag is reserved for designer and connector widgets.
 - A `Test` tag makes the agent reachable only by a direct trigger.
 
@@ -43,7 +43,7 @@ Read a real one before you write yours. FortiSOAR ships its agents as open sourc
 
 ## 4. Read a sample manifest
 
-The manifest below is the one shipped in this workshop's example bundle. It validates on a real 8.0.1 appliance. Team-specific values are left as placeholders, but every key is present, because a key you omit is stored as null and a null can break list calls for every user. `category` and `help_online` are empty strings, `additional_information` an empty list: that is how you declare a key you have nothing for.
+The manifest below is the one shipped in this workshop's example bundle, and it validates on a real 8.0.1 appliance. Team-specific values are placeholders. Every key is present: `category` and `help_online` are empty strings and `additional_information` is an empty list, which is how you declare a key you have nothing for.
 
 ```json
 {

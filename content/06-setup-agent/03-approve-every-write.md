@@ -26,39 +26,43 @@ Create an alert named "Approval test" with severity Low, then tell me whether
 you were asked first.
 ```
 
-**What success looks like:** a prompt appears before the alert exists. Approve it and the alert is created; decline it and the agent reports that you said no. Delete the test alert afterwards.
+A prompt appears before the alert exists. Approve it and the alert is created; decline it and the agent tells you nothing was created. Delete the test alert afterwards. Then ask it to list the alerts: no prompt appears, because reads are never interrupted.
 
-Then ask it to list the alerts. No prompt appears: reads are never interrupted.
-
-### What each agent shows
-
-| Agent | What you see | How to approve |
-|---|---|---|
-| Claude Code | "requests your input", with the box, tool and arguments, a checkbox and Accept / Decline | Tick the box, then choose Accept |
-| Codex | The same text, with "Approve this change" as `1. True` / `2. False` (False is preselected) | Choose True, press Enter |
-| OpenCode | "fortisoar is requesting input", with `1. Yes` / `2. No` (No is preselected) | Choose Yes, press Enter |
+Each agent renders the same approval in its own style. Approving is always "yes" (or the preselected default is "no", so you have to choose):
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
-![Claude Code approval prompt](fsa06-05-claude-approval.png)
+Claude shows the tool, the module and the arguments, then asks **"Do you want to proceed?"** with a numbered list. Choose **1. Yes** to approve; **3. No** or Escape declines.
 
-After declining:
+<!-- step: fsa06-05-claude-approval manual: triggers a write in Claude Code to show the approval prompt; spends tokens -->
+<!-- capture: fsa06-05-claude-approval -->
+![fsa06-05-claude-approval](fsa06-05-claude-approval.png?height=600px)
 
-![Claude Code after declining](fsa06-09-claude-declined.png)
+Decline, and Claude reports the write was interrupted and asks what to do instead:
+
+<!-- step: fsa06-09-claude-declined manual: declines the Claude Code approval to show the result; spends tokens -->
+<!-- capture: fsa06-09-claude-declined -->
+![fsa06-09-claude-declined](fsa06-09-claude-declined.png?height=600px)
+
 {{% /tab %}}
 {{% tab title="Codex" %}}
-![Codex approval prompt](fsa06-06-codex-approval.png)
+Codex shows the box, the tool and the full arguments, then **"Approve this change"** with **1. True** / **2. False** (False preselected). Choose True and press Enter to approve.
 
-After declining:
+<!-- step: fsa06-06-codex-approval manual: triggers a write in Codex to show the approval prompt; spends tokens -->
+<!-- capture: fsa06-06-codex-approval -->
+![fsa06-06-codex-approval](fsa06-06-codex-approval.png?height=600px)
 
-![Codex after declining](fsa06-10-codex-declined.png)
+Decline, and Codex reports that the record was not created:
+
+<!-- step: fsa06-10-codex-declined manual: declines the Codex approval to show the result; spends tokens -->
+<!-- capture: fsa06-10-codex-declined -->
+![fsa06-10-codex-declined](fsa06-10-codex-declined.png?height=600px)
+
 {{% /tab %}}
 {{% tab title="OpenCode" %}}
-![OpenCode approval prompt](fsa06-07-opencode-approval.png)
+OpenCode surfaces the same approval through its own prompt. Approve it to let the write run, or decline to stop it. Run the test in section 2 to see exactly how your version renders it.
 {{% /tab %}}
 {{% /tabs %}}
-
-Choosing Accept without ticking the box, pressing Escape, or letting it time out all count as no.
 
 ## 3. The setting
 
@@ -88,14 +92,5 @@ fsr-agentic-toolkit permissions --write .claude/settings.json
 It merges into your existing settings and removes nothing you already have.
 
 {{% notice note %}}
-The prompt looks different in each agent. We checked Claude Code 2.1.312, Codex 0.165.0 and OpenCode 2.2.0, and all three show it. Do the test in section 2 with your own agent before relying on it, especially if it is not one of these.
+The prompt looks different in each agent. We checked Claude Code 2.1.312, Codex 0.165.0 and OpenCode 2.2.0, and all three show it. Run the test in section 2 with your own agent before relying on it, especially if it is not one of these. If a write ever runs with no prompt, your agent cannot show the server's request: set `FSR_MCP_APPROVAL=require`, or fall back to the agent's own tool approvals as described above.
 {{% /notice %}}
-
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| A write ran with no prompt | `auto` mode and your agent cannot show the prompt | Set `FSR_MCP_APPROVAL=require`, or use the agent's own tool approvals |
-| Every write is refused with "this client cannot ask the user" | `require` mode with an agent that cannot prompt | Switch to `auto` and use the agent's tool approvals |
-| The agent keeps retrying after you decline | It ignored the "do not retry" instruction | Tell it plainly to stop, and report the agent |
-| You are asked about something that is not a change | A tool that reads was marked as a write | Report it; reads should never prompt |

@@ -7,6 +7,10 @@ description: "Which AI paths can read, which can recommend, and which can change
 
 An agent that can read your alerts is useful. An agent that can change them needs a different level of trust. Before you run anything, learn which paths in this feature only read, which only recommend, and which can write.
 
+Four controls keep agents in bounds: they run as a real user with that user's permissions, indicators are masked before anything reaches the model, actions go through playbooks where people approve them, and every agent, tool and model call is traceable.
+
+![Staying in control: agents run as a user (real identity and permissions, no superuser), masked data (indicators masked before anything is sent to the model), people decide (actions go through playbooks with approval steps you define) and fully traceable (every agent, tool and model call is logged)](diagram-staying-in-control.png)
+
 ## 1. Read the table
 
 | Path | Can it change data? | What it can change |

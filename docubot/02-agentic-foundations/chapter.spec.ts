@@ -87,6 +87,10 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
     await contentType('Connectors');
     await contentType('AI Agent');
     await expect(soar.getByText('Filtered by:').first()).toBeVisible({ timeout: 30_000 });
+    // Gate the shot on the grid actually re-rendering to AI agents: wait for a
+    // shipped AI agent card (Alert Investigation) so a slow grid never leaves
+    // connector/solution-pack cards in the capture.
+    await expect(soar.getByText('Alert Investigation', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-02-agent-catalog', {
       mask: uiMask(soar),
     });
@@ -94,13 +98,14 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
 
   if (shouldRunStep('fsa02-03-mcp-servers')) await test.step('fsa02-03-mcp-servers', async () => {
     await soar.goto(`${origin}/ai-configuration/mcp-servers`, { waitUntil: 'domcontentloaded' });
+    // Assert the four built-in families that ship on every 8.0.1 box. Any
+    // externally registered server (FortiSIEM, deepwiki) is box-specific, so it
+    // is not asserted here; it still appears in the capture when present.
     for (const name of [
       'FortiSOAR Module Management',
-      'SOC Framework',
       'FortiSOAR Playbook Management',
+      'SOC Framework',
       'Utility Tools',
-      'deepwiki',
-      /FortiSIEM/i,
     ]) {
       await expect(soar.getByText(name).first()).toBeVisible({ timeout: 30_000 });
     }
@@ -113,8 +118,15 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
 
   if (shouldRunStep('fsa02-04-sop-compare')) await test.step('fsa02-04-sop-compare', async () => {
     await soar.goto(`${origin}/ai-configuration/organizational-context`, { waitUntil: 'domcontentloaded' });
-    await expect(soar.getByText('INVESTIGATION_SOP').first()).toBeVisible({ timeout: 30_000 });
-    await expect(soar.getByText('SOP - Malware Detection', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    // 66 org-context records span several pages, so the investigation SOPs are
+    // not on the first page. Filter the Title column (the grid's own column
+    // filter, not the top-bar search) to "SOP -" so the SOP records render at the
+    // top, then confirm the Malware SOP is among them. This replaces a
+    // filter-debounce sleep with a wait on the matched row.
+    await soar.locator('input[name="title"][placeholder="Search" i]').first().fill('SOP -');
+    await expect(
+      soar.locator('.ui-grid-row').filter({ hasText: 'SOP - Malware Detection' }).first(),
+    ).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-04-sop-compare', { mask: uiMask(soar) });
   });
 

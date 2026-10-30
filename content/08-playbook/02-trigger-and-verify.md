@@ -21,6 +21,9 @@ again to prove its description was updated by the playbook.
 
 <!-- step: fsa08-03-trigger-and-verify -->
 
+<!-- capture: fsa08-03-trigger-and-verify -->
+![fsa08-03-trigger-and-verify](fsa08-03-trigger-and-verify.png?height=600px)
+
 Watch the tool sequence - it is the verification pattern from chapter 1 end to end:
 
 1. `create_record` on alerts (the trigger fires server-side),
@@ -35,8 +38,8 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 
 **Verify in the UI:** open the alert; its description shows the playbook's text. Then open **Automation** > **Executed Playbooks** (the run history) and find your run.
 
-<!-- capture: fsa08-03-run-history -->
-![fsa08-03-run-history](fsa08-03-run-history.png)
+<!-- capture: fsa08-03-trigger-and-verify-run-history -->
+![fsa08-03-trigger-and-verify-run-history](fsa08-03-trigger-and-verify-run-history.png)
 
 {{% notice tip %}}
 Ask the agent for the record's lifecycle (`get_record_history`) and you get the whole story in one timeline: your create, the trigger, the playbook's update - each attributed and timestamped.
@@ -50,21 +53,3 @@ Ask the agent for the record's lifecycle (`get_record_history`) and you get the 
 | Run failed at Tag Alert | The update step's record reference | diagnose_playbook_run names the failing step and error; common cause is a mangled Jinja reference |
 | Run finished but description unchanged | Updated the wrong record or wrong field | Check the run's step results via get_playbook_run; read the alert by uuid |
 | Nothing in Executed Playbooks | Playbook inactive | Activate it and create a fresh alert (triggers do not fire retroactively) |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`02-trigger-and-verify#1`** (Sonnet run, sanitized)
-
-![08-playbook/02-trigger-and-verify#1](agent-run-02-trigger-and-verify-1.png)
-
-```text
-  > create_record {"module": "alerts", "data": {"name": "Agent Lab - suspicious login o...
-  > wait_for_playbook_run {"playbook": "Tag Agent Lab Alerts", "timeout": 120}
-  > get_record {"module": "alerts", "ref": "823a526b-bf35-4800-8aa8-612af2d442da", "...
-```
-
-</details>
-
-<!-- agent-drive:end -->

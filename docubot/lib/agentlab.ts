@@ -91,6 +91,32 @@ export function sh(cmd: string, args: string[], cwd?: string): string {
 }
 
 /**
+ * Drive the repeatable python seeder (tools/lab_setup.py) from a docubot spec's
+ * CONFIGURE phase, so one `docubot run` seeds the box and then captures. The
+ * seeder is idempotent (create-if-absent), so this is safe to call every run.
+ * It installs the SAME artifacts students download from static/examples, so the
+ * seed path and the student import path never drift.
+ *
+ * Box connection comes from the FSR_* env the run already sets (FSR_BASE_URL,
+ * FSR_USERNAME, FSR_PASSWORD, FSR_VERIFY_SSL). Mutating, so gate it behind the
+ * chapter's build flag; it is a no-op worth skipping on a read-only run.
+ *
+ * @param cmd a lab_setup.py subcommand: 'seed' | 'org-context' | 'install-agent'
+ */
+export function labSeed(cmd: string): string {
+  const py = process.env.FSR_PYTHON || process.env.DOCUBOT_PYTHON || 'python3';
+  const script = path.join(__dirname, '..', '..', 'tools', 'lab_setup.py');
+  const out = execFileSync(py, [script, cmd], {
+    encoding: 'utf8',
+    timeout: 5 * 60 * 1000,
+    env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
+    cwd: path.join(__dirname, '..', '..'),
+  });
+  console.log(`[labSeed ${cmd}] ${out.trim().split('\n').pop()}`);
+  return out;
+}
+
+/**
  * The Nth "Give your agent this prompt" fenced block on a content page — the
  * SAME prompt the student is told to run, so the spec proves the documented
  * text, never a spec-only copy. `page` is a content page stem in this chapter,

@@ -1,3 +1,10 @@
 {
-  "steps": []
+  "steps": [
+    {
+      "id": "fsa04-02-tool-list-row",
+      "status": "passed",
+      "durationMs": 4276,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/04-build-your-own-agent/chapter.spec.ts"
+    }
+  ]
 }

@@ -23,6 +23,9 @@ and show me a table of what you found.
 
 <!-- step: fsa07-03-seed-records -->
 
+<!-- capture: fsa07-03-seed-records -->
+![fsa07-03-seed-records](fsa07-03-seed-records.png?height=600px)
+
 The agent should reach for `get_or_create_record` or `upsert_record` (idempotent, matching on `hostname`) rather than blind `create_record` calls, and use `query_records` with a filter for the read-back. The addresses are TEST-NET documentation ranges, safe for lab content.
 
 ## 2. What success looks like
@@ -32,8 +35,8 @@ The agent should reach for `get_or_create_record` or `upsert_record` (idempotent
 
 **Verify in the UI:** open the Agent Lab Assets module and check the grid.
 
-<!-- capture: fsa07-03-records-grid -->
-![fsa07-03-records-grid](fsa07-03-records-grid.png)
+<!-- capture: fsa07-03-seed-records-grid -->
+![fsa07-03-seed-records-grid](fsa07-03-seed-records-grid.png?height=600px)
 
 ## 3. Read the audit trail
 
@@ -47,6 +50,9 @@ record's uuid.
 
 <!-- step: fsa07-04-record-lifecycle -->
 
+<!-- capture: fsa07-04-record-lifecycle -->
+![fsa07-04-record-lifecycle](fsa07-04-record-lifecycle.png?height=600px)
+
 **What success looks like:** a timeline from `record_lifecycle` whose create event is attributed to your agent's login. Every write your agent has made in this chapter is in the box's audit log under that identity - this is why chapter 6 told you to make a dedicated login.
 
 ## Troubleshooting
@@ -56,34 +62,3 @@ record's uuid.
 | Picklist error naming valid_values | Wrong casing like "critical" | The error lists the valid values; the agent should retry with the exact one |
 | Query returns every record | Filter used the picklist display value against the IRI field | Ask the agent to filter on `criticality.itemValue` |
 | Duplicate records after re-runs | Agent used create_record, not upsert | Delete the extras (confirm-gated) and redo with "skip any that already exist" |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`03-work-with-records#1`** (Sonnet run, sanitized)
-
-![07-users-modules-records/03-work-with-records#1](agent-run-03-work-with-records-1.png)
-
-```text
-  > describe_module {"module": "agentlab_assets"}
-  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "db-server-01", "i...
-  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "web-server-01", "...
-  > get_or_create_record {"module": "agentlab_assets", "data": {"hostname": "jump-host-01", "i...
-  > query_records {"module": "agentlab_assets", "filters": [{"field": "criticality", "o...
-  > query_records {"module": "agentlab_assets", "sort": [{"field": "hostname", "directi...
-  > query_records {"module": "agentlab_assets", "sort": [{"field": "hostname", "directi...
-```
-
-**`03-work-with-records#2`** (Sonnet run, sanitized)
-
-![07-users-modules-records/03-work-with-records#2](agent-run-03-work-with-records-2.png)
-
-```text
-  > search_records {"module": "agentlab_assets", "term": "db-server-01", "limit": 5}
-  > record_lifecycle {"entity_uuid": "9e8da455-0094-412e-8609-2ec6e1fd4872", "entity_type"...
-```
-
-</details>
-
-<!-- agent-drive:end -->

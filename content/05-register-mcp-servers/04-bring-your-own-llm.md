@@ -25,7 +25,7 @@ Prefer the connector-backed route for a class. It keeps the key encrypted in the
 
 A health check is not enough. A key on an account with no credit can pass the health check and then fail the first real call, and the investigation fails in normalization with a quota error.
 
-<!-- step: fsa05-06-byo-profile manual: bring-your-own LLM profile; the page says not to run it on a shared box -->
+<!-- step: fsa05-08-byo-profile manual: bring-your-own LLM profile; the page says not to run it on a shared box -->
 
 Only on a non-production box, and only if your build supports it:
 

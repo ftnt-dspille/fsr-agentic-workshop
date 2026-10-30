@@ -51,6 +51,9 @@ published.
 
 <!-- step: fsa08-04-diagnose-run -->
 
+<!-- capture: fsa08-04-diagnose-run -->
+![fsa08-04-diagnose-run](fsa08-04-diagnose-run.png?height=600px)
+
 Watch the tool sequence: `publish_playbook` (the broken version), `create_record` to trigger it, `wait_for_playbook_run` which comes back `failed`, then `diagnose_playbook_run`, and finally `publish_playbook` again to restore the good version.
 
 {{% notice note %}}
@@ -86,24 +89,3 @@ The agent can do all four from one request. Your job is to read what it changed 
 | diagnose_playbook_run says the run was not found | Diagnosing the wrong run, or the run is still in flight | Diagnose the newest run of the playbook by name, after the wait returns |
 | The fix did not take | The restore republished the broken YAML | Check the record reference the agent put back; it must be the triggering alert's id, not the all-zeros placeholder |
 | The good "Tag Agent Lab Alerts" playbook changed | The practice YAML reused its name | It should not - the practice playbook is "Agent Lab Diagnose Practice", a separate playbook; publish that name, not the chapter 8 page 1 one |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`03-diagnose-a-failed-run#1`** (Sonnet run, sanitized)
-
-![08-playbook/03-diagnose-a-failed-run#1](agent-run-03-diagnose-a-failed-run-1.png)
-
-```text
-  > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
-  > create_record {"module": "alerts", "data": {"name": "Agent Lab diag test"}}
-  > wait_for_playbook_run {"playbook": "Agent Lab Diagnose Practice"}
-  > debug_run {"playbook_or_id": "22065"}
-  > diagnose_run {"playbook": "Agent Lab Diagnose Practice", "run": "22065"}
-  > publish_playbook {"yaml_text": "collection: Agent Lab visible: true playbooks:   - nam...
-```
-
-</details>
-
-<!-- agent-drive:end -->

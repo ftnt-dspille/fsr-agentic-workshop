@@ -24,6 +24,9 @@ list their names.
 
 <!-- step: fsa07-01-bulk-triage -->
 
+<!-- capture: fsa07-01-bulk-triage -->
+![fsa07-01-bulk-triage](fsa07-01-bulk-triage.png?height=600px)
+
 Watch the shape of the work: one `query_records` to find the batch, then one `update_record` per match. The agent reports the count and the names, so you can check its arithmetic against the grid.
 
 {{% notice note %}}
@@ -47,33 +50,3 @@ Updating a record is a tier-2 write: the agent can do it once the read-only guar
 | "status value not found" | The status picklist differs on your build | Ask the agent to read the AlertStatus picklist first, then use a value it lists |
 | The agent changed alerts it should not have | The query was too broad | Name the exact starts-with string and the exact source status in the prompt |
 | It did one update and stopped | The agent treated the batch as a single record | Tell it to query first, then update every row the query returned |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`01-bulk-triage#1`** (Sonnet run, sanitized)
-
-![07-users-modules-records/01-bulk-triage#1](agent-run-01-bulk-triage-1.png)
-
-```text
-  > query_records {"module": "alerts", "filters": [{"field": "name", "operator": "like"...
-  > query_records {"module": "alerts", "filters": [{"field": "name", "operator": "like"...
-  > resolve_picklist {"module": "alerts", "field": "status", "value": "Open"}
-  > resolve_picklist {"module": "alerts", "field": "status", "value": "Investigating"}
-  > query_records {"module": "alerts", "filters": [{"field": "name", "operator": "like"...
-  > update_record {"module": "alerts", "ref": "1100adda-f541-459e-9f82-77229a2fbad6", "...
-  > update_record {"module": "alerts", "ref": "9f0bfcb3-a94b-490f-a33f-be36b29c2822", "...
-  > update_record {"module": "alerts", "ref": "d945c043-15cb-4788-b5e4-f0a4ea5d88d2", "...
-  > update_record {"module": "alerts", "ref": "3e2357b8-5b79-417c-9e63-77d57d89730b", "...
-  > update_record {"module": "alerts", "ref": "50ec7684-9974-4482-8cf0-9371850a4411", "...
-  > update_record {"module": "alerts", "ref": "3b71a1dc-eb20-4b05-9339-612dcc9bc3c5", "...
-  > update_record {"module": "alerts", "ref": "e6e371f0-fc38-4b97-9a6f-e1ddee61acae", "...
-  > update_record {"module": "alerts", "ref": "f202e5ad-9b04-4242-87a2-b7eb66056604", "...
-  > update_record {"module": "alerts", "ref": "acf921d4-9da8-4bb8-ac43-1cd2155122f2", "...
-  ... 2 more tool calls
-```
-
-</details>
-
-<!-- agent-drive:end -->

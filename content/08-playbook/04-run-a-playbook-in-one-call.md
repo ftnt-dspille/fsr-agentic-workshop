@@ -15,7 +15,7 @@ This is the rule the rest of the lab follows: **if the toolkit has a workflow fo
 
 ## 1. Ask the agent
 
-Use a throwaway playbook that touches no records, so the test run leaves nothing behind:
+Give your agent this prompt. It uses a throwaway playbook that touches no records, so the test run leaves nothing behind:
 
 ```text
 Use run_playbook_yaml to test-run this probe and clean up after it. Do not
@@ -39,6 +39,11 @@ playbooks:
 
 Tell me the status, each step's result, and whether anything was left on the box.
 ```
+
+<!-- step: fsa08-05-run-in-one-call -->
+
+<!-- capture: fsa08-05-run-in-one-call -->
+![fsa08-05-run-in-one-call](fsa08-05-run-in-one-call.png?height=600px)
 
 **What success looks like:**
 

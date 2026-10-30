@@ -31,6 +31,7 @@ Requires the pyfsr package.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -40,6 +41,16 @@ from typing import Any
 # What the labs need. Change these in one place.
 
 ALERT_NAME_PREFIX = "Agent Lab: "  # reset_lab.py removes alerts with this prefix
+
+# Repeatable lab artifacts. These are the same files students download and import
+# (the "working version"); the seeders below install them so a rerun is one
+# command. Paths are relative to the workshop repo root (this file's parent's
+# parent).
+REPO_ROOT = Path(__file__).resolve().parent.parent
+EXAMPLES = REPO_ROOT / "static" / "examples"
+ORG_CONTEXT_DIR = EXAMPLES / "org-context"   # *.json org-context records (TOOL_LIST, ...)
+AGENT_BUNDLE = EXAMPLES / "workshop_hello_agent"  # chapter 4 custom agent bundle
+AGENT_NAME = "workshop_hello_agent"
 
 # The demo alerts chapter 6 onward investigate. Picklist fields (type, status,
 # severity, source) are given by name; pyfsr resolves them to IRIs on create.
@@ -166,6 +177,12 @@ def build_client(env: dict[str, str], *, require_admin: bool = False):
     if not base:
         sys.exit("lab_setup: FSR_BASE_URL is required")
     verify = (setting("FSR_VERIFY_SSL", env, "1") or "1").lower() not in ("0", "false", "no")
+    if not verify or (setting("FSR_SUPPRESS_INSECURE_WARNINGS", env) or "").lower() in ("1", "true", "yes"):
+        try:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        except Exception:
+            pass
     user = setting("FSR_USERNAME", env)
     password = setting("FSR_PASSWORD", env)
     if require_admin:
@@ -214,6 +231,116 @@ def cmd_seed(client) -> int:
             failed += 1
     print(f"\nseed: {created} created, {skipped} already present, {failed} failed")
     return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
+# org-context (TOOL_LIST and any other records the labs need)
+
+def existing_org_context(client) -> dict[tuple[str, str], dict]:
+    """Map (category, subCategory) -> record for every org-context record."""
+    out: dict[tuple[str, str], dict] = {}
+    res = client.get("/api/3/organizational_contexts", params={"$limit": 500})
+    members = res.get("hydra:member", res) if isinstance(res, dict) else res
+    for rec in members or []:
+        out[(rec.get("category"), rec.get("subCategory"))] = rec
+    return out
+
+
+def org_context_artifacts() -> list[dict]:
+    """Load every org-context record definition shipped under static/examples."""
+    if not ORG_CONTEXT_DIR.is_dir():
+        return []
+    specs = []
+    for path in sorted(ORG_CONTEXT_DIR.glob("*.json")):
+        specs.append(json.loads(path.read_text(encoding="utf-8")))
+    return specs
+
+
+def cmd_org_context(client) -> int:
+    """Create the shipped org-context records (idempotent by category+subCategory).
+
+    Create-only: an existing record is left untouched, so a hand-edited TOOL_LIST
+    is never clobbered. Delete it first if you want the shipped version back.
+    """
+    specs = org_context_artifacts()
+    if not specs:
+        print(f"org-context: no artifacts in {ORG_CONTEXT_DIR}")
+        return 0
+    have = existing_org_context(client)
+    created = skipped = failed = 0
+    for spec in specs:
+        key = (spec.get("category"), spec.get("subCategory"))
+        label = f"{key[0]}/{key[1]}"
+        if key in have:
+            print(f"skip (exists): {label}")
+            skipped += 1
+            continue
+        try:
+            client.post("/api/3/organizational_contexts", data=spec)
+            print(f"created: {label}")
+            created += 1
+        except Exception as exc:
+            print(f"FAILED: {label}: {exc}")
+            failed += 1
+    print(f"\norg-context: {created} created, {skipped} already present, {failed} failed")
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
+# install-agent (chapter 4 custom AI agent bundle)
+
+def agent_installed(client, name: str) -> bool:
+    try:
+        res = client.get("/ai/agents")
+    except Exception:
+        return False
+    rows = res if isinstance(res, list) else (
+        res.get("items") or res.get("agents") or res.get("hydra:member") or res.get("members") or [])
+    return any((r.get("name") == name or r.get("agent_name") == name) for r in rows if isinstance(r, dict))
+
+
+def zip_bundle(bundle_dir: Path) -> Path:
+    """Zip a bundle folder so the archive's top folder == the folder name."""
+    import tempfile, zipfile
+    out = Path(tempfile.mkdtemp(prefix="labseed-")) / f"{bundle_dir.name}.zip"
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in bundle_dir.rglob("*"):
+            if p.is_file():
+                zf.write(p, p.relative_to(bundle_dir.parent))
+    return out
+
+
+def cmd_install_agent(client) -> int:
+    """Import the chapter-4 hello agent via POST /ai/agent/import (idempotent).
+
+    Uses ?replace=true so a rerun refreshes the bundle. The bundle is the same
+    folder students download and zip, so the seed path and the student path never
+    drift.
+    """
+    if not AGENT_BUNDLE.is_dir():
+        print(f"install-agent: bundle not found at {AGENT_BUNDLE}")
+        return 1
+    if agent_installed(client, AGENT_NAME):
+        print(f"skip (installed): {AGENT_NAME}")
+        return 0
+    zip_path = zip_bundle(AGENT_BUNDLE)
+    base = client.base_url if hasattr(client, "base_url") else None
+    try:
+        with open(zip_path, "rb") as fh:
+            # pyfsr exposes a requests session with auth headers already set.
+            resp = client.session.post(
+                f"{base}/ai/agent/import",
+                params={"replace": "true"},
+                files={"file": (zip_path.name, fh, "application/zip")},
+                verify=client.verify_ssl if hasattr(client, "verify_ssl") else False,
+            )
+        ok = getattr(resp, "status_code", 0) in (200, 201, 202)
+        print(f"install-agent: {AGENT_NAME} -> HTTP {getattr(resp, 'status_code', '?')}"
+              + ("" if ok else f" :: {getattr(resp, 'text', '')[:300]}"))
+        return 0 if ok else 1
+    except Exception as exc:
+        print(f"install-agent FAILED: {exc}")
+        return 1
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +409,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check", help="report readiness, change nothing")
     sub.add_parser("seed", help="create the demo alerts (idempotent)")
+    sub.add_parser("org-context", help="create the shipped org-context records, e.g. TOOL_LIST (idempotent)")
+    sub.add_parser("install-agent", help="import the chapter-4 hello agent bundle (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
     args = ap.parse_args(argv)
 
@@ -292,6 +421,10 @@ def main(argv: list[str] | None = None) -> int:
     client = build_client(env)
     if args.cmd == "seed":
         return cmd_seed(client)
+    if args.cmd == "org-context":
+        return cmd_org_context(client)
+    if args.cmd == "install-agent":
+        return cmd_install_agent(client)
     return cmd_check(client)
 
 

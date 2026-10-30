@@ -9,30 +9,32 @@ The agent authenticates to FortiSOAR with a dedicated user login. Create one so 
 
 ## 1. Create the user
 
-<!-- step: fsa06-01-create-user manual: creates a user in the UI; screenshot pending recapture -->
+<!-- step: fsa06-01-create-user manual: creates a user in the UI -->
 
 1. Log in to your FortiSOAR instance at `https://fortisoar.example.com`.
-2. Open **System** > **Identity & Access Management** > **Users**. Some versions name the tab or menu differently.
-3. Click **Add**, give it a login id like `agentlab`, set a password, and assign a role with enough rights for the whole workshop. The labs do more than read and write records: chapter 7 **creates a module** (a schema change), chapter 9 **installs a connector**, and chapter 8 **publishes a playbook**. **Full App Permissions** alone covers record CRUD but not those, so pair it with **Application Administrator** (module schema and connectors), **Security Administrator** (roles and access), and **Playbook Administrator** (playbook publish) - or use a role your instructor confirms can manage modules, connectors and playbooks. In production, scope this down.
+2. Open **System** > **Identity & Access Management** > **Users**.
+3. Click **Add**, give it a login id like `agentlab`, and set a password.
+4. Assign a role with enough rights for the whole workshop (next section), then **Save** and note the login id and password.
 
-> Operators: `tools/lab_setup.py grant` unions exactly those three roles onto the login's role from an admin account, so you do not have to click through the UI. See `tools/LAB_OPERATOR.md`.
-4. Save, then note the login id and password.
-
-<!-- capture: fsa06-01-api-key-page -->
-![fsa06-01-api-key-page](fsa06-01-api-key-page.png)
+<!-- capture: fsa06-01-create-user -->
+![fsa06-01-create-user](fsa06-01-create-user.png?height=600px)
 
 {{% notice warning %}}
 Treat the password like any credential. It goes into your agent's MCP configuration and nowhere else: not into a git repo, not into a prompt, not into a chat transcript you might share.
 {{% /notice %}}
 
-## 2. What success looks like
+## 2. Give the role enough rights
 
-The user appears in the Users list with your chosen role. Keep the login id and password handy for the next page.
+The labs do more than read and write records. Chapter 7 **creates a module** (a schema change), chapter 8 **publishes a playbook**, and chapter 9 **installs a connector** - none of which **Full App Permissions** covers on its own. Pair it with three administrator roles:
 
-## Troubleshooting
+| Role | Covers |
+|---|---|
+| Application Administrator | module schema and connectors |
+| Security Administrator | roles and access |
+| Playbook Administrator | playbook publish |
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| No Users page under Settings | Your login lacks the Security read permission | Use an admin account or ask your instructor |
-| Login works for reads but writes return 403 | The role lacks Create/Update on the module | Edit the role, or assign Full App Permissions for the lab |
-| Creating a module returns 403 on `staging_model_metadatas` | The role has record CRUD but not module-schema rights | Add **Application Administrator** (Application Editor rights) to the role; Full App Permissions alone is not enough |
+Or use any role your instructor confirms can manage modules, connectors and playbooks. In production, scope this down.
+
+> Operators: `tools/lab_setup.py grant` unions exactly those three roles onto the login's role from an admin account, so you do not have to click through the UI. See `tools/LAB_OPERATOR.md`.
+
+The user now appears in the Users list with your chosen role. Keep the login id and password handy for the next page.

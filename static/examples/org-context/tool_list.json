@@ -1,0 +1,8 @@
+{
+  "title": "TOOL_LIST",
+  "category": "INFRA_INFO",
+  "subCategory": "TOOL_LIST",
+  "description": "Investigation tool table. Replaces the built-in tool table for every alert investigation. The planner writes one question per active row. Keep all nine default rows, then append your own.",
+  "llmSummarize": false,
+  "content": "| Avenue | Source | Required field | Active |\n| -- | -- | -- | -- |\n| Approved activity | Org Context | IOCs + activity | Yes |\n| Change authorization | ITSM | host + window | Yes |\n| Detection quality | SIEM (raw event) | case_id + rule | Yes |\n| Historical baseline | SIEM | entity | Yes |\n| Asset criticality | CMDB | host | Yes |\n| Identity status | IAM | user | Yes |\n| IOC reputation | Threat Intel | each public IOC | Yes |\n| Prior disposition | Alert Correlation | each entity | Yes |\n| Endpoint behavior | EDR | process | Yes |\n"
+}

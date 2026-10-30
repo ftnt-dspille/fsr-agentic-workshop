@@ -25,6 +25,9 @@ criticality High, and show me that record.
 
 <!-- step: fsa07-02-create-module -->
 
+<!-- capture: fsa07-02-create-module -->
+![fsa07-02-create-module](fsa07-02-create-module.png?height=600px)
+
 Expect one workflow call, `provision_module`, that runs the phases below in order. It is confirm-gated because it commits schema changes appliance-wide, so the agent must ask you before confirming.
 
 1. **Create** the module with the field list - it lands in **staging**.
@@ -47,8 +50,8 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 
 **Verify in the UI:** the new module appears in the left navigation (you may need to reload the browser). Open it; the test record is there.
 
-<!-- capture: fsa07-02-module-in-ui -->
-![fsa07-02-module-in-ui](fsa07-02-module-in-ui.png)
+<!-- capture: fsa07-02-create-module-ui -->
+![fsa07-02-create-module-ui](fsa07-02-create-module-ui.png?height=600px)
 
 ## Troubleshooting
 
@@ -59,24 +62,3 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 | Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
 | criticality arrives as plain text | Field was created as text, not a picklist binding | Name the Severity picklist in the field spec so it binds; fix an already-created field in the UI (Settings > Application Editor > Modules) |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`02-create-a-module#1`** (Sonnet run, sanitized)
-
-![07-users-modules-records/02-create-a-module#1](agent-run-02-create-a-module-1.png)
-
-```text
-  > provision_module {"module": "agentlab_assets", "label": "Agent Lab Assets", "plural": ...
-  > provision_module {"module": "agentlab_assets", "check_only": true}
-  > provision_module {"module": "agentlab_assets", "check_only": true, "confirm": true}
-  > provision_module {"module": "agentlab_assets", "confirm": true}
-  > create_record {"module": "agentlab_assets", "data": {"hostname": "build-server-01",...
-  > get_record {"module": "agentlab_assets", "ref": "d942ea76-3559-40f0-bd9c-6424cda...
-```
-
-</details>
-
-<!-- agent-drive:end -->

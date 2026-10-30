@@ -61,10 +61,6 @@ Open the AI Configurations group of the left navigation and read what it shows. 
 2. Confirm there is no "AI feature not enabled" banner. The enablement switch and the token balance are under **System** > **System Configuration** > **FortiAI**, not in the AI Configurations group.
 3. If a token balance is shown there, note it. Do not change any setting.
 
-The enablement page is under **System** > **System Configuration** > **FortiAI**. It
-shows whether the AI features are enabled and, on builds that expose it, the
-remaining token balance.
-
 <!-- capture: fsa02-01-ai-enabled -->
 ![fsa02-01-ai-enabled](fsa02-01-ai-enabled.png?height=600px)
 
@@ -99,14 +95,14 @@ Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Conten
 
 <!-- step: fsa02-03-mcp-servers -->
 
-Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. The 8.0.1 build this page was checked against lists six, all active and all on the HTTP transport:
+Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. A fresh 8.0.1 box lists the four built-in families, all active and all on the HTTP transport:
 
 - **FortiSOAR Module Management**: reads and writes records and modules.
-- **SOC Framework**: alert and indicator tools.
 - **FortiSOAR Playbook Management**: runs playbooks and reports their status.
+- **SOC Framework**: alert and indicator tools.
 - **Utility Tools**: helper tools.
-- **deepwiki**: a public documentation server.
-- **FortiSIEM**: a connector-backed server for FortiSIEM operations. It wraps installed connector operations as tools, so it is not one of the three FortiSOAR families.
+
+Any external or connector-backed server someone has registered (for example a FortiSIEM endpoint, or a public docs server like deepwiki) shows up in this same list. You register one yourself in chapter 5.
 
 <!-- capture: fsa02-03-mcp-servers -->
 ![fsa02-03-mcp-servers](fsa02-03-mcp-servers.png?height=600px)
@@ -119,6 +115,10 @@ Open the MCP servers list under AI Configurations. Identify the built-in servers
 If the names on your build differ, use what the list shows.
 
 ## 5. Compare an SOP with the planner
+
+Organization context is your SOC's own knowledge: the SOPs, working hours and approved activity an investigation reads before it calls anything malicious. It is retrieved per investigation, not baked into the model, which is why the same inputs produce the same reasoning on your box.
+
+![Organization context: what goes in (SOPs per alert type, working hours and maintenance windows, approved systems, trusted networks and risk criteria) and how agents use it (retrieved per investigation, the SOP decides which questions get asked, approved activity rules out false positives)](diagram-organization-context.png)
 
 <!-- step: fsa02-04-sop-compare -->
 

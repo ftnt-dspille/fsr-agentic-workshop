@@ -23,6 +23,9 @@ errors, and show me the compiled result. Do not publish yet.
 
 <!-- step: fsa08-01-compile-yaml -->
 
+<!-- capture: fsa08-01-compile-yaml -->
+![fsa08-01-compile-yaml](fsa08-01-compile-yaml.png?height=600px)
+
 Working from the toolkit's reference, the agent should produce YAML along these lines and run `compile_playbook_yaml` on it:
 
 ```yaml
@@ -67,10 +70,13 @@ Name the collection and playbook in the prompt (not "that playbook"): the publis
 
 <!-- step: fsa08-02-publish-playbook -->
 
+<!-- capture: fsa08-02-publish-playbook -->
+![fsa08-02-publish-playbook](fsa08-02-publish-playbook.png?height=600px)
+
 **Verify in the UI:** open **Playbooks** in the left navigation. The "Agent Lab" collection holds "Tag Agent Lab Alerts"; open it and check the canvas shows the three steps with the on-create trigger.
 
-<!-- capture: fsa08-02-playbook-canvas -->
-![fsa08-02-playbook-canvas](fsa08-02-playbook-canvas.png)
+<!-- capture: fsa08-02-publish-playbook-canvas -->
+![fsa08-02-publish-playbook-canvas](fsa08-02-publish-playbook-canvas.png)
 
 {{% notice tip %}}
 Once you are comfortable with these two calls, page 4 collapses them - plus the run itself - into one tool, `run_playbook_yaml`, which is how you should test-run a new playbook.
@@ -85,32 +91,3 @@ Once you are comfortable with these two calls, page 4 collapses them - plus the 
 | Compile error no_trigger | Missing the start_on_create step | The YAML needs exactly one trigger step per playbook |
 | Compile ok but publish fails | Collection name collision on the box | Rename the collection or ask the agent to list existing collections first |
 | Playbook exists but shows inactive | Push did not activate it | Ask the agent to verify and activate it, or toggle it in the UI |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`01-author-and-publish#1`** (Sonnet run, sanitized)
-
-![08-playbook/01-author-and-publish#1](agent-run-01-author-and-publish-1.png)
-
-```text
-  > playbook_yaml_reference {}
-  > playbook_yaml_reference {"topic": "update_record"}
-  > playbook_yaml_reference {"topic": "start_on_create"}
-  > playbook_yaml_reference {"topic": "Step types"}
-  > compile_playbook_yaml {"yaml_text": "collection: Agent Lab description: Agent Lab playbooks...
-```
-
-**`01-author-and-publish#2`** (Sonnet run, sanitized)
-
-![08-playbook/01-author-and-publish#2](agent-run-01-author-and-publish-2.png)
-
-```text
-  > publish_playbook {"yaml_text": "collection: Agent Lab description: Agent Lab playbooks...
-  > query_records {"module": "workflows", "filters": [{"field": "uuid", "operator": "eq...
-```
-
-</details>
-
-<!-- agent-drive:end -->

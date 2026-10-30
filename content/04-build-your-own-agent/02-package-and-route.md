@@ -5,7 +5,7 @@ weight: 20
 description: "Package a small agent, upload it, test it directly, then make an investigation route questions to it through the tool table."
 ---
 
-In this page you package a small agent, upload it, prove it runs, and then make an investigation send it a question. The last step is the one most people miss: a tag alone does not route a question to your agent. The tool table does.
+On this page you package a small agent, upload it, prove it runs, and make an investigation send it a question. Most people miss the last part: a tag alone does not route a question to your agent. The tool table does.
 
 ## 1. Package the bundle
 
@@ -23,18 +23,18 @@ The UI upload control is gated. Enable **System Configuration > Advanced Develop
 
 ## 2. Upload it
 
+<!-- step: fsa04-00-upload-agent -->
+
 There are two supported ways to install the bundle. Use whichever fits.
 
 **A. Through the UI (Content Hub).** With the toggle above on, open **Content Hub > Manage**, filter to **AI Agent**, and use **Upload > Upload AI Agent**. The panel that slides in is a drop zone:
 
-<!-- capture: fsa04-04-upload-dialog -->
-![fsa04-04-upload-dialog](fsa04-04-upload-dialog.png)
+<!-- capture: fsa04-00-upload-agent-dialog -->
+![fsa04-00-upload-agent-dialog](fsa04-00-upload-agent-dialog.png?height=600px)
 
 Choose your zip (or drag it onto the drop zone). Selecting the file uploads and activates the agent in one step; on success the panel reports it was added. If an agent of the same name already exists, tick **Replace existing version** before choosing the file, or you get a `CS-AI-AGENT-11` conflict. The agent then appears as a card in the catalog with its own detail page.
 
-**B. Through the API.** Post the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`. Note: an agent installed this way is active and triggerable but is **not** listed in the Content Hub catalog; use path A if you want the catalog card and detail page.
-
-If an upload fails with a multipart or "field required" error, the request is not reaching the AI service as a file: the multipart field must be named `file`.
+**B. Through the API.** Post the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`. An agent installed this way is active and triggerable but is **not** listed in the Content Hub catalog. Use path A if you want the catalog card and detail page.
 
 {{% notice warning %}}
 A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again.
@@ -46,7 +46,7 @@ After import, check that the agent is active. Some builds import agents inactive
 
 Your first agent should not call an LLM. Make it return a fixed structured answer built from its input. That proves packaging, import, activation and a direct call.
 
-<!-- step: fsa04-01-hello-agent manual: packages, imports and triggers a lab agent in the UI; no spec written yet (the hello agent makes no LLM call, so it spends no tokens) -->
+<!-- step: fsa04-01-hello-agent -->
 
 Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path: `POST /ai/agents/{agent_name}/trigger` (note the plural `agents`), with your input as the JSON body: the object your `inputformat` declares, for the hello agent `{"entity": "host-01.example.com"}`. The call returns `202` with a `task_id` and a status:
 
@@ -68,11 +68,11 @@ Poll `GET /ai/agents/{task_id}/status` until the status reads `completed`, then 
 
 The trigger, poll and result for the hello agent look like this (token, host and task id are placeholders):
 
-<!-- capture: fsa04-01-trigger-result -->
-![fsa04-01-trigger-result](fsa04-01-trigger-result.png)
+<!-- capture: fsa04-01-hello-agent-trigger-result -->
+![fsa04-01-hello-agent-trigger-result](fsa04-01-hello-agent-trigger-result.png?height=600px)
 
-<!-- capture: fsa04-01-agent-detail -->
-![fsa04-01-agent-detail](fsa04-01-agent-detail.png)
+<!-- capture: fsa04-01-hello-agent-detail -->
+![fsa04-01-hello-agent-detail](fsa04-01-hello-agent-detail.png?height=600px)
 
 **What success looks like**
 
@@ -113,12 +113,12 @@ Your row is one more line: a short Avenue name, the Source your agent reads, the
 
 Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds.
 
-<!-- step: fsa04-02-tool-list-row manual: edits the TOOL_LIST record by hand; needs the agent from fsa04-01 -->
+<!-- step: fsa04-02-tool-list-row -->
 
 Open the `TOOL_LIST` record. Add one row for your agent. Its description should name the entity the agent needs, such as a host, and the kind of evidence it returns. Keep the nine defaults.
 
-<!-- capture: fsa04-02-tool-list-record -->
-![fsa04-02-tool-list-record](fsa04-02-tool-list-record.png)
+<!-- capture: fsa04-02-tool-list-row-record -->
+![fsa04-02-tool-list-row-record](fsa04-02-tool-list-row-record.png?height=600px)
 
 **What success looks like**
 
@@ -127,7 +127,7 @@ Open the `TOOL_LIST` record. Add one row for your agent. Its description should 
 
 ## 5. Check the route with a test investigation
 
-<!-- step: fsa04-03-route-check manual: checks the agent route with a FortiAI invocation; spends tokens -->
+<!-- step: fsa04-03-route-check -->
 
 Run an investigation on a seeded alert that has the entity your agent needs. When the run finishes, open its trace and find the question your row produced. Then find the call to your agent.
 
@@ -137,7 +137,7 @@ Run an investigation on a seeded alert that has the entity your agent needs. Whe
 - The question was answered by your agent, and the answer reached the summary or the next actions.
 
 {{% notice note %}}
-The routing instruction in the platform names the built-in agents with a fixed mapping. Routing to your agent worked in testing, but a strong mismatch between the row and your description may not route. If your question goes to a built-in agent instead, tighten your row's wording first. Changing the routing instruction itself is an export, edit and re-import, and an upgrade reverts it.
+The platform's routing instruction maps the built-in agents by name. Routing to your agent worked in testing, but a strong mismatch between your row and your description may not route. If the question goes to a built-in agent, tighten your row's wording first. Changing the routing instruction itself is an export, edit and re-import, and an upgrade reverts it.
 {{% /notice %}}
 
 ## Troubleshooting

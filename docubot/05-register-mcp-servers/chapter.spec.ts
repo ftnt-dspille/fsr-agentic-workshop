@@ -1,0 +1,176 @@
+// Chapter 5 - register MCP servers. Registers the public DeepWiki remote server
+// (auth none) through the Connect MCP Server form, checks its row and status,
+// grants it to one agent, and (opt-in, spends FortiAI credits) proves the agent
+// can use it. UI shots go through the gui device and capture.shot; box effects
+// are read back through the app's own authenticated API (apiViaApp), the same
+// routes the page names: /api/3/mcp_configurations and /api/ai/mcp/status.
+//
+// Manual steps (performed by a person, no test.step here, marked `manual` in the
+// Markdown): fsa05-06-handshake (curl against a server you run), fsa05-07-json-trap
+// (breaks the box on purpose), fsa05-08-byo-profile (bring-your-own LLM, not GA).
+//
+// Cleanup: the lab server is removed at the end so the box is left as found,
+// unless DOCUBOT_KEEP_LAB=1 (keep it to inspect the registration by hand).
+//
+// Opt-ins (everything else is free and read/registration only):
+//   DOCUBOT_CH05_GRANT=1   fsa05-04: save the MCP Server selection on the agent
+//                          named by DOCUBOT_CH05_AGENT (default Alert Investigation).
+//                          Without it the form is filled and captured, never saved.
+//   SPEND_AI=1             fsa05-05: ask the granted agent the DeepWiki question
+//                          (spends FortiAI credits). Needs DOCUBOT_CH05_GRANT=1.
+//
+// Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
+// verify on a box with `docubot run --chapter 05-register-mcp-servers`.
+import { apiViaApp, askFortiSOARAssistant, expect, test } from 'docubot';
+import { shouldRunStep, uiMask } from '../lib/agentlab';
+
+test.describe.configure({ mode: 'serial' });
+
+const NAME = 'agentlab-deepwiki';
+const SERVER_URL = 'https://mcp.deepwiki.com/mcp';
+const LIST = '/ai-configuration/mcp-servers';
+const BUILT_IN = ['FortiSOAR Module Management', 'FortiSOAR Playbook Management', 'SOC Framework', 'Utility Tools'];
+const AGENT = process.env.DOCUBOT_CH05_AGENT || 'Alert Investigation';
+const QUESTION =
+  'Using your tools, what does the modelcontextprotocol/python-sdk repository say FastMCP is called in v2?';
+
+interface McpRow { '@id'?: string; uuid?: string; name?: string; active?: boolean }
+
+/** Registered MCP rows, read through the app's own session. */
+async function mcpRows(soar: any): Promise<McpRow[]> {
+  const res: any = await apiViaApp(soar, 'GET', '/api/3/mcp_configurations?$limit=200');
+  return (res && (res['hydra:member'] || res.data || res)) as McpRow[];
+}
+
+/** Delete the lab server by exact name (never anything else). No-op if absent. */
+async function removeLabServer(soar: any): Promise<void> {
+  for (const row of await mcpRows(soar)) {
+    if (row.name === NAME && row['@id']) await apiViaApp(soar, 'DELETE', row['@id']);
+  }
+}
+
+test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
+  test.setTimeout(20 * 60 * 1000);
+  const soar = await gui('soar');
+  soar.setDefaultTimeout(30_000);
+  const origin = new URL(soar.url()).origin;
+  const ownsLab = shouldRunStep('fsa05-01-validate-register');
+
+  const openList = async () => {
+    await soar.goto(`${origin}${LIST}`, { waitUntil: 'domcontentloaded' });
+    await expect(soar.getByText(/MCP Servers?/i).first()).toBeVisible({ timeout: 30_000 });
+  };
+
+  try {
+    // A leftover from an interrupted run would make the name collide.
+    if (ownsLab) await removeLabServer(soar);
+
+    if (shouldRunStep('fsa05-01-validate-register')) await test.step('fsa05-01-validate-register', async () => {
+      await openList();
+      await soar.getByRole('button', { name: /Connect MCP Server/ }).click();
+      const modal = soar.locator('.modal-content');
+      await modal.locator('input[type=text]').first().fill(NAME);
+      await modal.locator('textarea[name=description]').fill('Lab: DeepWiki remote server (public, no credentials)');
+      await modal.locator('select[name=transport]').selectOption('http');
+      await modal.locator('input[type=url]').fill(SERVER_URL);
+      // After transport=http a required Auth Type select appears; DeepWiki takes None.
+      const auth = modal.locator('select[name=auth_type]');
+      await expect(auth).toBeVisible();
+      await auth.selectOption({ label: 'None' });
+      // The filled form: the server address sits in the url input, so paint it over.
+      await capture.shot(soar, 'fsa05-01-validate-register-connect-form', {
+        target: modal,
+        mask: [modal.locator('input[type=url]')],
+      });
+      // Validate first: Save stays disabled until the handshake succeeds, so its
+      // enabled state is the proof that the tool list came back.
+      const testConnection = modal.getByRole('button', { name: 'Test Connection' });
+      await expect(testConnection).toBeEnabled();
+      await testConnection.click();
+      const save = modal.getByRole('button', { name: 'Save' });
+      await expect(save).toBeEnabled({ timeout: 120_000 });
+      await save.click();
+      // Effect: the row was persisted, active, with a UUID.
+      await expect
+        .poll(async () => (await mcpRows(soar)).find((r) => r.name === NAME)?.['@id'] ?? '', { timeout: 30_000 })
+        .toContain('/api/3/mcp_configurations/');
+    });
+
+    if (shouldRunStep('fsa05-02-status-check')) await test.step('fsa05-02-status-check', async () => {
+      // API ground truth: the status route answers for the whole box (a poisoned
+      // authentication row would make it fail for every server) and lists ours.
+      const status = JSON.stringify(await apiViaApp(soar, 'GET', '/api/ai/mcp/status'));
+      expect(status).toContain(NAME);
+      expect(status, 'status route lists a built-in server too').toMatch(/Utility Tools|SOC Framework|Module Management/);
+      const row = (await mcpRows(soar)).find((r) => r.name === NAME);
+      expect(row?.active, 'registered server is active').toBe(true);
+
+      await openList();
+      await expect(soar.getByText(NAME, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+      for (const builtIn of BUILT_IN) await expect(soar.getByText(builtIn).first()).toBeVisible();
+      // The Url column is the server address: masked by uiMask (leaf URL text).
+      await capture.shot(soar, 'fsa05-02-status-check-servers-page', { mask: uiMask(soar) });
+    });
+
+    if (shouldRunStep('fsa05-03-register-remote')) await test.step('fsa05-03-register-remote', async () => {
+      // Registration itself was proven by fsa05-01; this step reads the stored
+      // row back and checks it is the remote (external, http) shape.
+      const row: any = (await mcpRows(soar)).find((r) => r.name === NAME);
+      expect(row, 'lab server row exists').toBeTruthy();
+      expect(row.type).toBe('external');
+      expect(row.transport).toBe('http');
+      // authentication must be stored as a string (the JSON-string rule), never an object.
+      expect(typeof row.authentication === 'string' || row.authentication == null).toBe(true);
+    });
+
+    if (shouldRunStep('fsa05-04-grant-allowlist')) await test.step('fsa05-04-grant-allowlist', async () => {
+      // Content Hub > AI Agents > agent detail > Configurations. UNVERIFIED
+      // selectors below (Custom Configuration, MCP Server field): the lead fixes
+      // them live. Catalog and tab navigation mirror docubot fsr-ui aiAgents.ts.
+      await soar.goto(`${origin}/content-hub/my-content/?contentType=ai_agent&searchText=${encodeURIComponent(AGENT)}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      const tile = soar.locator('.mp-tile-container').filter({ hasText: AGENT }).first();
+      await expect(tile, `agent "${AGENT}" is in the catalog`).toBeVisible({ timeout: 30_000 });
+      await tile.click();
+      await soar.getByText(/^Configurations$/i).last().click();
+      const custom = soar.getByText(/Custom Configuration/i).first();
+      await expect(custom).toBeVisible({ timeout: 20_000 });
+      await custom.click();
+      // MCP Server multi-select: open the field, pick the lab server by name.
+      const mcpField = soar.locator('label:has-text("MCP Server") ~ *, :text("MCP Server") + *').first();
+      await mcpField.click();
+      await soar.getByText(NAME, { exact: true }).last().click();
+      await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', { mask: uiMask(soar) });
+      if (process.env.DOCUBOT_CH05_GRANT !== '1') {
+        console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
+        return;
+      }
+      await soar.getByRole('button', { name: /^Save$/ }).first().click();
+      // Effect: reopen the agent and confirm the selection stuck.
+      await soar.reload({ waitUntil: 'domcontentloaded' });
+      await soar.getByText(/^Configurations$/i).last().click();
+      await expect(soar.getByText(NAME, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+    });
+
+    if (shouldRunStep('fsa05-05-agent-uses-remote')) await test.step('fsa05-05-agent-uses-remote', async () => {
+      // Spends FortiAI credits and needs the grant saved by fsa05-04.
+      if (process.env.SPEND_AI !== '1' || process.env.DOCUBOT_CH05_GRANT !== '1') {
+        console.log('[ch05] fsa05-05 skipped: set SPEND_AI=1 and DOCUBOT_CH05_GRANT=1 (spends FortiAI credits)');
+        return;
+      }
+      // UNVERIFIED flow: asked through the FortiSOAR AI assistant. If the granted
+      // agent has its own run surface the lead should swap this for it, and add
+      // an openTracePanel assertion that the trace shows a call to the lab server.
+      await soar.goto(`${origin}/dashboard`, { waitUntil: 'domcontentloaded' });
+      const { drawer } = await askFortiSOARAssistant(soar, QUESTION);
+      await expect(drawer).toContainText(/FastMCP|MCPServer/i);
+      await capture.shot(soar, 'fsa05-05-agent-uses-remote-answer', { mask: uiMask(soar), scrub: false });
+      // The server must still be healthy after the calls.
+      expect(JSON.stringify(await apiViaApp(soar, 'GET', '/api/ai/mcp/status'))).toContain(NAME);
+    });
+  } finally {
+    // Leave the box as found, even when a step failed.
+    if (ownsLab && process.env.DOCUBOT_KEEP_LAB !== '1') await removeLabServer(soar).catch(() => undefined);
+  }
+});

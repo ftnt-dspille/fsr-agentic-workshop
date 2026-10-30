@@ -7,6 +7,10 @@ description: "The vocabulary of FortiSOAR Agentic AI: what each part does, what 
 
 Before you build anything, agree on the words. FortiSOAR Agentic AI has more moving parts than most features, and the same word can name a screen in one place and a naming convention in another. This page gives you the vocabulary used in the rest of the workshop, and a picture of how a request flows through it.
 
+Four building blocks carry most of that vocabulary: the agents that do the work, the skills that instruct them, the organization context that grounds them in your environment, and the MCP tools they reach data through.
+
+![The four building blocks: agents (specialists that each own one job), skills (each agent's instructions), organization context (your SOPs, hours and approved activity) and MCP tools (connections to FortiSOAR data and external servers)](diagram-building-blocks.png)
+
 ## 1. Learn the vocabulary
 
 | Term | What it means | Watch out for |
@@ -33,6 +37,10 @@ Some product walkthroughs label the alert investigation agent as "the orchestrat
 {{% /notice %}}
 
 ## 2. Follow a request through the stack
+
+Under the hood, the pieces talk in a fixed loop. The agent asks its MCP servers what tools exist, pulls its skills and your organization context, then hands the question and the tool list to the model. The model only ever picks a tool; the agent makes the call through MCP, and every step lands in the trace.
+
+![Under the hood: an analyst or playbook asks the agent to investigate an alert; the agent lists tools from its MCP server, retrieves skills and organization context, sends the prompt plus tool list to the LLM, the model selects a tool, and the agent invokes it through MCP to reach your tools](diagram-agent-mcp-llm-loop.png)
 
 Every request starts with an intent: an analyst clicks a button, types a question, or a playbook calls an API. From there, the path depends on what kind of intent it is.
 

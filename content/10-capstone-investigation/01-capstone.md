@@ -20,6 +20,9 @@ web-server-01 to 203.0.113.99 since 02:00 UTC."
 
 <!-- step: fsa10-01-stage-alert -->
 
+<!-- capture: fsa10-01-stage-alert -->
+![fsa10-01-stage-alert](fsa10-01-stage-alert.png?height=600px)
+
 (The chapter 8 playbook will tag it within seconds - that is expected, and the first piece of history on the record.)
 
 ## 2. Run the investigation
@@ -42,7 +45,7 @@ structured summary (verdict, evidence, recommended next steps) and raise
 its severity if your verdict warrants it. Do not close the alert.
 ```
 
-<!-- step: fsa10-02-investigate manual: runs the capstone investigation; spends tokens -->
+<!-- step: fsa10-02-investigate -->
 
 Let it run. A good transcript reads like an analyst's notebook: each claim traceable to a tool result, gaps stated honestly ("no reputation connector is configured, so the destination is unverified"), and a verdict that distinguishes evidence from inference.
 
@@ -54,8 +57,11 @@ Let it run. A good transcript reads like an analyst's notebook: each claim trace
 
 **Verify in the UI:** open the alert. The description is the agent's write-back; the audit timeline shows the whole investigation imprint.
 
-<!-- capture: fsa10-02-findings-on-alert -->
-![fsa10-02-findings-on-alert](fsa10-02-findings-on-alert.png)
+<!-- capture: fsa10-02-investigate -->
+![fsa10-02-investigate](fsa10-02-investigate.png?height=600px)
+
+<!-- capture: fsa10-02-investigate-findings-on-alert -->
+![fsa10-02-investigate-findings-on-alert](fsa10-02-investigate-findings-on-alert.png?height=600px)
 
 ## 4. Optional: hand it to the platform
 
@@ -81,37 +87,3 @@ The investigation worked once; chapter 8 showed you how to make it permanent. As
 | Write-back overwrote the playbook's tag | Full description replace | Fine for the lab; for surgical edits, ask it to append instead |
 | investigate_alert errors | Native AI investigation not configured on this box | Expected on a bare lab box; skip step 4 |
 | Investigation stalls on huge results | Tool outputs hit the size cap | The truncation envelope tells the agent to narrow; nudge it to use summary=true and filters |
-
-<!-- agent-drive:begin -->
-
-<details><summary>What the agent did</summary>
-
-**`01-capstone#1`** (Sonnet run, sanitized)
-
-![10-capstone-investigation/01-capstone#1](agent-run-01-capstone-1.png)
-
-```text
-  > create_record {"module": "alerts", "data": {"name": "Agent Lab - beaconing from web...
-```
-
-**`01-capstone#2`** (Sonnet run, sanitized)
-
-![10-capstone-investigation/01-capstone#2](agent-run-01-capstone-2.png)
-
-```text
-  > search_records {"module": "alerts", "term": "Agent Lab - beaconing from web-server-0...
-  > list_connectors {}
-  > search_records {"module": "alerts", "term": "Agent Lab - beaconing from web-server-0...
-  > record_lifecycle {"entity_uuid": "2dadee52-aac1-484a-b6c9-dbefab56ca46", "entity_type"...
-  > search_records {"module": "agentlab_assets", "term": "web-server-01", "summary": fal...
-  > list_connector_operations {"connector": "virustotal"}
-  > run_connector_operation {"connector": "virustotal", "operation": "ip_reputation", "params": {...
-  > search_records {"module": "alerts", "term": "203.0.113.99", "fields": ["name", "seve...
-  > run_connector_operation {"connector": "virustotal", "operation": "get_ip_reputation", "params...
-  > run_connector_operation {"connector": "virustotal", "operation": "ip_reputation_lookup", "par...
-  > update_record {"module": "alerts", "ref": "alerts:2dadee52-aac1-484a-b6c9-dbefab56c...
-```
-
-</details>
-
-<!-- agent-drive:end -->

@@ -9,6 +9,10 @@ An AI Insight answers a plain-language question about your FortiSOAR data. You g
 
 ## 1. Know the flow
 
+An insight runs as a short chain: you state an intent, the platform reasons about it, proposes a plan you can read, executes each step through an insight agent, and returns a result card.
+
+![AI Insights flow: intent (ask in plain English, pick a role), chain of thoughts (the intent broken into small steps you can review), plan (each step assigned to an agent), execute (agents run the plan on demand or on a schedule) and result (summary, findings and recommended actions on a card)](diagram-ai-insights-flow.png)
+
 1. **Question.** Write it in plain language, or pick a template.
 2. **Role.** Pick the persona the answer should be written for, such as SOC Analyst or SOC Manager. The role shapes the plan and the summary.
 3. **Chain of thought.** The platform proposes its reasoning. You can read it. It is editable on some builds.

@@ -7,9 +7,21 @@ description: "Agents, MCP servers, and the two ways FortiSOAR puts them to work.
 
 Before touching anything, get the map straight. Everything in this workshop is one of three things: an **agent** (an LLM in a loop that decides which tool to call next), a **tool surface** (what the agent is allowed to do), and a **verification step** (how you know the tool call actually worked).
 
+The shift this workshop is about: a playbook does the same thing the same way every time, while an agent is handed an objective and works out the steps itself.
+
+![Traditional AI answers a single question; agentic AI pursues an objective, plans the steps, gathers evidence and recommends next steps](diagram-traditional-vs-agentic.png)
+
+FortiSOAR sits between your data sources and the products you act on: alerts and records come in, the automation engine and AI agents reason over them, and actions go out to the tools you connect.
+
+![FortiSOAR takes alerts, vulnerabilities, assets and custom data from 700+ connectors, works them in the analyst workbench with its automation engine and AI agents, and sends actions and responses out to downstream products](diagram-platform-architecture.png)
+
 ## MCP in one paragraph
 
 MCP (Model Context Protocol) is the plug standard between agents and tools. A server advertises tools with typed schemas; the agent lists them, picks one, sends arguments, gets a result. The agent product (Claude Code, OpenCode, Copilot) does not need to know anything about FortiSOAR: it just sees tools like `search_records` or `run_connector_operation` and reads their descriptions.
+
+Whichever surface it runs on, an agent follows the same loop: you give it a goal, it plans the questions, retrieves what it knows about your environment, acts through its tools, and writes down its reasoning.
+
+![An agent takes a goal, plans the steps, retrieves skills and organization context, acts through MCP tools, then reasons over the evidence and shows its work](diagram-how-an-agent-works.png)
 
 An MCP connection always has a caller and a thing being called, and this workshop uses it **both ways**. Keep the direction straight and nothing else is confusing:
 

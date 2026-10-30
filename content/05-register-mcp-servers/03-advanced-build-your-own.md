@@ -48,7 +48,7 @@ The tool returns the envelope `status`, `result` and `error`. FortiSOAR agents e
 
 Before FortiSOAR sees the server, check it yourself. The client must send an `Accept` header that lists both JSON and event-stream. The server returns a session ID in the `mcp-session-id` response header, and every later call must send it back.
 
-<!-- step: fsa05-03-handshake manual: a curl handshake run from a shell against the server, not a box UI step -->
+<!-- step: fsa05-06-handshake manual: a curl handshake run from a shell against the server, not a box UI step -->
 
 Send `initialize`. Read the session ID from the response headers. Send `notifications/initialized` with that session header. Then send `tools/list` and `tools/call`.
 
@@ -75,21 +75,17 @@ curl -s -X POST http://localhost:8000/mcp/ \
 
 A request without the `Accept` header is rejected, so if the call fails with a 406, check that header first.
 
-## 3. Register it
+## 3. Register it and grant it
 
-Register the server with the steps from the previous page. Validate first, and check that validation returns `get_forecast`. Then persist, note the UUID, and check the status.
+Register the server with the steps from the previous page: validate first (it must return `get_forecast`), then persist, note the UUID and check the status. Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server on your laptop is NOT reachable from the box, which is why the lab runs it on the appliance. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate.
 
-Use the `none` authentication type for this lab server only, and register the on-box URL `http://localhost:8000/mcp/`. A server running on your laptop is NOT reachable from the box - that is why the lab runs it on the appliance's own CLI. If your class provides a shared reachable host instead, confirm the box can reach it and that its certificate is trusted before you validate.
+Then grant it to one agent as you did for the public server, listing only `get_forecast`, ask the agent for a known city's forecast and check the trace for the call.
 
-## 4. Grant it and prove it
-
-Grant the server to one agent exactly as you did for the public server on the previous page, listing only `get_forecast`, then ask the agent for a known city's forecast and check the trace for the call. The allowlist rules from that page apply unchanged.
-
-## 5. Optional: break the JSON-string rule on purpose
+## 4. Optional: break the JSON-string rule on purpose
 
 Only do this on a throwaway non-production box you own. Do not run it on a shared class box.
 
-<!-- step: fsa05-05-json-trap manual: breaks the JSON rule on purpose on a throwaway box; the page forbids it on a shared box -->
+<!-- step: fsa05-07-json-trap manual: breaks the JSON rule on purpose on a throwaway box; the page forbids it on a shared box -->
 
 Save a second copy of the server's definition, with `authentication` sent as a JSON object instead of a string. Watch the status route. Then fix the row by writing `authentication` back as a string, and check the status again.
 

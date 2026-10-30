@@ -5,7 +5,7 @@ weight: 30
 description: "Call your agent from a playbook through a supported route, choose the route by the kind of agent, and branch on its answer."
 ---
 
-A playbook is where an agent's answer turns into action, so the way the playbook calls the agent matters. This page explains the three routes, which one to use, and how to branch on the result. The rule is simple: a playbook should call an agent through a route that authenticates as a user, and any write should come after a manual-input step.
+A playbook is where an agent's answer turns into action. This page covers the three routes, which one to use, and how to branch on the result. The rule: call an agent through a route that authenticates as a user, and put any write after a manual-input step.
 
 ## 1. Know the options
 
@@ -16,7 +16,7 @@ A playbook is where an agent's answer turns into action, so the way the playbook
 | C. Starting a full alert investigation through the HMAC route | The same HMAC call, but it starts an investigation | Nothing reliable | The investigation runs without FortiSOAR tools, and the verdict is never written back. Do not use this route for investigations. |
 
 {{% notice warning %}}
-Do not hand-roll an agent action by modifying a connector package. You do not need to: the stock Remote FortiSOAR connector already ships the **Invoke AI Agent** (`invoke_agent`) operation. A modified package is unsupported and can break on upgrade. Use route A (the stock operation) for most agents, and route B for a reasoning-only agent with no connector configured.
+Do not modify a connector package to call an agent. The stock Remote FortiSOAR connector already ships the **Invoke AI Agent** (`invoke_agent`) operation, and a modified package is unsupported and can break on upgrade.
 {{% /notice %}}
 
 {{% notice note %}}
@@ -43,12 +43,12 @@ Build a playbook in the playbook designer. The trigger is up to you. A common sh
 4. A manual-input step before any change, so a person approves it.
 5. The change itself, only on the approved branch.
 
-<!-- step: fsa04-04-playbook-branch manual: builds and runs a route-A playbook that calls the lab agent and branches on confidence; the hello agent makes no LLM call, so it spends no tokens -->
+<!-- step: fsa04-04-playbook-branch -->
 
 The playbook below calls the hello agent, then a Decision step routes on its `confidence`. Because the hello agent always returns `low`, the run takes the Low confidence branch (Needs Review) and skips Auto Close.
 
-<!-- capture: fsa04-03-playbook-branch -->
-![fsa04-03-playbook-branch](fsa04-03-playbook-branch.png)
+<!-- capture: fsa04-04-playbook-branch-decision -->
+![fsa04-04-playbook-branch-decision](fsa04-04-playbook-branch-decision.png?height=600px)
 
 **What success looks like**
 
@@ -58,11 +58,11 @@ The playbook below calls the hello agent, then a Decision step routes on its `co
 
 ## 4. Route B: the raw trigger API
 
+<!-- step: fsa04-05-playbook-route-b -->
+
 Route B calls the agent's trigger route directly from a **Make FortiSOAR API Call** step, authenticated with HMAC. Use it only for a reasoning-only agent that has no connector configured, and that needs no MCP tools.
 
-The trigger route is **asynchronous**. A single call to `POST /ai/agents/{agent_name}/trigger` returns `202` with a `task_id`, not the agent's answer. To read the answer you add two more steps: poll `GET /ai/agents/{task_id}/status` until it reads `completed`, then read `GET /ai/agents/{task_id}/result`. An agent that needs MCP tools gets an authorization failure from the built-in servers through this route, so route A is the better default.
-
-<!-- step: fsa04-05-playbook-route-b manual: invokes a reasoning-only agent through the raw trigger API; the hello agent spends no tokens -->
+The trigger route is **asynchronous**. One call to `POST /ai/agents/{agent_name}/trigger` returns `202` with a `task_id`, not the answer. Add two more steps: poll `GET /ai/agents/{task_id}/status` until it reads `completed`, then read `GET /ai/agents/{task_id}/result`. An agent that needs MCP tools fails authorization against the built-in servers on this route, so route A is the better default.
 
 **What success looks like**
 
@@ -72,9 +72,9 @@ The trigger route is **asynchronous**. A single call to `POST /ai/agents/{agent_
 
 ## 5. Check the upgrade path
 
-An upgrade can keep an agent's configuration but overwrite its code. Test that before you rely on a replaced agent.
+<!-- step: fsa04-06-replace-check -->
 
-<!-- step: fsa04-06-replace-check manual: re-imports the agent with replace and re-runs the playbook; the re-run may call FortiAI -->
+An upgrade can keep an agent's configuration but overwrite its code. Test that before you rely on a replaced agent.
 
 Re-import the agent with replace. Note its ID before and after. Check that its allowlist and agent configuration are still in place. Run the playbook again.
 

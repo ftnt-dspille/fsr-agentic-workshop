@@ -9,6 +9,11 @@ The Model Context Protocol (MCP) is how an agent reaches tools that live outside
 
 ## 1. Know the three kinds of server
 
+Agents reach tools through one open standard, and only the servers you assign. The three kinds differ in where the server lives and who builds it.
+
+![Three kinds of MCP server: native FortiSOAR MCP (built in, no setup, records, modules, SOC framework and playbooks), external MCP servers (register any server with an auth type, for example FortiSIEM incidents, assigned per agent) and connector-based MCP (turn any installed connector into a server where each action becomes a tool)](diagram-mcp-three-types.png)
+
+
 | Kind | What it is | Who makes it |
 |---|---|---|
 | Built-in | Four families that ship with FortiSOAR: module management (records), utility tools, SOC framework (alert and indicator tools), and playbook management (run and status) | FortiSOAR |
@@ -33,9 +38,7 @@ Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` 
 | `fsr` | The caller's own FortiSOAR token | Servers that check FortiSOAR tokens themselves |
 | `oauth2` | An OAuth flow | Vendor services that require it |
 
-Type names may be case-sensitive. Try the lowercase form first, and check the list on your build.
-
-On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value. Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record. Check the list of types against your build before you rely on it.
+On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value. Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record, so check the list of types against your build.
 
 The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity. Choose the type with that trade-off in mind.
 
@@ -85,31 +88,29 @@ The registration has four steps. Do not skip the first one.
 
 Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. The filled form looks like this:
 
-<!-- capture: fsa05-03-connect-form -->
-![fsa05-03-connect-form](fsa05-03-connect-form.png)
+<!-- capture: fsa05-01-validate-register-connect-form -->
+![fsa05-01-validate-register-connect-form](fsa05-01-validate-register-connect-form.png)
 
 Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
-
-<!-- capture: fsa05-01-mcp-servers-page -->
-![fsa05-01-mcp-servers-page](fsa05-01-mcp-servers-page.png)
 
 **What success looks like**
 
 - Validation returns the server's tool names, and the save returns a UUID.
 - The server appears in the MCP list.
 
-If the UI does not offer a validate step, validate through the validation route with the same definition before you save.
-
-<!-- step: fsa05-02-status-check manual: status check after a registration made by fsa05-01; no spec yet -->
+<!-- step: fsa05-02-status-check -->
 
 Check the status of the server you just saved. Then check the status of one built-in server, to confirm the status route still works for everyone.
+
+<!-- capture: fsa05-02-status-check-servers-page -->
+![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png)
 
 **What success looks like**
 
 - Your server reports active, with its tools.
 - A built-in server still reports its status normally.
 
-If the status route fails for every server after you save, the most likely cause is an authentication value stored as an object. Fix the row by writing the field back as a string.
+If the status route fails for every server after you save, see the first row of the troubleshooting table.
 
 ## Troubleshooting
 
