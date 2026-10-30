@@ -98,10 +98,12 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       const auth = modal.locator('select[name=auth_type]');
       await expect(auth).toBeVisible();
       await auth.selectOption({ label: 'None' });
-      // The filled form: the server address sits in the url input, so paint it over.
+      // The student types this URL, so it MUST be visible (do not mask or scrub
+      // it). The URL is the public DeepWiki endpoint, not a lab secret, and the
+      // connect-form panel shows no appliance host, so this leaks nothing.
       await capture.shot(soar, 'fsa05-01-validate-register-connect-form', {
         target: modal,
-        mask: [modal.locator('input[type=url]')],
+        scrub: false,
       });
       // Validate first: Save stays disabled until the handshake succeeds, so its
       // enabled state is the proof that the tool list came back.
