@@ -33,9 +33,15 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import { apiViaApp, askFortiSOARAssistant, expect, test } from 'docubot';
-import { labSeed, shouldRunStep, uiMask } from '../lib/agentlab';
+import { labSeed, shouldRunStep } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
+
+// Mask only truly sensitive values. These pages show MCP server URLs that are
+// localhost (built-ins) or public (deepwiki), which are not lab secrets, so they
+// stay visible; the scrub backstop still refuses a real lab IP, hostname, key or
+// sensitive term. On-screen dates are legitimate content (scrubSkip date-or-time).
+const SKIP = { scrubSkip: ['date-or-time'] };
 
 const NAME = 'agentlab-deepwiki';
 const SERVER_URL = 'https://mcp.deepwiki.com/mcp';
@@ -106,12 +112,11 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       const auth = modal.locator('select[name=auth_type]');
       await expect(auth).toBeVisible();
       await auth.selectOption({ label: 'None' });
-      // The student types this URL, so it MUST be visible (do not mask or scrub
-      // it). The URL is the public DeepWiki endpoint, not a lab secret, and the
-      // connect-form panel shows no appliance host, so this leaks nothing.
+      // The student types this URL, so it MUST be visible. It is the public
+      // DeepWiki endpoint, not a lab secret; the backstop stays on and passes it.
       await capture.shot(soar, 'fsa05-01-validate-register-connect-form', {
         target: modal,
-        scrub: false,
+        ...SKIP,
       });
       // Validate first: Save stays disabled until the handshake succeeds, so its
       // enabled state is the proof that the tool list came back.
@@ -145,8 +150,10 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // Leave the grid unfiltered for the capture.
       const nameFilter = soar.locator('input[name="name"][placeholder="Search" i]').first();
       if (await nameFilter.isVisible().catch(() => false)) await nameFilter.fill('');
-      // The Url column is the server address: masked by uiMask (leaf URL text).
-      await capture.shot(soar, 'fsa05-02-status-check-servers-page', { mask: uiMask(soar) });
+      // The Url column shows each server's address: localhost for the built-ins,
+      // the public deepwiki host for the lab server. None are lab secrets, so the
+      // column stays visible; the backstop still refuses a real lab host.
+      await capture.shot(soar, 'fsa05-02-status-check-servers-page', SKIP);
     });
 
     if (shouldRunStep('fsa05-03-register-remote')) await test.step('fsa05-03-register-remote', async () => {
@@ -194,7 +201,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       ).toHaveCount(1, { timeout: 20_000 });
       await mcpSelect.selectOption({ label: NAME });
       await soar.locator('#csForm-masking_agent').selectOption({ index: 1 }).catch(() => undefined);
-      await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', { mask: uiMask(soar) });
+      await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', SKIP);
       if (process.env.DOCUBOT_CH05_GRANT !== '1') {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
         return;
@@ -239,7 +246,10 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // the question. If this fails with "no reputation", the IP has de-listed -
       // refresh REPUTATION_IP from the FortiGuard feed (see the chapter note).
       await expect(drawer).toContainText(/reputation|fortiguard|malicious|phishing|command-and-control|malware/i);
-      await capture.shot(soar, 'fsa05-05-chat-runs-tool-answer', { mask: uiMask(soar), scrub: false });
+      // The answer names the PUBLIC threat IP being enriched; the scan can't tell a
+      // public IP from a lab one, so skip ip-address here. The lab box address is
+      // still guarded by the sensitive-term category (the base-URL host).
+      await capture.shot(soar, 'fsa05-05-chat-runs-tool-answer', { scrubSkip: ['ip-address', 'date-or-time'] });
 
       // Prove the tool actually fired: the latest Chat Assistant trace must carry a
       // TOOL span for enrich_indicator. Read through the app's own session.
