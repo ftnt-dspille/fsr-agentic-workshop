@@ -70,17 +70,17 @@ OpenCode surfaces the same approval through its own prompt. Approve it to let th
 
 | Value | Behavior |
 |---|---|
-| `auto` (default) | Ask when your coding agent can show a prompt; otherwise run the write and rely on the agent's own tool prompts |
-| `require` | Ask, and refuse the write if your agent cannot show a prompt |
+| `require` (default) | Ask on every write, and refuse the write if your agent cannot show a prompt. No write reaches the box without a person saying yes (or your agent being set to auto-accept the prompt). |
+| `auto` | Ask when your coding agent can show a prompt; otherwise run the write and rely on the agent's own tool prompts |
 | `off` | Never ask. For unattended runs only. |
 
 If nobody answers within five minutes (`FSR_MCP_APPROVAL_TIMEOUT`, in seconds), the write is refused, so an unattended run can never hang or write by accident.
 
-Use `require` if you need a guarantee that no write ever runs without a person saying yes.
+The default is `require`: a write is prompted for, and refused outright if your agent cannot show the prompt, so nothing changes the box unasked. Switch to `auto` only if your agent cannot show the server's prompt and you would rather fall back to its own tool approvals than have writes refused.
 
 ## 4. If your agent does not show the prompt
 
-Coding agents differ in what they support. If you are in `auto` mode and a write runs without a prompt, your agent does not support the server's approval requests. You have two fallbacks:
+Coding agents differ in what they support. On the `require` default a write is refused if your agent cannot show the prompt, so you will see a refusal rather than a silent write. If you switch to `auto` and a write runs with no prompt, your agent does not support the server's approval requests. Either way you have two fallbacks:
 
 - **Set `require`.** Writes are then refused rather than run unasked, which is safe but means this agent cannot write.
 - **Use the agent's own tool approvals.** Every tool is marked read-only or not, so a client that honors those hints will ask for the writes on its own. In Claude Code you can also generate explicit rules, reads allowed and writes asking:
@@ -92,5 +92,5 @@ fsr-agentic-toolkit permissions --write .claude/settings.json
 It merges into your existing settings and removes nothing you already have.
 
 {{% notice note %}}
-The prompt looks different in each agent. We checked Claude Code 2.1.312, Codex 0.165.0 and OpenCode 2.2.0, and all three show it. Run the test in section 2 with your own agent before relying on it, especially if it is not one of these. If a write ever runs with no prompt, your agent cannot show the server's request: set `FSR_MCP_APPROVAL=require`, or fall back to the agent's own tool approvals as described above.
+The prompt looks different in each agent. We checked Claude Code 2.1.312, Codex 0.165.0 and OpenCode 2.2.0, and all three show it. Run the test in section 2 with your own agent before relying on it, especially if it is not one of these. On the `require` default a write is refused rather than run when your agent cannot show the prompt, so you never get a silent write; if you have switched to `auto` and a write runs with no prompt, set `FSR_MCP_APPROVAL=require` or fall back to the agent's own tool approvals as described above.
 {{% /notice %}}
