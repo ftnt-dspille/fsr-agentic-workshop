@@ -135,7 +135,7 @@ export function promptFor(chapter: string, page: string, n = 1): string {
 }
 
 /** Keys the Claude Code TUI needs; named so the driving code reads clearly. */
-const KEY = { down: '\x1b[B', enter: '\r', shiftTab: '\x1b[Z', space: ' ' };
+const KEY = { down: '\x1b[B', up: '\x1b[A', enter: '\r', shiftTab: '\x1b[Z', space: ' ' };
 
 // The server-side write-approval elicitation (toolkit verbs/approval.py, 0.1.9+).
 // The caret line while the checkbox is unchecked; U+2610 is replaced by a checked
@@ -150,24 +150,36 @@ const turnDoneCount = (term: LocalSession): number => (term.screen().match(TURN_
 
 /**
  * Answer the MCP write-approval form the toolkit server raises before a write:
- * a boolean "Approve this change" checkbox (caret starts on it), then an
- * Accept/Decline row. Tick the box (Space), move to Accept (Down), submit
- * (Enter) - the same keys the footer advertises. Self-correcting on the tick,
- * so a missed keystroke does not silently decline the write.
+ * a boolean "Approve this change" checkbox ABOVE an Accept/Decline row. In the
+ * current Claude Code TUI the caret starts on Accept (❯ Accept Decline), not on
+ * the checkbox, and the footer navigates with up/down - so move UP to the
+ * checkbox, tick it (Space), then DOWN to Accept and submit (Enter). Accepting
+ * with the box unticked cancels the write, so the tick is verified (the ☐ glyph
+ * must disappear) before Accept is pressed. Self-correcting on the tick.
  */
 async function answerApprovalGate(term: LocalSession): Promise<boolean> {
   // Act only on a LIVE form: the unticked checkbox (U+2610) is on screen. If it
   // is not, the "requests your input" text is just lingering in the buffer after
   // an answer already given - do not send stray keystrokes into the chat input.
   if (!APPROVAL_UNCHECKED.test(term.plainScreen())) return false;
-  for (let i = 0; i < 3 && APPROVAL_UNCHECKED.test(term.plainScreen()); i++) {
+  if (process.env.DOCUBOT_DEBUG_APPROVAL === '1') {
+    console.log('\n===== APPROVAL FORM (before tick) =====\n' + term.plainScreen() + '\n===== END =====\n');
+  }
+  // The caret starts on the Accept button; step up to the checkbox row, then tick.
+  // Retry the up+space pair so one missed keystroke self-corrects.
+  for (let i = 0; i < 4 && APPROVAL_UNCHECKED.test(term.plainScreen()); i++) {
+    term.write(KEY.up);
+    await settle(300);
     term.write(KEY.space);
     await settle(500);
   }
   if (APPROVAL_UNCHECKED.test(term.plainScreen())) {
+    if (process.env.DOCUBOT_DEBUG_APPROVAL === '1') {
+      console.log('\n===== APPROVAL FORM (after tick attempts, still unchecked) =====\n' + term.plainScreen() + '\n===== END =====\n');
+    }
     throw new Error('write-approval gate: could not tick "Approve this change"');
   }
-  term.write(KEY.down); // caret from the checkbox to the Accept button
+  term.write(KEY.down); // caret from the checkbox back down to the Accept button
   await settle(500);
   term.write(KEY.enter); // activate Accept
   // Wait for the form to leave the viewport so the next race does not re-match
