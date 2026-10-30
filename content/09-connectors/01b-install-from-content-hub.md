@@ -45,7 +45,7 @@ The agent walks `default_connector_config` (the expected config shape), `upsert_
 **Verify in the UI:** open **Connectors** (it opens the Content Hub on the Connectors filter). The connector now shows as installed, with the `default` configuration and its health state.
 
 <!-- capture: fsa09-06-install-from-hub -->
-![fsa09-06-install-from-hub](fsa09-06-install-from-hub.png)
+![fsa09-06-install-from-hub](fsa09-06-install-from-hub.png?height=600px)
 
 ## Troubleshooting
 

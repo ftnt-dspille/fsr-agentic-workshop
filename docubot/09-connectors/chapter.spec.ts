@@ -11,14 +11,14 @@ import { expect, test } from 'docubot';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DADJOKE, agentTurn, promptFor, sh, startAgent, toolkit } from '../lib/agentlab';
+import { DADJOKE, agentTurn, promptFor, sh, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
 test('chapter 9 — connectors', async ({ gui, local, capture }) => {
   test.setTimeout(20 * 60 * 1000);
 
-  await test.step('fsa09-01-discover-connectors', async () => {
+  if (shouldRunStep('fsa09-01-discover-connectors')) await test.step('fsa09-01-discover-connectors', async () => {
     // Page §1 has two captures: the agent discovering connectors in the TUI, and
     // the Content Hub count that proves the number the agent reported is real.
     // API ground truth first: the live connector count the agent must match.
@@ -48,7 +48,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     });
   });
 
-  await test.step('fsa09-02-run-operation', async () => {
+  if (shouldRunStep('fsa09-02-run-operation')) await test.step('fsa09-02-run-operation', async () => {
     // Page §2 is the agent running a harmless read-only operation and
     // interpreting the result, captured in the TUI with the page's own prompt.
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
@@ -69,7 +69,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
   const workdir = process.env.FSR_WORKDIR || fs.mkdtempSync(path.join(os.tmpdir(), 'agentlab-conn-'));
   const conndir = path.join(workdir, DADJOKE);
 
-  await test.step('fsa09-03-scaffold-connector', async () => {
+  if (shouldRunStep('fsa09-03-scaffold-connector')) await test.step('fsa09-03-scaffold-connector', async () => {
     sh('pyfsr', ['connector', 'scaffold', DADJOKE, '--dir', conndir]);
     const opsPath = path.join(conndir, 'operations.py');
     let ops = fs.readFileSync(opsPath, 'utf8');
@@ -93,7 +93,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     expect(fs.readFileSync(opsPath, 'utf8')).toContain('def get_joke');
   });
 
-  await test.step('fsa09-04-deploy-connector', async () => {
+  if (shouldRunStep('fsa09-04-deploy-connector')) await test.step('fsa09-04-deploy-connector', async () => {
     if (!process.env.FSR_WORKDIR) {
       const tgz = sh('pyfsr', ['connector', 'package', conndir]).trim();
       expect(tgz.endsWith('.tgz')).toBe(true);
@@ -110,7 +110,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     expect(JSON.stringify(health)).toContain('Available');
   });
 
-  await test.step('fsa09-05-run-own-connector', async () => {
+  if (shouldRunStep('fsa09-05-run-own-connector')) await test.step('fsa09-05-run-own-connector', async () => {
     const out = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} });
     expect(JSON.stringify(out)).toContain('joke');
 
@@ -127,19 +127,26 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
   // fsa09-06/-07 were manual (agent-driven Content Hub install, box-inventory
   // specific). Now automated: drive the agent in a real TUI, capture its screen,
   // and confirm the box effect.
-  await test.step('fsa09-06-install-from-hub', async () => {
+  if (shouldRunStep('fsa09-06-install-from-hub')) await test.step('fsa09-06-install-from-hub', async () => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const before = new Set<string>((toolkit('list_connectors', {}).connectors || []).map((l: string) => String(l).split(' ')[0]));
     const screen = await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 1), {
       confirm: 'Yes, go ahead and install it.',
     });
     await capture.screen('fsa09-06-install-from-hub', screen, { title: 'student@laptop: ~/agent-lab' });
-    // Effect-check: a connector the box did not have before is now installed.
-    const after = (toolkit('list_connectors', {}).connectors || []).map((l: string) => String(l).split(' ')[0]);
-    expect(after.some((name: string) => !before.has(name)), 'no new connector appeared after the hub install').toBe(true);
+    // Effect-check: a connector the box did not have before is now installed. The Content Hub
+    // install is async on the appliance, so the connector list can still lag the agent's turn
+    // when it reports done; poll for a short window rather than reading the list once.
+    let appeared = false;
+    for (let i = 0; i < 20 && !appeared; i++) {
+      const after = (toolkit('list_connectors', {}).connectors || []).map((l: string) => String(l).split(' ')[0]);
+      appeared = after.some((name: string) => !before.has(name));
+      if (!appeared) await new Promise((r) => setTimeout(r, 5000));
+    }
+    expect(appeared, 'no new connector appeared after the hub install (polled 100s)').toBe(true);
   });
 
-  await test.step('fsa09-07-configure-and-health', async () => {
+  if (shouldRunStep('fsa09-07-configure-and-health')) await test.step('fsa09-07-configure-and-health', async () => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 2), {
       confirm: 'Yes, configure it.',

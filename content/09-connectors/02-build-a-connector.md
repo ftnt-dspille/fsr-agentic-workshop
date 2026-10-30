@@ -61,7 +61,7 @@ returned.
 **Verify in the UI:** **Connectors** now lists AgentLab Dad Joke v1.0.0 (Content Hub, Manage, filtered to Connectors) as installed.
 
 <!-- capture: fsa09-05-run-own-connector -->
-![fsa09-05-run-own-connector](fsa09-05-run-own-connector.png)
+![fsa09-05-run-own-connector](fsa09-05-run-own-connector.png?height=600px)
 
 ## Troubleshooting
 

@@ -288,10 +288,27 @@ export async function agentTurn(
   }).catch(() => {});
   term.enter();
   if (opts.confirm) {
-    // Wait for the connector tier gate's approval prompt, then answer it.
-    await term.waitFor(/confirm|proceed|approve|\(y\/n\)|yes, /i, { timeoutMs });
-    term.type(opts.confirm);
-    term.enter();
+    // The go-ahead can arrive three ways, so race them instead of blocking on one:
+    //  - a PROSE yes/no question the agent typed in chat  -> answer it with text;
+    //  - the MCP write-approval CHECKBOX form             -> the gate loop below
+    //    ticks it (do not type a sentence into a checkbox), so just stop waiting;
+    //  - no approval at all (the tool was not gated, or the agent finished)
+    //    -> the turn completes, so stop waiting rather than hang to timeout.
+    // "Approve this change" belongs to the checkbox form, so it is NOT in the
+    // prose pattern (that is the gate loop's job).
+    const base0 = turnDoneCount(term);
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      await settle(500);
+      const scr = term.plainScreen();
+      if (APPROVAL_UNCHECKED.test(scr)) break; // checkbox form -> gate loop handles it
+      if (/\bproceed\b|\(y\/n\)|\byes,|go ahead\b|shall i\b|should i\b|\bconfirm\b/i.test(scr)) {
+        term.type(opts.confirm);
+        term.enter();
+        break;
+      }
+      if (turnDoneCount(term) > base0) break; // turn finished with no approval to answer
+    }
   }
   // Wait for the turn to actually COMPLETE, not merely go quiet: a fresh agent's
   // initial thinking gap is quiet but not done (that returned the bare startup
