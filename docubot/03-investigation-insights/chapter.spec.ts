@@ -9,22 +9,21 @@
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
 import { expect, fieldAfterLabel, findAlert, goToModuleList, openRecord, readInvestigation, runInvestigation, selectDetailTab, test, waitForInvestigation } from 'docubot';
-import { labSeed, shouldRunStep, uiMask } from '../lib/agentlab';
+import { labSeed, shouldRunStep } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
 const SPEND = process.env.SPEND_AI === '1';
 const ALERT_RE = /Agent Lab - beaconing/i;
-
-/** Hide any leaf that carries a record uuid (Next Steps quotes the case id). */
-async function maskRecordIds(page: any): Promise<void> {
-  await page.evaluate(() => {
-    const idRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-    for (const el of document.querySelectorAll('#view-panel-content li, #view-panel-content p, #view-panel-content span')) {
-      if (idRe.test(el.textContent || '')) el.setAttribute('data-privacy', 'mask');
-    }
-  });
-}
+// Mask only truly sensitive values (the lab URL is caught by the scrub backstop).
+// On-screen dates are legitimate content, so the scan skips date-or-time; it still
+// refuses a real lab IP, hostname, key or sensitive term.
+const SKIP = { scrubSkip: ['date-or-time'] };
+// The alert record page shows record/correlation UUIDs, which the backstop reads as
+// key-like tokens. They are not secrets and the user wants them left visible, and an
+// alert record never renders a real API key, so this one shot also skips that
+// category. The lab-URL guards (ip-address, url-or-hostname, sensitive-term) stay on.
+const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 
 test('chapter 3 - investigation', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
@@ -58,8 +57,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
     await soar.waitForTimeout(2000);
     await capture.shot(soar, 'fsa03-01-investigation-tab', {
       highlight: soar.locator('#view-panel-content li.uib-tab', { hasText: 'AI Investigation' }),
-      mask: uiMask(soar),
-      scrub: false,
+      ...SKIP,
     });
   });
 
@@ -67,17 +65,15 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
     await expect(soar.locator('#view-panel-content svg:has(g#Hypo_1)')).toBeVisible();
     await capture.shot(soar, 'fsa03-02-hypotheses', {
       target: soar.locator('#view-panel-content svg:has(g#Hypo_1)'),
-      mask: uiMask(soar),
-      scrub: false,
+      ...SKIP,
     });
   });
 
   if (shouldRunStep('fsa03-03-alert-ai-fields')) await test.step('fsa03-03-alert-ai-fields', async () => {
     await selectDetailTab(soar, 'Alert Details');
-    await maskRecordIds(soar);
     // Effect, not card: the record itself carries the AI fields the card shows.
     await expect(soar.locator('#view-panel-content').getByText('AI Investigation Overview', { exact: true }).first()).toBeVisible();
-    await capture.shot(soar, 'fsa03-03-alert-ai-fields', { mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa03-03-alert-ai-fields', SKIP_RECORD);
   });
 
   if (shouldRunStep('fsa03-04-trace-steps')) await test.step('fsa03-04-trace-steps', async () => {
@@ -93,7 +89,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
     await expect(soar.getByText('Trace Flow', { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(soar.getByText('Alert Investigation', { exact: true }).first()).toBeVisible();
     await soar.waitForTimeout(2000);
-    await capture.shot(soar, 'fsa03-04-trace-steps', { mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa03-04-trace-steps', SKIP);
   });
 });
 
@@ -125,7 +121,7 @@ test('chapter 3 - ai insights', async ({ gui, capture }) => {
   await soar.waitForTimeout(1500);
 
   if (shouldRunStep('fsa03-05-insight-plan')) await test.step('fsa03-05-insight-plan', async () => {
-    await capture.shot(soar, 'fsa03-05-insight-plan', { target: modal, mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa03-05-insight-plan', { target: modal, ...SKIP });
   });
 
   if (shouldRunStep('fsa03-06-insight-card')) await test.step('fsa03-06-insight-card', async () => {
@@ -145,6 +141,6 @@ test('chapter 3 - ai insights', async ({ gui, capture }) => {
     await expect(modal.locator('#executeButton')).toBeEnabled({ timeout: 8 * 60 * 1000 });
     await expect(modal.getByText(/Summary/).first()).toBeVisible({ timeout: 2 * 60 * 1000 });
     await soar.waitForTimeout(3000);
-    await capture.shot(soar, 'fsa03-06-insight-card', { target: modal, mask: uiMask(soar), scrub: false });
+    await capture.shot(soar, 'fsa03-06-insight-card', { target: modal, ...SKIP });
   });
 });
