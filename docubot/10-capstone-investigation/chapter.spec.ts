@@ -17,7 +17,13 @@
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, findAlert, openRecord, test } from 'docubot';
-import { labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit, uiMask } from '../lib/agentlab';
+import { labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
+
+// Mask only truly sensitive values; the scrub backstop still refuses a real lab
+// IP, hostname, key or sensitive term. The alert record shows dates and record
+// UUIDs (read as key-like tokens but not secrets, and no real key renders on an
+// alert record), so those categories are skipped for this shot.
+const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 
 test.describe.configure({ mode: 'serial' });
 
@@ -139,13 +145,17 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
       expect(alert, 'capstone alert not found in the UI: stage it (fsa10-01) first').toBeTruthy();
       alertId = alert!.id;
     }
-    await openRecord(soar, 'alerts', alertId!, { tab: null });
+    // Open the Alert Details tab, not whatever tab the record last showed: the
+    // findings are written into the alert DESCRIPTION, and the AI Investigation
+    // tab's empty-state promo also contains the word "verdict" (it would match
+    // the locator and capture the wrong panel). On Alert Details the only
+    // "verdict" on screen is the agent's write-back.
+    await openRecord(soar, 'alerts', alertId!, { tab: 'Alert Details' });
     const findings = soar.locator('#view-panel-content').getByText(/verdict/i).first();
     await expect(findings, 'findings not rendered on the alert: run fsa10-02 with SPEND_AI=1').toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa10-02-investigate-findings-on-alert', {
       highlight: findings,
-      mask: uiMask(soar),
-      scrub: false,
+      ...SKIP_RECORD,
     });
   });
 
