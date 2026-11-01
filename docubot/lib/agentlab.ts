@@ -9,7 +9,7 @@ import { execFileSync } from 'child_process';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LocalSession } from 'docubot';
+import { LocalSession, claudeAdapter } from 'docubot';
 
 /** The connector the ch09 build lab produces (one source of truth). */
 export const DADJOKE = 'agentlab-dadjoke';
@@ -212,82 +212,12 @@ export function queryRows(module: string, filters: unknown[], extra: Record<stri
   return rows(toolkit('query_records', { module, filters, limit: 100, ...extra }));
 }
 
-/** Keys the Claude Code TUI needs; named so the driving code reads clearly. */
-const KEY = { down: '\x1b[B', up: '\x1b[A', enter: '\r', shiftTab: '\x1b[Z', space: ' ' };
-
-// The server-side write-approval elicitation (toolkit verbs/approval.py, 0.1.9+).
-// The caret line while the checkbox is unchecked; U+2610 is replaced by a checked
-// glyph once toggled, so "still unchecked" is the robust live-form / tick test.
-const APPROVAL_UNCHECKED = /Approve this change:\s*☐/;
-
-// Claude Code's turn-complete status line, e.g. "Cooked for 38s . done" (the verb
-// varies: Cooked/Brewed/Churned/...). Counting it over the full scrollback marks
-// a turn's end even for a reused session that already shows an earlier "done".
-const TURN_DONE = /for \d+s[^\n]*\bdone\b/gi;
-const turnDoneCount = (term: LocalSession): number => (term.screen().match(TURN_DONE) || []).length;
-
-/**
- * Answer the MCP write-approval form the toolkit server raises before a write:
- * a boolean "Approve this change" checkbox ABOVE an Accept/Decline row. In the
- * current Claude Code TUI the caret starts on Accept (❯ Accept Decline), not on
- * the checkbox, and the footer navigates with up/down - so move UP to the
- * checkbox, tick it (Space), then DOWN to Accept and submit (Enter). Accepting
- * with the box unticked cancels the write, so the tick is verified (the ☐ glyph
- * must disappear) before Accept is pressed. Self-correcting on the tick.
- */
-async function answerApprovalGate(term: LocalSession): Promise<boolean> {
-  // Act only on a LIVE form: the unticked checkbox (U+2610) is on screen. If it
-  // is not, the "requests your input" text is just lingering in the buffer after
-  // an answer already given - do not send stray keystrokes into the chat input.
-  if (!APPROVAL_UNCHECKED.test(term.plainScreen())) return false;
-  if (process.env.DOCUBOT_DEBUG_APPROVAL === '1') {
-    console.log('\n===== APPROVAL FORM (before tick) =====\n' + term.plainScreen() + '\n===== END =====\n');
-  }
-  // The caret starts on the Accept button; step up to the checkbox row, then tick.
-  // Retry the up+space pair so one missed keystroke self-corrects.
-  for (let i = 0; i < 4 && APPROVAL_UNCHECKED.test(term.plainScreen()); i++) {
-    term.write(KEY.up);
-    await settle(300);
-    term.write(KEY.space);
-    await settle(500);
-  }
-  if (APPROVAL_UNCHECKED.test(term.plainScreen())) {
-    if (process.env.DOCUBOT_DEBUG_APPROVAL === '1') {
-      console.log('\n===== APPROVAL FORM (after tick attempts, still unchecked) =====\n' + term.plainScreen() + '\n===== END =====\n');
-    }
-    throw new Error('write-approval gate: could not tick "Approve this change"');
-  }
-  term.write(KEY.down); // caret from the checkbox back down to the Accept button
-  await settle(500);
-  term.write(KEY.enter); // activate Accept
-  // Wait for the form to leave the viewport so the next race does not re-match
-  // the same prompt (bounded; the model's continued output scrolls it off).
-  for (let j = 0; j < 20 && /Accept\s+Decline/.test(term.plainScreen()); j++) await settle(500);
-  return true;
-}
-
-/**
- * A small bounded real delay. Used ONLY for the trust menu: Ink attaches its
- * key handler a beat after the menu paints, and that readiness emits no output,
- * so there is no screen signal to wait on - waitIdle returns at once because the
- * menu is already quiet. Everywhere else we wait on a real signal, never a sleep.
- */
-const settle = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
 /**
  * Launch a Claude Code TUI against the box and return a session ready for a
- * prompt. Points the agent at the box over MCP (DOCUBOT_MCP_CONFIG, a
- * .mcp.json with the fortisoar server), pins the model so captures never show
- * the operator's own default, clears the first-run "trust the files" prompt,
- * and switches on auto-accept so only the connector's own tier gate pauses a
- * turn (agentTurn answers that). cols/rows fix the capture width.
- *
- * The launch is deliberately explicit rather than relying on repo-local config:
- * --strict-mcp-config so only this file's servers load (never the operator's
- * user-level MCP servers). --dangerously-skip-permissions is NOT passed; the
- * auto-mode classifier blocks it. Keystroke sends are separated from Enter:
- * under the TUI's bracketed-paste a combined "text\r" submits as a newline, not
- * a return, so the prompt would never send.
+ * prompt. How claude is launched, trusted and readied is docubot's
+ * claudeAdapter; this adds only the workshop's choices: the box .mcp.json
+ * (DOCUBOT_MCP_CONFIG) and a working folder outside any git repo, so the footer
+ * shows no repo state (open merge request, project agents).
  */
 export async function startAgent(
   local: (name: string, opts?: any) => Promise<LocalSession>,
@@ -301,117 +231,23 @@ export async function startAgent(
         '(an env setup problem, not a content failure).',
     );
   }
-  const model = process.env.DOCUBOT_AGENT_MODEL || 'claude-sonnet-5-5';
-  // Run from a folder outside any git repo, so the footer shows no repo state
-  // (open merge request, project agents) from wherever docubot is checked out.
   fs.mkdirSync(AGENT_CWD, { recursive: true });
-  const term = await local(name, {
-    file: 'claude',
-    args: ['--mcp-config', path.resolve(mcp), '--strict-mcp-config', '--model', model],
-    cwd: AGENT_CWD,
-    cols: opts.cols ?? 100,
-    rows: opts.rows ?? 40,
-  });
-  // First launch in a new folder shows the trust gate ("Is this a project you
-  // created or one you trust? ... Yes, I trust this folder"). The menu opens on
-  // "No, exit", so the trust row is one Down, then Enter. Signal-based, never a
-  // fixed sleep. If no gate shows (folder already trusted), skip.
-  const trusted = await term
-    .waitFor(/trust this folder|safety check|a project you (created|trust)/i, { timeoutMs: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (trusted) {
-    // Position the caret on "Yes, I trust this folder" and only then confirm.
-    // The menu opens on "No, exit" (confirming it blind quits), and the Ink menu
-    // IGNORES arrow keys until it has finished its first paint, so settle before
-    // the first Down and after each one. Match on the PLAIN screen (the menu
-    // draws CUF escapes between characters). Self-correcting: Down toggles the
-    // two rows, so press until the caret line is the trust row.
-    const caretOnTrust = () =>
-      /trust this folder/i.test(
-        term.plainScreen().split('\n').find((l) => /❯/.test(l)) || '',
-      );
-    await settle(1200);
-    for (let i = 0; i < 4 && !caretOnTrust(); i++) {
-      term.write(KEY.down);
-      await settle(700);
-    }
-    if (!caretOnTrust()) {
-      throw new Error('trust gate: could not move the caret to "Yes, I trust this folder"');
-    }
-    term.write(KEY.enter);
-  }
-  // Wait for the READY screen: the version banner, the input-box placeholder, or
-  // the mode footer. Match on these, never on the bare caret (the trust gate
-  // drew one too). Auto mode is already ON in this harness ("auto mode on
-  // (shift+tab to cycle)"), so do NOT send shift+tab - that would toggle it OFF
-  // and make every routine tool call stop for approval.
-  await term.waitFor(/Claude Code v\d|auto mode on|Try "|for shortcuts/i, {
-    timeoutMs: 120_000,
-  });
+  const { file, args } = claudeAdapter.launchArgv({ type: 'agent', tool: 'claude' } as any, path.resolve(mcp));
+  const term = await local(name, { file, args, cwd: AGENT_CWD, cols: opts.cols ?? 100, rows: opts.rows ?? 40 });
+  await claudeAdapter.clearStartupGates(term);
+  await term.waitFor(claudeAdapter.readyPattern, { timeoutMs: 120_000 });
   return term;
 }
 
 /**
- * Drive one agent turn in a Claude Code TUI session and return its final screen.
- * Types the prompt, submits it (type then Enter, separated — see startAgent),
- * optionally answers a tier-gated confirm, waits for the turn to go idle, then
- * returns the screen for capture.screen().
+ * Drive one agent turn and return its final screen for capture.screen(). The
+ * turn logic (approval forms, prose go-aheads answered with `confirm`, waiting
+ * for the turn's own completion line) is docubot's claudeAdapter.turn.
  */
 export async function agentTurn(
   term: LocalSession,
   prompt: string,
   opts: { confirm?: string; quietMs?: number; timeoutMs?: number } = {},
 ): Promise<string> {
-  const timeoutMs = opts.timeoutMs ?? 300_000;
-  term.type(prompt);
-  await term.waitFor(new RegExp(prompt.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), {
-    timeoutMs: 15_000,
-  }).catch(() => {});
-  term.enter();
-  if (opts.confirm) {
-    // The go-ahead can arrive three ways, so race them instead of blocking on one:
-    //  - a PROSE yes/no question the agent typed in chat  -> answer it with text;
-    //  - the MCP write-approval CHECKBOX form             -> the gate loop below
-    //    ticks it (do not type a sentence into a checkbox), so just stop waiting;
-    //  - no approval at all (the tool was not gated, or the agent finished)
-    //    -> the turn completes, so stop waiting rather than hang to timeout.
-    // "Approve this change" belongs to the checkbox form, so it is NOT in the
-    // prose pattern (that is the gate loop's job).
-    const base0 = turnDoneCount(term);
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      await settle(500);
-      const scr = term.plainScreen();
-      if (APPROVAL_UNCHECKED.test(scr)) break; // checkbox form -> gate loop handles it
-      if (/\bproceed\b|\(y\/n\)|\byes,|go ahead\b|shall i\b|should i\b|\bconfirm\b|would you like\b/i.test(scr)) {
-        term.type(opts.confirm);
-        term.enter();
-        break;
-      }
-      if (turnDoneCount(term) > base0) break; // turn finished with no approval to answer
-    }
-  }
-  // Wait for the turn to actually COMPLETE, not merely go quiet: a fresh agent's
-  // initial thinking gap is quiet but not done (that returned the bare startup
-  // banner), and a write pauses on the approval form while the spinner animates
-  // (never idle). The reliable completion signal is Claude Code's status line
-  // "<verb> for <N>s . done"; count it against a baseline so a reused agent's
-  // earlier "done" does not false-trigger. A live approval form (unticked box)
-  // is answered as it appears; after the last answer the turn's own "done"
-  // ends the wait.
-  const base = turnDoneCount(term);
-  const deadline = Date.now() + timeoutMs;
-  gate: for (let guard = 0; guard < 12; guard++) {
-    while (Date.now() < deadline) {
-      await settle(600);
-      if (APPROVAL_UNCHECKED.test(term.plainScreen())) {
-        await answerApprovalGate(term);
-        continue gate; // re-enter the wait for the next approval or completion
-      }
-      if (turnDoneCount(term) > base) break gate;
-    }
-    break; // timeout
-  }
-  return term.screen();
+  return claudeAdapter.turn!(term, prompt, opts);
 }
