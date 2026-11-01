@@ -16,8 +16,8 @@ Give your agent this prompt:
 ```text
 Build a FortiSOAR playbook collection named "Agent Lab" with one playbook
 "Tag Agent Lab Alerts". Goal: when an alert is created whose name starts with
-"Agent Lab", update that alert's description to "Triaged automatically by the
-Agent Lab playbook", then end. Name the three steps "On Alert Created" (the
+"Agent Lab", append "Triaged automatically by the Agent Lab playbook" to that
+alert's description, keeping the text already there, then end. Name the three steps "On Alert Created" (the
 on-create trigger), "Tag Alert" (the update-record step) and "Done" (the end).
 Author the playbook YAML, compile it and fix any errors, and show me the
 compiled result. Do not publish yet.
@@ -51,7 +51,7 @@ playbooks:
         module: alerts
         record: "{{ vars.input.records[0]['@id'] }}"
         fields:
-          description: "Triaged automatically by the Agent Lab playbook"
+          description: "{{ vars.input.records[0].description | default('', true) }} Triaged automatically by the Agent Lab playbook"
         next: Done
       - name: Done
         type: end

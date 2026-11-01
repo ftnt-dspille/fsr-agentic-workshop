@@ -17,7 +17,7 @@
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, findAlert, openRecord, test } from 'docubot';
-import { labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
+import { agentScreen, labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. The alert record shows dates and record
@@ -77,10 +77,14 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     const since = new Date().toISOString();
     let staged = SPEND;
     if (SPEND) {
+      // The page's premise is one alert with this name. The seeded demo set has a
+      // same-named alert (and reruns leave staged copies); with two, the agent
+      // stops to ask which to update. ch07's reset-alerts restores the demo copy.
+      labSeed('delete-records', 'alerts', 'name', ALERT_NAME);
       // The page's own staging prompt, driven in a real agent TUI.
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, PAGE, 1));
-      await capture.screen('fsa10-01-stage-alert', screen, { title: 'student@laptop: ~/agent-lab' });
+      await capture.screen('fsa10-01-stage-alert', screen, agentScreen());
     } else {
       console.log('[ch10] fsa10-01-stage-alert: seeding via the toolkit; the agent capture needs SPEND_AI=1');
       if (stagedAlerts().length === 0) {
@@ -122,7 +126,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
         timeoutMs: 20 * 60 * 1000,
         quietMs: 8_000,
       });
-      await capture.screen('fsa10-02-investigate', screen, { title: 'student@laptop: ~/agent-lab' });
+      await capture.screen('fsa10-02-investigate', screen, agentScreen());
     } else {
       console.log('[ch10] fsa10-02-investigate: agent run skipped (spends credits); set SPEND_AI=1');
     }

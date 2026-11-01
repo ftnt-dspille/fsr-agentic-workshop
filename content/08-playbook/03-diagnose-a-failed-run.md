@@ -37,7 +37,7 @@ playbooks:
         module: alerts
         record: "/api/3/alerts/00000000-0000-0000-0000-000000000000"
         fields:
-          description: "Triaged automatically by the Agent Lab playbook"
+          description: "{{ vars.input.records[0].description | default('', true) }} Triaged automatically by the Agent Lab playbook"
         next: Done
       - name: Done
         type: end

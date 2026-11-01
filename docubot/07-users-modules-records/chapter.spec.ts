@@ -22,10 +22,9 @@
 //
 // Prerequisites: the read-only guard is OFF in DOCUBOT_MCP_CONFIG (no
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
-// fsa07-01 (the spec seeds two marker alerts itself if none are Open).
-import { expect, goToModuleList, test } from 'docubot';
-import type { Page } from '@playwright/test';
-import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+// fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
+import { clearGridFilter, expect, filterGridRow, goToModuleList, test } from 'docubot';
+import { agentScreen, agentTurn, labSeed, promptFor, queryRows, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. These grids show TEST-NET documentation
@@ -38,35 +37,9 @@ test.describe.configure({ mode: 'serial' });
 const CHAPTER = '07-users-modules-records';
 const MODULE = 'agentlab_assets';
 const RUN_AGENT = process.env.SPEND_AI === '1';
-const TITLE = { title: 'student@laptop: ~/agent-lab' };
-
-/** First array found in a toolkit result (shape differs between tools). */
-function rowsOf(res: any): any[] {
-  if (Array.isArray(res)) return res;
-  if (!res || typeof res !== 'object') return [];
-  for (const key of ['records', 'results', 'items', 'data', 'hydra:member']) {
-    if (Array.isArray(res[key])) return res[key];
-  }
-  for (const v of Object.values(res)) if (Array.isArray(v)) return v as any[];
-  return [];
-}
 
 const text = (v: unknown) => JSON.stringify(v ?? '');
-
-/**
- * Query a module by field conditions; returns the rows. Pass `fields` in `extra`
- * to get a custom module's own field VALUES back: the default summary projection
- * only returns identity fields it recognizes (for a new module that is just uuid +
- * dates), and asking for full records (summary:false) makes them large enough that
- * the toolkit's output cap silently truncates the members list to one. An explicit
- * `fields` list is compact AND carries the values.
- *
- * FortiSOAR's `like` operator is NOT a bare substring match: it needs SQL wildcards,
- * so callers pass `%value%`, never `value`.
- */
-function query(module: string, filters: any[], extra: Record<string, unknown> = {}): any[] {
-  return rowsOf(toolkit('query_records', { module, filters, limit: 100, ...extra }));
-}
+const query = queryRows;
 
 function moduleExists(): boolean {
   try {
@@ -76,19 +49,6 @@ function moduleExists(): boolean {
     if (!/not found|does not exist|unknown module/i.test(String(err.message))) throw err;
     return false;
   }
-}
-
-/**
- * Filter a module grid on its own column filter (pagination-proof; never a bare
- * getByText on the first page) and return the matching row. Field names are the
- * ui-grid column names; verify on a live box.
- */
-async function gridRow(soar: Page, field: string, value: string, hint: string) {
-  const filter = soar.locator(`input[name="${field}"][placeholder="Search" i]`).first();
-  if (await filter.waitFor({ timeout: 15_000 }).then(() => true).catch(() => false)) await filter.fill(value);
-  const row = soar.locator('.ui-grid-row').filter({ hasText: value }).first();
-  await expect(row, hint).toBeVisible({ timeout: 30_000 });
-  return row;
 }
 
 const SEEDS = [
@@ -114,22 +74,18 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     const isOpen = (r: any) => /\bOpen\b/.test(text(r.status));
     const isInvestigating = (r: any) => /Investigating/.test(text(r.status));
 
-    // Precondition: there is an Open batch to move (seed two markers if the
-    // chapter 2 alerts are not Open). Marker alerts are removed again below.
-    const markers: string[] = [];
-    if (!lab().some(isOpen)) {
-      for (const suffix of ['A', 'B']) {
-        const out = toolkit('create_record', { module: 'alerts', data: { name: `Agent Lab bulk triage marker ${suffix}`, status: 'Open' } });
-        markers.push(out['@id'] || `/api/3/alerts/${out.uuid}`);
-      }
-    }
+    // Precondition: exactly the seeded demo alerts, all Open. Earlier chapters and
+    // reruns leave extra "Agent Lab" alerts behind, which would change what the
+    // agent moves; the reset returns the box to the page's starting state.
+    labSeed('reset-alerts');
     const openBefore = lab().filter(isOpen);
+    expect(openBefore.length, 'the reset should leave every demo alert Open').toBe(lab().length);
     expect(openBefore.length, 'no Open "Agent Lab" alert to triage').toBeGreaterThan(0);
 
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, '01-bulk-triage', 1));
-      await capture.screen('fsa07-01-bulk-triage', screen, TITLE);
+      await capture.screen('fsa07-01-bulk-triage', screen, agentScreen());
     } else {
       // Same mechanism without the agent: one update per matching alert.
       for (const r of openBefore) {
@@ -142,19 +98,21 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     expect(after.filter(isOpen), 'Open Agent Lab alerts remain').toHaveLength(0);
     expect(after.filter(isInvestigating).length).toBeGreaterThanOrEqual(openBefore.length);
 
-    for (const ref of markers) toolkit('delete_record', { module: 'alerts', ref, confirm: true });
   });
 
   if (shouldRunStep('fsa07-02-create-module')) await test.step('fsa07-02-create-module', async () => {
     if (RUN_AGENT) {
       // provision_module is tier-3 and confirm-gated: agentTurn answers the gate.
       // Skipped when the module already exists (the agent would only re-verify).
+      // The page has the agent create build-server-01 as its test record; remove
+      // earlier runs' copies so a rerun does not add a duplicate.
+      if (moduleExists()) labSeed('delete-records', MODULE, 'hostname', 'build-server-01');
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, '02-create-a-module', 1), {
         confirm: 'Yes, go ahead and publish it.',
         timeoutMs: 600_000,
       });
-      await capture.screen('fsa07-02-create-module', screen, TITLE);
+      await capture.screen('fsa07-02-create-module', screen, agentScreen());
     } else if (!moduleExists()) {
       toolkit('provision_module', {
         module: MODULE,
@@ -182,7 +140,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     // the app state, so the module appears without a manual browser reload.
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
-    await gridRow(soar, 'hostname', 'build-server-01', 'no build-server-01 row: the module step did not create it');
+    await filterGridRow(soar, 'build-server-01', { column: 'hostname' }); // the module step created it
     await capture.shot(soar, 'fsa07-02-create-module-ui', SKIP_RECORD);
   });
 
@@ -192,7 +150,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, '03-work-with-records', 1));
-      await capture.screen('fsa07-03-seed-records', screen, TITLE);
+      await capture.screen('fsa07-03-seed-records', screen, agentScreen());
     } else {
       for (const data of SEEDS) toolkit('get_or_create_record', { module: MODULE, data, key: 'hostname' });
     }
@@ -216,7 +174,9 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     // UI: the grid. IPs are TEST-NET documentation ranges (safe to show).
     const soar = await gui('soar');
     await goToModuleList(soar, MODULE);
-    await gridRow(soar, 'hostname', 'db-server-01', 'no db-server-01 row: run fsa07-03 (agent or toolkit) first');
+    await filterGridRow(soar, 'db-server-01', { column: 'hostname' }); // run fsa07-03 (agent or toolkit) first
+    // Show all the seeded assets, not just the row the filter proved exists.
+    await clearGridFilter(soar, { column: 'hostname' });
     await capture.shot(soar, 'fsa07-03-seed-records-grid', SKIP_RECORD);
   });
 
@@ -224,7 +184,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
       const screen = await agentTurn(agent, promptFor(CHAPTER, '03-work-with-records', 2));
-      await capture.screen('fsa07-04-record-lifecycle', screen, TITLE);
+      await capture.screen('fsa07-04-record-lifecycle', screen, agentScreen());
     }
 
     // Effect: the lifecycle of db-server-01 has a create event.

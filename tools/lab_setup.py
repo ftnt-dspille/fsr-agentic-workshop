@@ -425,6 +425,101 @@ def cmd_lab_records(client) -> int:
 
 
 # ---------------------------------------------------------------------------
+# reset-alerts (ch7: bulk triage starts from exactly the seeded demo set, Open)
+
+def cmd_reset_alerts(client) -> int:
+    """Return the "Agent Lab" alerts to the seeded demo set, every one Open.
+
+    Earlier chapters and reruns leave extra alerts behind (ch2's orientation
+    alert, ch7 markers, duplicate seeds). Deletes every alert whose name starts
+    with "Agent Lab" and is not a demo alert, keeps the OLDEST copy of each demo
+    alert (the one earlier chapters investigated) and deletes the rest, seeds any
+    that are missing, then sets the demo alerts' status to Open.
+    """
+    demo = {ALERT_NAME_PREFIX + s["name"] for s in DEMO_ALERTS}
+    rows = [r for r in client.records("alerts").iterate(raw=True)
+            if (r.get("name") or "").startswith("Agent Lab")]
+    rows.sort(key=lambda r: r.get("createDate") or 0)
+    kept: dict[str, dict] = {}
+    doomed: list[dict] = []
+    for r in rows:
+        name = r.get("name") or ""
+        if name in demo and name not in kept:
+            kept[name] = r
+        else:
+            doomed.append(r)
+    failed = 0
+    for r in doomed:
+        try:
+            client.records("alerts").delete(r["uuid"])
+            print(f"deleted: {r.get('name')}")
+        except Exception as exc:
+            print(f"FAILED delete: {r.get('name')}: {exc}")
+            failed += 1
+    if len(kept) < len(demo) and cmd_seed(client):
+        failed += 1
+    alerts = client.records("alerts")
+    for r in alerts.iterate(raw=True):
+        if (r.get("name") or "") in demo:
+            try:
+                spec = next(d for d in DEMO_ALERTS if ALERT_NAME_PREFIX + d["name"] == r.get("name"))
+                # Restore the seeded description too: a playbook may have edited it.
+                alerts.update(r["uuid"], {"status": "Open", "description": spec["description"]})
+            except Exception as exc:
+                print(f"FAILED reopen: {r.get('name')}: {exc}")
+                failed += 1
+    print(f"reset-alerts: {len(doomed)} removed, {len(demo)} demo alerts Open, {failed} failed")
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
+# delete-records (a page that has the agent create a record starts without it)
+
+def cmd_delete_records(client, module: str, field: str, value: str) -> int:
+    """Delete every record in `module` whose `field` equals `value` (exact).
+
+    A page that asks the agent to create a named record would otherwise add a
+    duplicate on every rerun. A no-op when none match.
+    """
+    recs = client.records(module)
+    hits = [r for r in recs.iterate(raw=True) if r.get(field) == value]
+    for r in hits:
+        recs.delete(r["uuid"])
+    print(f"delete-records: {len(hits)} {module} with {field}={value} removed")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# reset-connector (ch9: a hub-install page starts from "not installed yet")
+
+def cmd_reset_connector(client, name: str) -> int:
+    """Uninstall every installed version of a connector, then wait until it is gone.
+
+    The ch9 Content Hub page has the agent install a connector the box does not
+    have, so a rerun first returns the box to that state. A no-op when absent.
+    """
+    import time
+
+    def installed():
+        return [c for c in client.connectors.list_configured(refresh=True) if c.name == name]
+
+    for c in installed():
+        try:
+            client.connectors.uninstall(name, version=c.version)
+            print(f"uninstalled: {name} {c.version}")
+        except Exception as exc:
+            print(f"reset-connector FAILED: {name} {c.version}: {exc}")
+            return 1
+    for _ in range(90):
+        if not installed():
+            print(f"reset-connector: {name} not installed")
+            return 0
+        time.sleep(2)
+    print(f"reset-connector FAILED: {name} still listed after 180s")
+    return 1
+
+
+# ---------------------------------------------------------------------------
 # check
 
 def cmd_check(client) -> int:
@@ -495,6 +590,11 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("mcp-server", help="register the shipped external MCP servers (idempotent)")
     sub.add_parser("records", help="seed records from static/examples/records (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
+    sub.add_parser("reset-alerts", help="return the Agent Lab alerts to the demo set, all Open")
+    dr = sub.add_parser("delete-records", help="delete records whose field equals a value")
+    dr.add_argument("module"); dr.add_argument("field"); dr.add_argument("value")
+    rc = sub.add_parser("reset-connector", help="uninstall a connector so a hub-install lab starts clean")
+    rc.add_argument("name")
     args = ap.parse_args(argv)
 
     env = resolve_env(args)
@@ -512,6 +612,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_mcp_server(client)
     if args.cmd == "records":
         return cmd_lab_records(client)
+    if args.cmd == "delete-records":
+        return cmd_delete_records(client, args.module, args.field, args.value)
+    if args.cmd == "reset-alerts":
+        return cmd_reset_alerts(client)
+    if args.cmd == "reset-connector":
+        return cmd_reset_connector(client, args.name)
     return cmd_check(client)
 
 

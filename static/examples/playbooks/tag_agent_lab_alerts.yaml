@@ -18,7 +18,7 @@ playbooks:
         module: alerts
         record: "{{ vars.input.records[0]['@id'] }}"
         fields:
-          description: "Triaged automatically by the Agent Lab playbook"
+          description: "{{ vars.input.records[0].description | default('', true) }} Triaged automatically by the Agent Lab playbook"
         next: Done
       - name: Done
         type: end

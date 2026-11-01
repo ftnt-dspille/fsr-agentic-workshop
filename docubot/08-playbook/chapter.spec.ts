@@ -18,10 +18,10 @@
 //
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
-import * as fs from 'fs';
-import * as path from 'path';
 import { expect, openPlaybook, openPlaybookLogs, openRecord, test } from 'docubot';
-import { agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+import {
+  agentScreen, agentTurn, labSeed, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, queryRows, shouldRunStep, startAgent, toolkit,
+} from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. Designer/run-history pages show dates and
@@ -33,45 +33,18 @@ test.describe.configure({ mode: 'serial' });
 
 const CHAPTER = '08-playbook';
 const AGENT = process.env.SPEND_AI === '1';
-const TITLE = 'student@laptop: ~/agent-lab';
 
 const TAG_PLAYBOOK = 'Tag Agent Lab Alerts';
 const COLLECTION = 'Agent Lab';
 const PRACTICE_PLAYBOOK = 'Agent Lab Diagnose Practice';
 const PROBE_PLAYBOOK = 'Agent Lab Probe';
 const TAG_TEXT = 'Triaged automatically by the Agent Lab playbook';
+const KEEP_TEXT = 'Repeated failed logins followed by a success.';
 
-/** Read a content page of this chapter. */
-function pageMd(page: string): string {
-  return fs.readFileSync(path.join(__dirname, '..', '..', 'content', CHAPTER, `${page}.md`), 'utf8');
-}
+const pageYaml = (page: string) => pageYamlOf(CHAPTER, page);
+const promptYaml = (page: string, start: string, end: string) => promptYamlOf(CHAPTER, page, start, end);
 
-/** The first ```yaml fence on a page - the YAML the page tells the agent to produce. */
-function pageYaml(page: string): string {
-  const m = /```yaml\n([\s\S]*?)```/.exec(pageMd(page));
-  if (!m) throw new Error(`no yaml fence on content/${CHAPTER}/${page}.md`);
-  return m[1];
-}
-
-/** YAML embedded in a prompt fence, between two literal markers of the prompt text. */
-function promptYaml(page: string, startMarker: string, endMarker: string): string {
-  const md = pageMd(page);
-  const start = md.indexOf(startMarker);
-  const end = md.indexOf(endMarker, start);
-  if (start < 0 || end < 0) throw new Error(`prompt YAML markers not found on content/${CHAPTER}/${page}.md`);
-  return md.slice(start, end).trim() + '\n';
-}
-
-/** Records out of a query_records result, whatever envelope key the toolkit used. */
-function members(res: any): any[] {
-  if (Array.isArray(res)) return res;
-  for (const key of ['records', 'members', 'hydra:member', 'items', 'results', 'data']) {
-    if (Array.isArray(res?.[key])) return res[key];
-  }
-  return [];
-}
-
-const query = (module: string, filters: unknown[]): any[] => members(toolkit('query_records', { module, filters }));
+const query = (module: string, filters: unknown[]): any[] => queryRows(module, filters);
 const playbookRows = (name: string) => query('workflows', [{ field: 'name', operator: 'eq', value: name }]);
 // query_records returns a projection that omits isActive, so read the active
 // state from the full record (get_record returns it).
@@ -109,7 +82,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     if (AGENT) {
       agent = await freshAgent();
       const screen = await agentTurn(agent, promptFor(CHAPTER, '01-author-and-publish', 1));
-      await capture.screen('fsa08-01-compile-yaml', screen, { title: TITLE });
+      await capture.screen('fsa08-01-compile-yaml', screen, agentScreen());
     }
     // Effect: the page's YAML compiles offline (nothing touches the box).
     const out = toolkit('compile_playbook_yaml', { yaml_text: pageYaml('01-author-and-publish') });
@@ -123,7 +96,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
       // Publish + read-back to a live box legitimately runs longer than the
       // default 5 min turn budget; give it the same headroom as the diagnose turn.
       const screen = await agentTurn(agent, promptFor(CHAPTER, '01-author-and-publish', 2), { timeoutMs: 10 * 60 * 1000 });
-      await capture.screen('fsa08-02-publish-playbook', screen, { title: TITLE });
+      await capture.screen('fsa08-02-publish-playbook', screen, agentScreen());
     } else {
       ensureTagPlaybook();
     }
@@ -147,7 +120,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     if (AGENT) {
       const a = await freshAgent();
       const screen = await agentTurn(a, promptFor(CHAPTER, '02-trigger-and-verify', 1));
-      await capture.screen('fsa08-03-trigger-and-verify', screen, { title: TITLE });
+      await capture.screen('fsa08-03-trigger-and-verify', screen, agentScreen());
       // The agent created the alert; find the newest one it made.
       const found = query('alerts', [{ field: 'name', operator: 'like', value: 'Agent Lab - suspicious login%' }])
         .sort((x, y) => String(y.createDate).localeCompare(String(x.createDate)));
@@ -161,6 +134,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
           name: `Agent Lab - suspicious login on jump-host-01 (${Date.now()})`,
           severity: 'High',
           source: 'Agent Lab Workshop',
+          description: KEEP_TEXT,
         },
       });
       alertUuid = created.uuid;
@@ -170,6 +144,8 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     // Effect: the read-back is the proof, not the run status.
     const alert = toolkit('get_record', { module: 'alerts', ref: alertUuid });
     expect(JSON.stringify(alert)).toContain(TAG_TEXT);
+    // The playbook appends; it must not wipe the alert's own description.
+    if (!AGENT) expect(JSON.stringify(alert), 'the playbook replaced the description').toContain(KEEP_TEXT);
 
     // UI: the alert's Executed Playbook Logs (historical) draw the run's step graph.
     await openRecord(soar, 'alerts', alertUuid, { tab: null });
@@ -194,7 +170,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
       // The agent does the whole break-fix loop from one prompt.
       const a = await freshAgent();
       const screen = await agentTurn(a, promptFor(CHAPTER, '03-diagnose-a-failed-run', 1), { timeoutMs: 10 * 60 * 1000 });
-      await capture.screen('fsa08-04-diagnose-run', screen, { title: TITLE });
+      await capture.screen('fsa08-04-diagnose-run', screen, agentScreen());
       // Effect: the agent named the failing step, and the practice playbook is
       // published and active again (the fix landed). The failed run it diagnosed
       // is the agent's own, so the seeded diagnosis below is skipped here.
@@ -222,14 +198,17 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     if (AGENT) {
       const a = await freshAgent();
       const screen = await agentTurn(a, promptFor(CHAPTER, '04-run-a-playbook-in-one-call', 1));
-      await capture.screen('fsa08-05-run-in-one-call', screen, { title: TITLE });
+      await capture.screen('fsa08-05-run-in-one-call', screen, agentScreen());
     }
     // Effect: the one-call workflow answers, shows the step result, and cleans up.
+    // Start without a probe playbook (the agent's turn above may leave its own),
+    // so the check proves this call's cleanup, not an earlier run's.
+    labSeed('delete-records', 'workflows', 'name', PROBE_PLAYBOOK);
     const probe = promptYaml('04-run-a-playbook-in-one-call', 'collection: Agent Lab Probe', '\n\nTell me the status');
     const out = toolkit('run_playbook_yaml', { yaml_text: probe, cleanup: true });
     const text = JSON.stringify(out);
     expect(text).toContain('answered');
     expect(text).toContain('agent-lab-ok');
-    expect(playbookRows(PROBE_PLAYBOOK), 'cleanup=true left the probe playbook on the box').toHaveLength(0);
+    expect(playbookRows(PROBE_PLAYBOOK), `cleanup=true left the probe playbook on the box. Toolkit said: ${text.slice(0, 1500)}`).toHaveLength(0);
   });
 });

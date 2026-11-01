@@ -7,15 +7,22 @@
 // Live-only (needs the box + the agent). Authored against the pre-docubot specs
 // tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js; verify on
 // a box with `docubot run --chapter 09-connectors`.
-import { expect, test } from 'docubot';
+import { connectorResultsCount, expect, openConnector, test } from 'docubot';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DADJOKE, agentTurn, promptFor, sh, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+import { agentScreen, DADJOKE, agentTurn, labSeed, promptFor, sh, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+
+// The Content Hub connector the install page names.
+const HUB = 'whois-rdap';
+const hubInstalled = (): boolean =>
+  (toolkit('list_connectors', {}).connectors || []).some((l: string) => String(l).startsWith(`${HUB} `));
 
 test.describe.configure({ mode: 'serial' });
 
 test('chapter 9 — connectors', async ({ gui, local, capture }) => {
+  // fsa09-06 and -07 are one conversation (the second prompt says "this connector").
+  let hubAgent: Awaited<ReturnType<typeof startAgent>> | undefined;
   test.setTimeout(20 * 60 * 1000);
 
   if (shouldRunStep('fsa09-01-discover-connectors')) await test.step('fsa09-01-discover-connectors', async () => {
@@ -29,23 +36,13 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     // first prompt fence), so the picture matches the words on the page.
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const screen = await agentTurn(agent, promptFor('09-connectors', '01-explore-and-run', 1));
-    await capture.screen('fsa09-01-discover-connectors', screen, { title: 'student@laptop: ~/agent-lab' });
+    await capture.screen('fsa09-01-discover-connectors', screen, agentScreen());
 
-    // UI proof: the Content Hub results count, highlighted. Mask the user menu
-    // and the publisher facet (a real analyst name) so the shot is repo-safe; the
-    // scrub backstop refuses the shot on any other unmasked leak.
+    // UI proof: the Content Hub results count, highlighted. Only the lab URL and
+    // keys are ever masked (house rule); the scrub backstop refuses any other leak.
     const soar = await gui('soar');
-    await soar.goto(`${new URL(soar.url()).origin}/connectors`, { waitUntil: 'domcontentloaded' });
-    const countEl = soar.getByText(/results/i).first();
-    await expect(countEl).toBeVisible({ timeout: 30_000 });
-    await capture.shot(soar, 'fsa09-01-discover-connectors-ui-count', {
-      highlight: countEl,
-      mask: [
-        soar.locator('#user-links'),
-        soar.locator('.userpic'),
-        soar.locator('.facet-container, .filter-facets, [class*="publisher"]'),
-      ],
-    });
+    const countEl = await connectorResultsCount(soar, new URL(soar.url()).origin);
+    await capture.shot(soar, 'fsa09-01-discover-connectors-ui-count', { highlight: countEl });
   });
 
   if (shouldRunStep('fsa09-02-run-operation')) await test.step('fsa09-02-run-operation', async () => {
@@ -53,7 +50,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     // interpreting the result, captured in the TUI with the page's own prompt.
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const screen = await agentTurn(agent, promptFor('09-connectors', '01-explore-and-run', 2));
-    await capture.screen('fsa09-02-run-operation', screen, { title: 'student@laptop: ~/agent-lab' });
+    await capture.screen('fsa09-02-run-operation', screen, agentScreen());
 
     // Effect-check: a configured connector exists and exposes operations to run.
     const listed = toolkit('list_connectors', {});
@@ -118,9 +115,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     // fsa09-05-dadjoke-installed (pending). The detail panel is the reliable
     // shot; the grid-tile clip is dialed in on the target box.
     const soar = await gui('soar');
-    await soar.goto(`${new URL(soar.url()).origin}/connectors`, { waitUntil: 'domcontentloaded' });
-    await soar.getByText('Manage', { exact: true }).first().click();
-    await soar.getByText('AgentLab Dad Joke', { exact: true }).first().click().catch(() => {});
+    await openConnector(soar, new URL(soar.url()).origin, 'AgentLab Dad Joke');
     await capture.shot(soar, 'fsa09-05-run-own-connector');
   });
 
@@ -128,33 +123,42 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
   // specific). Now automated: drive the agent in a real TUI, capture its screen,
   // and confirm the box effect.
   if (shouldRunStep('fsa09-06-install-from-hub')) await test.step('fsa09-06-install-from-hub', async () => {
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    const before = new Set<string>((toolkit('list_connectors', {}).connectors || []).map((l: string) => String(l).split(' ')[0]));
+    const agent = hubAgent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    // The page's premise is that the box does not have this connector yet, so
+    // return the box to that state first; otherwise a rerun proves nothing.
+    labSeed('reset-connector', HUB);
+    expect(hubInstalled(), `${HUB} is still installed after the reset`).toBe(false);
     const screen = await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 1), {
-      confirm: 'Yes, go ahead and install it.',
+      // Covers both a plain go-ahead and the agent asking which version (the
+      // toolkit cannot list Content Hub versions, so it may ask first).
+      confirm: 'Yes, go ahead and install the latest version.',
     });
-    await capture.screen('fsa09-06-install-from-hub', screen, { title: 'student@laptop: ~/agent-lab' });
-    // Effect-check: a connector the box did not have before is now installed. The Content Hub
-    // install is async on the appliance, so the connector list can still lag the agent's turn
-    // when it reports done; poll for a short window rather than reading the list once.
-    let appeared = false;
-    for (let i = 0; i < 20 && !appeared; i++) {
-      const after = (toolkit('list_connectors', {}).connectors || []).map((l: string) => String(l).split(' ')[0]);
-      appeared = after.some((name: string) => !before.has(name));
-      if (!appeared) await new Promise((r) => setTimeout(r, 5000));
+    await capture.screen('fsa09-06-install-from-hub', screen, agentScreen());
+    // Effect-check: the agent's install landed. The hub install is async on the
+    // appliance, so poll a short window.
+    let installed = false;
+    for (let i = 0; i < 20 && !installed; i++) {
+      installed = hubInstalled();
+      if (!installed) await new Promise((r) => setTimeout(r, 5000));
     }
-    expect(appeared, 'no new connector appeared after the hub install (polled 100s)').toBe(true);
+    expect(installed, `${HUB} is not installed after the hub install (polled 100s)`).toBe(true);
   });
 
   if (shouldRunStep('fsa09-07-configure-and-health')) await test.step('fsa09-07-configure-and-health', async () => {
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    // The page's second prompt continues the install conversation ("this
+    // connector"), so it goes to the same agent session fsa09-06 opened.
+    if (!hubAgent) throw new Error('fsa09-07 continues the fsa09-06 conversation; run both steps together');
+    const agent = hubAgent;
     await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 2), {
       confirm: 'Yes, configure it.',
     });
-    // Effect-check: the hub connector the chapter installed reports healthy.
-    // The exact name is box-specific; assert at least one newly-configured
-    // connector is Available (the orchestrator pins the name for a strict run).
-    const listed = toolkit('list_connectors', {});
-    expect((listed.connectors || []).some((l: string) => String(l).includes('config'))).toBe(true);
+    // Effect-check: the hub connector now has a configuration (polled; the
+    // connector list can lag the agent's save).
+    let line = '';
+    for (let i = 0; i < 12 && !/\(\d+ configs?\)/.test(line); i++) {
+      line = String((toolkit('list_connectors', {}).connectors || []).find((l: string) => String(l).startsWith(`${HUB} `)) || '');
+      if (!/\(\d+ configs?\)/.test(line)) await new Promise((r) => setTimeout(r, 5000));
+    }
+    expect(line, `${HUB} has no configuration. Agent screen:\n${agent.plainScreen().trim().slice(-3000)}`).toMatch(/\(\d+ configs?\)/);
   });
 });

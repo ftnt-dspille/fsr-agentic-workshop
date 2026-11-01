@@ -6,6 +6,7 @@
 // pulling an agent prompt out of the page it is documented on, and driving the
 // Claude Code TUI for a prompt.
 import { execFileSync } from 'child_process';
+import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 import { LocalSession } from 'docubot';
@@ -104,15 +105,51 @@ export function sh(cmd: string, args: string[], cwd?: string): string {
  * @param cmd a lab_setup.py subcommand: 'seed' | 'org-context' | 'install-agent'
  *   | 'mcp-server' | 'records' (and chapter seeders as they are added)
  */
-export function labSeed(cmd: string): string {
+/**
+ * Capture options for an agent TUI screen: the student's window title, and the
+ * agent's real working folder (the folder holding DOCUBOT_MCP_CONFIG) shown as
+ * the ~/agent-lab folder the pages tell the student to work in.
+ */
+/** Working folder for the TUI agent: outside every repo. */
+export const AGENT_CWD = path.join(os.tmpdir(), 'fsa-workshop', 'agent-lab');
+
+// Agent sessions are shown unmasked (scrub off); only the temp folder is
+// renamed to the folder the pages use.
+// Footer items that come from the capturing machine, not the lab: Claude Code's
+// count of other local sessions and the checkout's open merge request. Gaps
+// between words are serialized as cursor-forward escapes, and colour codes can
+// sit between them, so both count as space.
+const GAP = String.raw`(?:\s|\x1b\[[\d;]*[Cm])*`;
+const FOOTER_NOISE: Array<[RegExp, string]> = [
+  [new RegExp(`${GAP}[·•]${GAP}←${GAP}\\d+${GAP}agents?`, 'g'), ''],
+  [new RegExp(`${GAP}[·•]${GAP}MR${GAP}!\\d+`, 'g'), ''],
+];
+
+export function agentScreen(): { title: string; scrub: false; replace: Array<[string | RegExp, string]> } {
+  const dir = process.env.DOCUBOT_MCP_CONFIG ? path.dirname(path.resolve(process.env.DOCUBOT_MCP_CONFIG)) : '';
+  const home = process.env.HOME || '';
+  const tilde = dir && home && dir.startsWith(home) ? '~' + dir.slice(home.length) : '';
+  return {
+    title: 'student@laptop: ~/agent-lab',
+    scrub: false,
+    replace: [['/private' + AGENT_CWD, '~/agent-lab'], [AGENT_CWD, '~/agent-lab'], [dir, '~/agent-lab'], [tilde, '~/agent-lab'], ...FOOTER_NOISE].filter(([f]) => f) as Array<[string | RegExp, string]>,
+  };
+}
+
+export function labSeed(cmd: string, ...args: string[]): string {
   const py = process.env.FSR_PYTHON || process.env.DOCUBOT_PYTHON || 'python3';
   const script = path.join(__dirname, '..', '..', 'tools', 'lab_setup.py');
-  const out = execFileSync(py, [script, cmd], {
-    encoding: 'utf8',
-    timeout: 5 * 60 * 1000,
-    env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
-    cwd: path.join(__dirname, '..', '..'),
-  });
+  let out: string;
+  try {
+    out = execFileSync(py, [script, cmd, ...args], {
+      encoding: 'utf8',
+      timeout: 5 * 60 * 1000,
+      env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
+      cwd: path.join(__dirname, '..', '..'),
+    });
+  } catch (e: any) {
+    throw new Error(`lab_setup ${cmd} ${args.join(' ')} failed:\n${String(e.stdout || '')}${String(e.stderr || '')}`);
+  }
   console.log(`[labSeed ${cmd}] ${out.trim().split('\n').pop()}`);
   return out;
 }
@@ -132,6 +169,47 @@ export function promptFor(chapter: string, page: string, n = 1): string {
   const prompt = found[n - 1];
   if (!prompt) throw new Error(`no prompt #${n} on content/${chapter}/${page}.md (found ${found.length})`);
   return prompt;
+}
+
+/** Raw Markdown of a content page (`content/<chapter>/<page>.md`). */
+export function pageMd(chapter: string, page: string): string {
+  return fs.readFileSync(path.join(__dirname, '..', '..', 'content', chapter, `${page}.md`), 'utf8');
+}
+
+/** The first ```yaml fence on a content page: the YAML the page tells the agent to produce. */
+export function pageYaml(chapter: string, page: string): string {
+  const m = /```yaml\n([\s\S]*?)```/.exec(pageMd(chapter, page));
+  if (!m) throw new Error(`no yaml fence on content/${chapter}/${page}.md`);
+  return m[1];
+}
+
+/** YAML embedded in a prompt, from a literal start marker up to (not incl.) an end marker. */
+export function promptYaml(chapter: string, page: string, startMarker: string, endMarker: string): string {
+  const md = pageMd(chapter, page);
+  const start = md.indexOf(startMarker);
+  const end = md.indexOf(endMarker, start);
+  if (start < 0 || end < 0) throw new Error(`prompt YAML markers not found on content/${chapter}/${page}.md`);
+  return md.slice(start, end).trim() + '\n';
+}
+
+/** The record list out of a toolkit result, whatever envelope key the tool used. */
+export function rows(res: any): any[] {
+  if (Array.isArray(res)) return res;
+  if (!res || typeof res !== 'object') return [];
+  for (const key of ['records', 'members', 'hydra:member', 'items', 'results', 'data']) {
+    if (Array.isArray(res[key])) return res[key];
+  }
+  for (const v of Object.values(res)) if (Array.isArray(v)) return v as any[];
+  return [];
+}
+
+/**
+ * toolkit query_records -> rows. Pass `fields` in `extra` to get a custom
+ * module's own field values (the default projection returns identity fields
+ * only). FortiSOAR `like` needs SQL wildcards: pass `%value%`.
+ */
+export function queryRows(module: string, filters: unknown[], extra: Record<string, unknown> = {}): any[] {
+  return rows(toolkit('query_records', { module, filters, limit: 100, ...extra }));
 }
 
 /** Keys the Claude Code TUI needs; named so the driving code reads clearly. */
@@ -224,9 +302,13 @@ export async function startAgent(
     );
   }
   const model = process.env.DOCUBOT_AGENT_MODEL || 'claude-sonnet-5-5';
+  // Run from a folder outside any git repo, so the footer shows no repo state
+  // (open merge request, project agents) from wherever docubot is checked out.
+  fs.mkdirSync(AGENT_CWD, { recursive: true });
   const term = await local(name, {
     file: 'claude',
-    args: ['--mcp-config', mcp, '--strict-mcp-config', '--model', model],
+    args: ['--mcp-config', path.resolve(mcp), '--strict-mcp-config', '--model', model],
+    cwd: AGENT_CWD,
     cols: opts.cols ?? 100,
     rows: opts.rows ?? 40,
   });
@@ -302,7 +384,7 @@ export async function agentTurn(
       await settle(500);
       const scr = term.plainScreen();
       if (APPROVAL_UNCHECKED.test(scr)) break; // checkbox form -> gate loop handles it
-      if (/\bproceed\b|\(y\/n\)|\byes,|go ahead\b|shall i\b|should i\b|\bconfirm\b/i.test(scr)) {
+      if (/\bproceed\b|\(y\/n\)|\byes,|go ahead\b|shall i\b|should i\b|\bconfirm\b|would you like\b/i.test(scr)) {
         term.type(opts.confirm);
         term.enter();
         break;

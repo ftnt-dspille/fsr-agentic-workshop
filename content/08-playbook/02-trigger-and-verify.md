@@ -29,7 +29,7 @@ Watch the tool sequence - it is the verification pattern from chapter 1 end to e
 1. `create_record` on alerts (the trigger fires server-side),
 2. `wait_for_playbook_run` scoped to the playbook name,
 3. `diagnose_playbook_run` if anything looks off - it diffs the defined steps against what actually ran,
-4. `get_record` on the alert: the description now reads "Triaged automatically by the Agent Lab playbook".
+4. `get_record` on the alert: the description still has its original text, now followed by "Triaged automatically by the Agent Lab playbook".
 
 ## 2. You are done when
 

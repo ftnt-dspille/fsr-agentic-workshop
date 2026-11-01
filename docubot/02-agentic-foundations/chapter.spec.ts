@@ -12,9 +12,11 @@
 //
 // Verify on a box with `docubot run --chapter 02-agentic-foundations`.
 import {
-  askFortiSOARAssistant, expect, fillRecordForm, findAlert, goToModuleList, ngGo,
-  openAgentDetail, openAgentDetailTab, openMcpServer, openNewRecordForm, openOrgContextRecord,
-  selectDetailTab, submitForm, test, waitForAlert,
+  askFortiSOARAssistant, deleteRecord, expect, fillRecordForm, listRecords, findAlert, goToModuleList, ngGo,
+  openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm,
+  openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, test, waitForAlert,
+  waitForRecordSettled,
+  skipStep,
 } from 'docubot';
 import { shouldRunStep } from '../lib/agentlab';
 
@@ -31,8 +33,13 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
 
   if (shouldRunStep('fsa02-00-create-alert')) await test.step('fsa02-00-create-alert', async () => {
     if (process.env.DOCUBOT_CREATE_ALERT !== '1') {
-      console.log('[ch02] fsa02-00-create-alert skipped: set DOCUBOT_CREATE_ALERT=1 to create an alert in the UI');
+      skipStep('fsa02-00-create-alert', 'set DOCUBOT_CREATE_ALERT=1 to create an alert in the UI');
       return;
+    }
+    // Alerts dedupe on Source + Source ID, and the page's documented values are
+    // fixed, so remove the orientation alerts earlier runs of this step created.
+    for (const a of await listRecords<{ uuid: string; name?: string }>(soar, 'alerts', '$search=Agent%20Lab%20-%20orientation&$limit=50')) {
+      if (/^Agent Lab - orientation \d+$/.test(a.name || '')) await deleteRecord(soar, 'alerts', a.uuid);
     }
     const name = `Agent Lab - orientation ${Date.now()}`;
     await goToModuleList(soar, 'alerts');
@@ -74,30 +81,9 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
 
   // Manual step fsa02-02-agent-catalog: the analyst reads each Triage/Insight
   // agent's profile by hand; the catalog view (Content Hub > Discover, filtered to
-  // AI Agent) is captured here. The Discover route presets the Connectors filter,
-  // so untick it and tick AI Agent.
+  // AI Agent) is captured here.
   if (shouldRunStep('fsa02-02-agent-catalog')) await test.step('fsa02-02-agent-catalog', async () => {
-    await soar.goto(`${origin}/connectors`, { waitUntil: 'domcontentloaded' });
-    await soar.getByText('Discover', { exact: true }).first().click();
-    const contentType = (label: string) =>
-      soar.evaluate((text: string) => {
-        const box = [...document.querySelectorAll('div, section')].find(
-          (el) =>
-            /Content Type/.test((el as HTMLElement).innerText || '') &&
-            el.querySelector('input[type=checkbox]') &&
-            (el as HTMLElement).innerText.length < 400,
-        );
-        const hit =
-          box &&
-          [...box.querySelectorAll('label, span, div')].find(
-            (el) => el.children.length === 0 && (el as HTMLElement).innerText.trim() === text,
-          );
-        if (!hit) throw new Error(`Content Type filter "${text}" not found`);
-        (hit as HTMLElement).click();
-      }, label);
-    await contentType('Connectors');
-    await contentType('AI Agent');
-    await expect(soar.getByText('Filtered by:').first()).toBeVisible({ timeout: 30_000 });
+    await openDiscover(soar, origin, { only: ['AI Agent'] });
     await expect(soar.getByText('Alert Investigation', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-02-agent-catalog', SKIP);
   });
@@ -114,7 +100,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   });
 
   if (shouldRunStep('fsa02-03-mcp-servers')) await test.step('fsa02-03-mcp-servers', async () => {
-    await soar.goto(`${origin}/ai-configuration/mcp-servers`, { waitUntil: 'domcontentloaded' });
+    await openMcpServers(soar, origin);
     for (const name of [
       'FortiSOAR Module Management',
       'FortiSOAR Playbook Management',
@@ -137,13 +123,9 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   });
 
   if (shouldRunStep('fsa02-04-sop-compare')) await test.step('fsa02-04-sop-compare', async () => {
-    await soar.goto(`${origin}/ai-configuration/organizational-context`, { waitUntil: 'domcontentloaded' });
-    // 66 org-context records span several pages, so filter the Title column to
-    // "SOP -" and confirm the Malware SOP is among the matched rows.
-    await soar.locator('input[name="title"][placeholder="Search" i]').first().fill('SOP -');
-    await expect(
-      soar.locator('.ui-grid-row').filter({ hasText: 'SOP - Malware Detection' }).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    // The org-context grid paginates, so filter the Title column to "SOP -" and
+    // confirm the Malware SOP is among the matched rows.
+    await orgContextRow(soar, origin, 'SOP -', 'SOP - Malware Detection');
     await capture.shot(soar, 'fsa02-04-sop-compare', SKIP);
   });
 
@@ -160,20 +142,24 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
     // FortiAI spend is opt-in. The page keeps this as a manual exercise unless
     // SPEND_AI=1 explicitly authorizes a real assistant turn and its capture.
     if (process.env.SPEND_AI !== '1') {
-      console.log('[ch02] fsa02-05-assistant-readonly skipped: set SPEND_AI=1 to spend FortiAI tokens');
+      skipStep('fsa02-05-assistant-readonly', 'set SPEND_AI=1 to spend FortiAI tokens');
       return;
     }
-    const alert = (await findAlert(soar, /Agent Lab/i, { search: 'Agent Lab' })) || (await findAlert(soar, /./));
+    // A settled seeded alert (the oldest beaconing one), not one fsa02-00 just
+    // created while the chapter 8 playbook may still be rewriting it.
+    const alert = (await findAlert(soar, /Agent Lab - beaconing/i, { search: 'Agent Lab - beaconing', oldest: true }))
+      || (await findAlert(soar, /./));
     expect(alert, 'create at least one alert before asking the assistant').toBeTruthy();
-    await ngGo(soar, 'viewPanel.modulesDetail', { module: 'alerts', id: alert!.id });
     // Alert Details is the right context behind the drawer; the record can open on
     // a remembered tab (e.g. AI Investigation), so select it explicitly.
-    await selectDetailTab(soar, 'Alert Details');
-    const { drawer } = await askFortiSOARAssistant(
+    await openRecord(soar, 'alerts', alert!.id, { tab: 'Alert Details' });
+    const { answer } = await askFortiSOARAssistant(
       soar,
       'Summarize this alert\'s severity and source. Do not repeat IP addresses, hostnames, usernames, dates, or record identifiers. Do not change anything.',
     );
-    await expect(drawer).toContainText(/severity|source/i);
+    // Assert on the ANSWER bubble; the question itself contains these words.
+    expect(answer, 'the assistant answered with the severity').toMatch(/critical|high|medium|low/i);
+    await waitForRecordSettled(soar);
     await capture.shot(soar, 'fsa02-05-assistant-readonly', SKIP);
   });
 });

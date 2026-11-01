@@ -16,7 +16,12 @@
 // TOOL_LIST view. Authored OFFLINE from the pre-docubot spec
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
-import { apiViaApp, expect, findAlert, openAlertAiInvestigation, openTracePanel, runInvestigation, test, waitForInvestigation } from 'docubot';
+import {
+  agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel,
+  openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation,
+  runInvestigation, test, triggerAgent, uploadAgentBundle, waitForInvestigation,
+  skipStep,
+} from 'docubot';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -44,71 +49,21 @@ const DEFAULT_TOOL_ROWS = [
 
 const build = () => process.env.DOCUBOT_AGENT_BUILD === '1';
 
-/** Open the Content Hub AI Agent catalog, optionally narrowed by a search string. */
-async function openCatalog(soar: Page, origin: string, search = ''): Promise<void> {
-  const url = `${origin}/content-hub/my-content/?contentType=ai_agent${search ? `&searchText=${encodeURIComponent(search)}` : ''}`;
-  await soar.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await soar
-    .waitForSelector('marketplace-tile-view-component, .mp-tile-container, text=No Results', { timeout: 30_000 })
-    .catch(() => undefined);
+/** Trigger the hello agent and check the documented async shape (task_id first, then the answer). */
+async function triggerHello(soar: Page, entity: string): Promise<any> {
+  const { trigger, result } = await triggerAgent(soar, AGENT, { entity });
+  expect(trigger.answer, 'trigger must return a task_id, not the answer').toBeUndefined();
+  return result;
 }
 
-/** Open the Upload dropdown; true when the gated "Upload AI Agent" item exists and was clicked. */
-async function openUploadPanel(soar: Page, origin: string): Promise<boolean> {
-  await openCatalog(soar, origin);
-  await soar.locator('#upload-btn').click();
-  const item = soar.locator('#upload-ai_agent');
-  const present = await item.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false);
-  if (!present) return false;
-  await item.click();
-  await soar.getByText(/Drag and Drop/i).first().waitFor({ timeout: 20_000 });
-  return true;
-}
+const helloListed = (soar: Page, origin: string) => agentInCatalog(soar, origin, AGENT_LABEL);
 
-/** Is the hello agent in the catalog (the UI-installed path lists it)? */
-async function agentListed(soar: Page, origin: string): Promise<boolean> {
-  await openCatalog(soar, origin, AGENT_LABEL);
-  return soar.locator('.mp-tile-container').filter({ hasText: AGENT_LABEL }).first()
-    .waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
-}
-
-/** Upload a bundle through the panel. Uploads AND activates in one step. */
-async function uploadBundle(soar: Page, origin: string, zip: string, replace: boolean): Promise<void> {
-  if (!(await openUploadPanel(soar, origin))) throw new Error('Upload AI Agent control is off: enable Advanced Development > Import/Upload Custom AI Agent');
-  if (replace) {
-    await soar.evaluate(() => {
-      const cb = (Array.from(document.querySelectorAll('input[type=checkbox]')) as HTMLInputElement[]).find((c) =>
-        /Replace existing version/i.test((c.closest('label') as HTMLElement)?.innerText || (c.parentElement as HTMLElement)?.innerText || ''));
-      if (cb && !cb.checked) cb.click();
-    });
+/** Upload the bundle through the panel (uploads AND activates); fail when the toggle is off. */
+async function uploadHello(soar: Page, origin: string, zip: string): Promise<void> {
+  if (!(await agentUploadAvailable(soar, origin)).available) {
+    throw new Error('Upload AI Agent control is off: enable Advanced Development > Import/Upload Custom AI Agent');
   }
-  await soar.locator('input[type=file][accept*="zip"]').first().setInputFiles(zip);
-  await soar.waitForFunction(() => /successfully/i.test(document.body.innerText) || !document.querySelector('input[type=file][accept*="zip"]'), null, { timeout: 30_000 });
-}
-
-/** Trigger the agent, poll to completion, return the result (the documented async shape). */
-async function triggerHello(soar: Page, entity: string): Promise<{ taskId: string; result: any }> {
-  const trig: any = await apiViaApp(soar, 'POST', `/ai/agents/${AGENT}/trigger`, { entity });
-  const taskId = String(trig.task_id);
-  expect(taskId).toBeTruthy();
-  let status = String(trig.status);
-  for (let i = 0; i < 30 && status !== 'completed'; i++) {
-    await soar.waitForTimeout(2_000);
-    status = String(((await apiViaApp(soar, 'GET', `/ai/agents/${taskId}/status`)) as any).status);
-    expect(['pending', 'running', 'in_progress', 'completed']).toContain(status);
-  }
-  expect(status).toBe('completed');
-  const result: any = await apiViaApp(soar, 'GET', `/ai/agents/${taskId}/result`);
-  return { taskId, result };
-}
-
-/** Read the agent's id from the agent list (GET /ai/agent/, singular: the management route;
- *  used to record whether replace changes it). */
-async function agentId(soar: Page): Promise<string | null> {
-  const list: any = await apiViaApp(soar, 'GET', '/ai/agent/');
-  const rows: any[] = Array.isArray(list) ? list : list?.items || list?.agents || list?.['hydra:member'] || [];
-  const hit = rows.find((a) => a && (a.name === AGENT || a.agent_name === AGENT));
-  return hit ? String(hit.id ?? hit.uuid ?? hit.agent_id ?? '') || null : null;
+  await uploadAgentBundle(soar, origin, zip, { replace: true });
 }
 
 test('chapter 4 - build your own agent', async ({ gui, capture }) => {
@@ -130,8 +85,8 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // Page 02 s2: the Content Hub upload panel. Opening it uploads nothing, so it is
   // always safe; skipped (not failed) when the Advanced Development toggle is off.
   if (shouldRunStep('fsa04-00-upload-agent')) await test.step('fsa04-00-upload-agent', async () => {
-    if (!(await openUploadPanel(soar, origin))) {
-      console.log('[ch04] fsa04-00-upload-agent skipped: the Import/Upload Custom AI Agent toggle is off');
+    if (!(await openAgentUploadPanel(soar, origin))) {
+      skipStep('fsa04-00-upload-agent', 'the Import/Upload Custom AI Agent toggle is off');
       return;
     }
     await expect(soar.getByText(/Replace existing version/i).first()).toBeVisible({ timeout: 20_000 });
@@ -140,24 +95,22 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     if (build()) {
       sh('zip', ['-r', zip, AGENT], EXAMPLES);
       expect(fs.existsSync(zip)).toBe(true);
-      await uploadBundle(soar, origin, zip, true);
-      expect(await agentListed(soar, origin), 'hello agent not in the catalog after upload').toBe(true);
+      await uploadHello(soar, origin, zip);
+      expect(await helloListed(soar, origin), 'hello agent not in the catalog after upload').toBe(true);
     }
   });
 
   // Page 02 s3: the hello agent. Detail page capture + the async trigger/poll/result
   // round trip. No LLM call, so no credits.
   if (shouldRunStep('fsa04-01-hello-agent')) await test.step('fsa04-01-hello-agent', async () => {
-    if (!(await agentListed(soar, origin))) {
-      console.log('[ch04] fsa04-01-hello-agent skipped: hello agent not installed (set DOCUBOT_AGENT_BUILD=1)');
+    if (!(await openAgentDetail(soar, origin, AGENT_LABEL))) {
+      skipStep('fsa04-01-hello-agent', 'hello agent not installed (set DOCUBOT_AGENT_BUILD=1)');
       return;
     }
-    await soar.locator('.mp-tile-container').filter({ hasText: AGENT_LABEL }).first().click();
-    await soar.waitForFunction(() => /[?&]uuid=/i.test(location.href), null, { timeout: 15_000 }).catch(() => undefined);
     await expect(soar.getByText(AGENT_LABEL).first()).toBeVisible({ timeout: 20_000 });
     await capture.shot(soar, 'fsa04-01-hello-agent-detail', SKIP_RECORD);
 
-    const { result } = await triggerHello(soar, 'host-01.example.com');
+    const result = await triggerHello(soar, 'host-01.example.com');
     expect(result.answer).toContain('hello from the workshop agent for entity: host-01.example.com');
     expect(result).toHaveProperty('confidence');
     expect(Array.isArray(result.evidence)).toBe(true);
@@ -178,15 +131,9 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // is a person's step; here we capture the record and assert the nine defaults are
   // intact (replacing it with a short table silently stops the default questions).
   if (shouldRunStep('fsa04-02-tool-list-row')) await test.step('fsa04-02-tool-list-row', async () => {
-    await soar.goto(`${origin}/ai-configuration/organizational-context`, { waitUntil: 'domcontentloaded' });
-    // The org-context grid paginates (60+ records), so TOOL_LIST is not on the
-    // first page. Filter the Title column (the grid's own column filter) to find
-    // it, then open it. Seed it first with: DOCUBOT_SEED=1 (or
-    // `python3 tools/lab_setup.py org-context`).
-    await soar.locator('input[name="title"][placeholder="Search" i]').first().fill('TOOL_LIST');
-    const row = soar.locator('.ui-grid-row').filter({ hasText: 'TOOL_LIST' }).first();
-    await expect(row, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeVisible({ timeout: 30_000 });
-    await row.click();
+    // Seed it first with DOCUBOT_SEED=1 (or `python3 tools/lab_setup.py org-context`).
+    const uuid = await openOrgContextRecord(soar, origin, 'TOOL_LIST').catch(() => null);
+    expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
     for (const label of DEFAULT_TOOL_ROWS) {
       await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
     }
@@ -197,16 +144,15 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // the custom agent. Spends FortiAI credits, so it is opt-in.
   if (shouldRunStep('fsa04-03-route-check')) await test.step('fsa04-03-route-check', async () => {
     if (process.env.SPEND_AI !== '1') {
-      console.log('[ch04] fsa04-03-route-check skipped: set SPEND_AI=1 to run a FortiAI investigation');
+      skipStep('fsa04-03-route-check', 'set SPEND_AI=1 to run a FortiAI investigation');
       return;
     }
     // A seeded alert no other chapter investigates (ch03 and ch10 own "beaconing from web-server-01").
     const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
     expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
     await openAlertAiInvestigation(soar, origin, alert!.id);
-    // A rerun finds the investigation already finished (no Begin button): read it, do not spend again.
-    const begin = await soar.locator('#view-panel-content #showTriagId').waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
-    const inv = begin
+    // A rerun finds the investigation already finished: read it, do not spend again.
+    const inv = (await readInvestigation(soar)).state === 'not-run'
       ? await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 })
       : await waitForInvestigation(soar, { timeoutMs: 60_000 });
     expect(inv.state).toBe('done');
@@ -221,21 +167,12 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // login and step wiring are not scripted); this step opens it and captures the
   // canvas. Skipped when the playbook is not there.
   if (shouldRunStep('fsa04-04-playbook-branch')) await test.step('fsa04-04-playbook-branch', async () => {
-    await soar.goto(`${origin}/playbooks`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await soar.waitForSelector('text=Collections', { timeout: 30_000 });
-    const coll = soar.locator(`text=${PLAYBOOK_COLLECTION}`).first();
-    if (!(await coll.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false))) {
-      console.log(`[ch04] fsa04-04-playbook-branch skipped: no "${PLAYBOOK_COLLECTION}" collection`);
+    const opened = await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME })
+      .then(() => true).catch(() => false);
+    if (!opened) {
+      skipStep('fsa04-04-playbook-branch', `no "${PLAYBOOK_NAME}" playbook in "${PLAYBOOK_COLLECTION}"`);
       return;
     }
-    await coll.click();
-    const pb = soar.locator(`text=${PLAYBOOK_NAME}`).first();
-    if (!(await pb.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false))) {
-      console.log(`[ch04] fsa04-04-playbook-branch skipped: no "${PLAYBOOK_NAME}" playbook`);
-      return;
-    }
-    await pb.click();
-    await soar.waitForSelector('.jsplumb-draggable, [class*="workflow-step"], #designer-container', { timeout: 30_000 });
     await expect(soar.getByText(/Invoke AI Agent|Decision/i).first()).toBeVisible({ timeout: 20_000 });
     // The designer header carries a "Last Modified <date> by <user>" line; the date
     // is benign content and the user name is a display name, so leave them visible.
@@ -245,14 +182,11 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // Page 03 s4: route B, the raw async trigger API. The effect is the documented
   // shape: one call returns a task_id (not the answer), then status, then result.
   if (shouldRunStep('fsa04-05-playbook-route-b')) await test.step('fsa04-05-playbook-route-b', async () => {
-    if (!(await agentListed(soar, origin)) && !build()) {
-      console.log('[ch04] fsa04-05-playbook-route-b skipped: hello agent not installed');
+    if (!(await helloListed(soar, origin)) && !build()) {
+      skipStep('fsa04-05-playbook-route-b', 'hello agent not installed');
       return;
     }
-    const trig: any = await apiViaApp(soar, 'POST', `/ai/agents/${AGENT}/trigger`, { entity: 'host-01.example.com' });
-    expect(trig.task_id, 'trigger must return a task_id, not the answer').toBeTruthy();
-    expect(trig.answer).toBeUndefined();
-    const { result } = await triggerHello(soar, 'host-01.example.com');
+    const result = await triggerHello(soar, 'host-01.example.com');
     expect(result.answer).toBeTruthy();
   });
 
@@ -260,15 +194,15 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // so it rides the same opt-in as the initial import. Records whether the id moved.
   if (shouldRunStep('fsa04-06-replace-check')) await test.step('fsa04-06-replace-check', async () => {
     if (!build()) {
-      console.log('[ch04] fsa04-06-replace-check skipped: set DOCUBOT_AGENT_BUILD=1 to re-import with replace');
+      skipStep('fsa04-06-replace-check', 'set DOCUBOT_AGENT_BUILD=1 to re-import with replace');
       return;
     }
     if (!fs.existsSync(zip)) sh('zip', ['-r', zip, AGENT], EXAMPLES);
-    const before = await agentId(soar);
-    await uploadBundle(soar, origin, zip, true);
-    const after = await agentId(soar);
+    const before = (await findAgent(soar, AGENT))?.id;
+    await uploadHello(soar, origin, zip);
+    const after = (await findAgent(soar, AGENT))?.id;
     console.log(`[ch04] agent id before=${before} after=${after} changed=${before !== after}`);
-    const { result } = await triggerHello(soar, 'host-01.example.com');
+    const result = await triggerHello(soar, 'host-01.example.com');
     expect(result.answer).toContain('hello from the workshop agent');
   });
 });
