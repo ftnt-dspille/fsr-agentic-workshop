@@ -17,7 +17,7 @@ ERROR  capture-pending   (--strict only) a capture still listed in pending-captu
 ERROR  duplicate-step    the same step id on more than one marker
 ERROR  duplicate-capture the same capture id on more than one marker
 ERROR  step-no-test      a non-manual step id with no ``test.step('<id>')`` in
-                         ``tools/e2e/**/*.spec.js``
+                         ``tools/e2e/**/*.spec.js`` or ``docubot/**/*.spec.ts``
 ERROR  capture-missing   a capture id with no ``<id>.png`` in the page's own
                          directory and no entry in ``tools/pending-captures.txt``
 ERROR  dash              an en or em dash in content (house rule, defense in depth)
@@ -48,6 +48,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT = REPO_ROOT / "content"
 E2E_DIR = REPO_ROOT / "tools" / "e2e"
+DOCUBOT_DIR = REPO_ROOT / "docubot"
 PENDING = REPO_ROOT / "tools" / "pending-captures.txt"
 
 # Dash characters are written as escapes so this file itself stays dash-free.
@@ -59,6 +60,9 @@ MANUAL_RE = re.compile(r"^\s*(\S+)(?:\s+manual(?::\s*(.*?))?)?\s*$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
 ALLOWED_FLAGS = {"manual"}
 TEST_STEP_RE = re.compile(r"""test\.step\(\s*(['"`])(?P<id>[^'"`]+)\1""")
+# A spec helper that wraps test.step(id), called with the step id first:
+# ``await gallery('fsa08-06-escalate-critical', ...)``.
+HELPER_STEP_RE = re.compile(r"""await\s+\w+\(\s*(['"`])(?P<id>fsa[\w-]+)\1""")
 IPV4_RE = re.compile(r"(?<![\d.])((?:\d{1,3}\.){3}\d{1,3})(?![\d.])")
 
 
@@ -112,13 +116,13 @@ def read_pending() -> dict[str, str]:
 
 def spec_step_ids() -> set[str]:
     ids: set[str] = set()
-    if not E2E_DIR.exists():
-        return ids
-    for spec in E2E_DIR.rglob("*.spec.js"):
+    specs = [*E2E_DIR.rglob("*.spec.js"), *DOCUBOT_DIR.rglob("*.spec.ts")]
+    for spec in specs:
         if "node_modules" in spec.parts:
             continue
-        for m in TEST_STEP_RE.finditer(spec.read_text(encoding="utf-8")):
-            ids.add(m.group("id"))
+        text = spec.read_text(encoding="utf-8")
+        for rx in (TEST_STEP_RE, HELPER_STEP_RE):
+            ids.update(m.group("id") for m in rx.finditer(text))
     return ids
 
 

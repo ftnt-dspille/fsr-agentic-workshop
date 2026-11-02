@@ -273,6 +273,30 @@ def org_context_artifacts() -> list[dict]:
     return specs
 
 
+# The learner's row from chapter 4 page 02 (fsa04-02): the tenth line of TOOL_LIST,
+# naming the hello agent so the investigation planner asks it a question.
+HELLO_TOOL_ROW = "| Workshop host lookup | Workshop Hello Agent | host | Yes |"
+
+
+def cmd_tool_list_row(client) -> int:
+    """Append the hello agent's row to TOOL_LIST, keeping every other row (idempotent).
+
+    Without it no investigation question targets the custom agent, so the
+    fsa04-03 route check cannot pass.
+    """
+    rec = existing_org_context(client).get(("INFRA_INFO", "TOOL_LIST"))
+    if rec is None:
+        print("tool-list-row: no TOOL_LIST record; run org-context first")
+        return 1
+    content = (rec.get("content") or "").rstrip()
+    if HELLO_TOOL_ROW in content:
+        print("skip (exists): TOOL_LIST hello row")
+        return 0
+    client.put(rec["@id"], data={"content": f"{content}\n{HELLO_TOOL_ROW}\n"})
+    print("added: TOOL_LIST hello row")
+    return 0
+
+
 def cmd_org_context(client) -> int:
     """Create the shipped org-context records (idempotent by category+subCategory).
 
@@ -643,6 +667,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("check", help="report readiness, change nothing")
     sub.add_parser("seed", help="create the demo alerts (idempotent)")
     sub.add_parser("org-context", help="create the shipped org-context records, e.g. TOOL_LIST (idempotent)")
+    sub.add_parser("tool-list-row", help="add the hello agent's row to TOOL_LIST, keeping the defaults (idempotent)")
     sub.add_parser("install-agent", help="import the chapter-4 hello agent bundle (idempotent)")
     sub.add_parser("mcp-server", help="register the shipped external MCP servers (idempotent)")
     sub.add_parser("records", help="seed records from static/examples/records (idempotent)")
@@ -666,6 +691,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_seed(client)
     if args.cmd == "org-context":
         return cmd_org_context(client)
+    if args.cmd == "tool-list-row":
+        return cmd_tool_list_row(client)
     if args.cmd == "install-agent":
         return cmd_install_agent(client)
     if args.cmd == "mcp-server":

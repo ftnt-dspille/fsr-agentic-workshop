@@ -18,7 +18,7 @@
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
 import {
   agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel,
-  openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation,
+  openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep,
   runInvestigation, test, triggerAgent, uploadAgentBundle, waitForInvestigation,
   skipStep,
 } from 'docubot';
@@ -38,6 +38,7 @@ const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
 test.describe.configure({ mode: 'serial' });
 
 const AGENT = 'workshop_hello_agent';
+const BEACON_ALERT = 'Agent Lab - Outbound beacon to known C2 range from 10-net host';
 const AGENT_LABEL = 'Workshop Hello Agent';
 const EXAMPLES = path.join(__dirname, '..', '..', 'static', 'examples');
 const PLAYBOOK_COLLECTION = 'Agent Lab';
@@ -147,22 +148,36 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       skipStep('fsa04-03-route-check', 'set SPEND_AI=1 to run a FortiAI investigation');
       return;
     }
+    // The learner's tenth TOOL_LIST row (page 02 s4); without it no question targets the agent.
+    labSeed('tool-list-row');
     // A seeded alert no other chapter investigates (ch03 and ch10 own "beaconing from web-server-01").
-    const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
-    expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
-    await openAlertAiInvestigation(soar, origin, alert!.id);
-    // A rerun finds the investigation already finished: read it, do not spend again.
-    const inv = (await readInvestigation(soar)).state === 'not-run'
-      ? await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 })
-      : await waitForInvestigation(soar, { timeoutMs: 60_000 });
-    expect(inv.state).toBe('done');
-    const trace = await openTracePanel(soar);
+    // The trace names the agent by its label.
+    const reached = (trace: unknown) => /workshop_hello_agent|Workshop Hello Agent/.test(JSON.stringify(trace));
+    const openTrace = async () => {
+      const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
+      expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
+      await openAlertAiInvestigation(soar, origin, alert!.id);
+      // A finished investigation is read, not run again.
+      const inv = (await readInvestigation(soar)).state === 'not-run'
+        ? await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 })
+        : await waitForInvestigation(soar, { timeoutMs: 60_000 });
+      expect(inv.state).toBe('done');
+      return openTracePanel(soar);
+    };
+    let trace = await openTrace();
+    if (!reached(trace)) {
+      // A finished investigation from before the row existed never reaches the
+      // agent: reseed the alert and investigate it fresh.
+      labSeed('delete-records', 'alerts', 'name', BEACON_ALERT);
+      labSeed('seed');
+      trace = await openTrace();
+    }
     expect(trace.length).toBeGreaterThan(0);
-    // Whether the question reached the custom agent depends on the row wording and
-    // the model, so the capture shows the trace and the log says what it found.
     // The capture is proof only if the trace shows the custom agent answering.
-    expect(JSON.stringify(trace), `the trace never reached ${AGENT}: tighten the TOOL_LIST row`).toContain(AGENT);
-    await capture.shot(soar, 'fsa04-03-route-check-trace', SKIP_RECORD);
+    expect(reached(trace), `the trace never reached ${AGENT}: tighten the TOOL_LIST row`).toBe(true);
+    // Open the agent's own step so the capture shows it, not just the top of the list.
+    const step = await selectTraceStep(soar, 'Workshop Hello Agent');
+    await capture.shot(soar, 'fsa04-03-route-check-trace', { ...SKIP_RECORD, highlight: step });
   });
 
   // Page 03 s3: route A, the Invoke AI Agent connector operation, with a Decision

@@ -2,6 +2,3 @@
 # One id per line, then "# reason". lint-steps.py accepts a pending id in place of a
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
-fsa09-05-run-own-connector  # dad-joke card in the Connectors grid; fsa09-02 detail panel already proves the install. Grid-tile clip needs dialing in on the target box.
-fsa09-06-install-from-hub  # new Content Hub install page; capture in the box sweep
-fsa04-03-route-check-trace  # trace panel proving the custom agent answered; needs a full AI investigation run on the target box

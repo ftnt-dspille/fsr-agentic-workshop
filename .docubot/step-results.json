@@ -1,10 +1,10 @@
 {
   "steps": [
     {
-      "id": "fsa10-08-plan-and-build",
+      "id": "fsa04-03-route-check",
       "status": "passed",
-      "durationMs": 397359,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/10-capstone-investigation/chapter.spec.ts"
+      "durationMs": 75833,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/04-build-your-own-agent/chapter.spec.ts"
     }
   ]
 }
