@@ -38,6 +38,9 @@ which fields it wants rather than guessing.
 
 <!-- step: fsa09-07-configure-and-health -->
 
+<!-- capture: fsa09-07-configure-and-health -->
+![fsa09-07-configure-and-health](fsa09-07-configure-and-health.png?height=600px)
+
 The agent walks `default_connector_config` (the expected config shape), `upsert_connector_configuration` (create or update the `default` config), and `healthcheck_connector`. A connector that reaches an external service will report unhealthy until you give it real credentials - that is the connector telling the truth, not a failure of the agent. A self-contained connector goes green on its own.
 
 **You are done when:** the agent names the connector and version it installed, shows the config fields, and reports the health result plainly - green, or a precise list of the credentials it still needs.

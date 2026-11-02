@@ -1,7 +1,7 @@
 // Chapter 9 — connectors: discover and run, build and deploy agentlab-dadjoke,
 // and install one from the Content Hub. Every documented step is automated.
 // API effect-checks use the fsr-agentic-toolkit (the same tools the agent
-// calls); the two agent steps are driven in a real Claude Code TUI via docubot's
+// calls); every agent step is driven in a real Claude Code TUI via docubot's
 // local device and captured with capture.screen.
 //
 // Live-only (needs the box + the agent). Authored against the pre-docubot specs
@@ -9,9 +9,8 @@
 // a box with `docubot run --chapter 09-connectors`.
 import { connectorResultsCount, expect, openConnector, test } from 'docubot';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
-import { agentScreen, DADJOKE, agentTurn, labSeed, promptFor, sh, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
 
 // The Content Hub connector the install page names.
 const HUB = 'whois-rdap';
@@ -61,59 +60,53 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     expect(ops.count).toBeGreaterThan(0);
   });
 
-  // The agent build steps and the spec build both land in one workdir; agent-run
-  // orchestration can point FSR_WORKDIR at the agent's folder to check its build.
-  const workdir = process.env.FSR_WORKDIR || fs.mkdtempSync(path.join(os.tmpdir(), 'agentlab-conn-'));
-  const conndir = path.join(workdir, DADJOKE);
+  // §1-§3 of the build page are one agent conversation: the agent scaffolds and
+  // implements the connector in its own folder, packages and installs it (the
+  // confirm-gated step), then runs it. Each turn's screen is the page's proof.
+  let buildAgent: Awaited<ReturnType<typeof startAgent>> | undefined;
+  const conndir = path.join(AGENT_CWD, DADJOKE);
 
   if (shouldRunStep('fsa09-03-scaffold-connector')) await test.step('fsa09-03-scaffold-connector', async () => {
-    sh('pyfsr', ['connector', 'scaffold', DADJOKE, '--dir', conndir]);
-    const opsPath = path.join(conndir, 'operations.py');
-    let ops = fs.readFileSync(opsPath, 'utf8');
-    ops = ops
-      .replace('def ping(config, params):', 'def get_joke(config, params):')
-      .replace(/return \{[^}]+\}/, (m) =>
-        m.includes('reply')
-          ? 'import requests\n    r = requests.get(config.get("server", "https://icanhazdadjoke.com"), headers={"Accept": "application/json"}, timeout=30)\n    data = r.json()\n    return {"id": data.get("id"), "joke": data.get("joke")}'
-          : m,
-      )
-      .replace("'ping': ping,", "'get_joke': get_joke,");
-    fs.writeFileSync(opsPath, ops);
-    const infoPath = path.join(conndir, 'info.json');
-    const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
-    info.operations[0].operation = 'get_joke';
-    info.operations[0].annotation = 'get_joke';
-    info.operations[0].title = 'Get Joke';
-    info.operations[0].parameters = [];
-    info.operations[0].output_schema = { id: '', joke: '' };
-    fs.writeFileSync(infoPath, JSON.stringify(info, null, 2));
-    expect(fs.readFileSync(opsPath, 'utf8')).toContain('def get_joke');
+    // The page's premise is a fresh build: no folder from a previous run, and no
+    // copy on the box (a same-version replace-install can leave connector workers
+    // running the old code, so the health check reads stale).
+    fs.rmSync(conndir, { recursive: true, force: true });
+    labSeed('reset-connector', DADJOKE);
+    const agent = buildAgent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const screen = await agentTurn(agent, promptFor('09-connectors', '02-build-a-connector', 1));
+    await capture.screen('fsa09-03-scaffold-connector', screen, agentScreen());
+    // Effect-check: info.json and operations.py agree on get_joke.
+    const info = JSON.parse(fs.readFileSync(path.join(conndir, 'info.json'), 'utf8'));
+    expect(info.operations.map((o: any) => o.operation)).toContain('get_joke');
+    expect(fs.readFileSync(path.join(conndir, 'operations.py'), 'utf8')).toContain('get_joke');
   });
 
   if (shouldRunStep('fsa09-04-deploy-connector')) await test.step('fsa09-04-deploy-connector', async () => {
-    if (!process.env.FSR_WORKDIR) {
-      const tgz = sh('pyfsr', ['connector', 'package', conndir]).trim();
-      expect(tgz.endsWith('.tgz')).toBe(true);
-      const out = toolkit('install_connector', { path: tgz, replace: true, confirm: true });
-      expect(out.install).toBeTruthy();
-      toolkit('upsert_connector_configuration', {
-        connector: DADJOKE,
-        config: { server: 'https://icanhazdadjoke.com' },
-        name: 'Default',
-        default: true,
-      });
-    }
+    if (!buildAgent) throw new Error('fsa09-04 continues the fsa09-03 conversation; run both steps together');
+    const screen = await agentTurn(buildAgent, promptFor('09-connectors', '02-build-a-connector', 2), {
+      confirm: 'Yes, go ahead and install it.',
+    });
+    await capture.screen('fsa09-04-deploy-connector', screen, agentScreen());
     const health = toolkit('healthcheck_connector', { connector: DADJOKE });
     expect(JSON.stringify(health)).toContain('Available');
   });
 
   if (shouldRunStep('fsa09-05-run-own-connector')) await test.step('fsa09-05-run-own-connector', async () => {
+    if (!buildAgent) throw new Error('fsa09-05 continues the fsa09-03 conversation; run the build steps together');
+    // Right after a reinstall, connector workers can keep serving the previous
+    // code for a few minutes. Wait until a run returns exactly what the agent's
+    // code returns ({joke} only) so the capture shows the agent's own code.
+    for (let i = 0; i < 24; i++) {
+      const data = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} }).data ?? {};
+      if (data.joke && Object.keys(data).length === 1) break;
+      await new Promise((r) => setTimeout(r, 10_000));
+    }
+    const screen = await agentTurn(buildAgent, promptFor('09-connectors', '02-build-a-connector', 3));
+    await capture.screen('fsa09-05-run-own-connector-joke', screen, agentScreen());
     const out = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} });
     expect(JSON.stringify(out)).toContain('joke');
 
-    // Capture the installed connector in the Connectors grid. Was
-    // fsa09-05-dadjoke-installed (pending). The detail panel is the reliable
-    // shot; the grid-tile clip is dialed in on the target box.
+    // UI proof the agent's code is a real installed, healthy connector.
     const soar = await gui('soar');
     await openConnector(soar, new URL(soar.url()).origin, 'AgentLab Dad Joke');
     await capture.shot(soar, 'fsa09-05-run-own-connector');
@@ -149,9 +142,10 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     // connector"), so it goes to the same agent session fsa09-06 opened.
     if (!hubAgent) throw new Error('fsa09-07 continues the fsa09-06 conversation; run both steps together');
     const agent = hubAgent;
-    await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 2), {
+    const screen = await agentTurn(agent, promptFor('09-connectors', '01b-install-from-content-hub', 2), {
       confirm: 'Yes, configure it.',
     });
+    await capture.screen('fsa09-07-configure-and-health', screen, agentScreen());
     // Effect-check: the hub connector now has a configuration (polled; the
     // connector list can lag the agent's save).
     let line = '';

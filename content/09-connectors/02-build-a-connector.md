@@ -19,12 +19,16 @@ Give your agent this prompt:
 Build me a FortiSOAR connector that fetches a random dad joke from the public
 icanhazdadjoke.com API. Scaffold it as agentlab-dadjoke with the pyfsr connector
 CLI, then implement a get_joke operation that GETs https://icanhazdadjoke.com
-with an Accept: application/json header and returns the joke text. Keep
+with an Accept: application/json header and returns the joke text. Keep the
+scaffold's server configuration field and use it as the base URL. Keep
 info.json's operation list in sync with operations.py. Show me the diff of what
 you changed.
 ```
 
 <!-- step: fsa09-03-scaffold-connector -->
+
+<!-- capture: fsa09-03-scaffold-connector -->
+![fsa09-03-scaffold-connector](fsa09-03-scaffold-connector.png?height=600px)
 
 The scaffold ships a working skeleton (one `server` config field, one operation, a health check), so the agent edits a running starting point instead of writing boilerplate. Review the diff like you would any code review - `info.json`'s `operations` entry and the `operations.py` dict must agree on the operation name. Nothing about this is dad-joke-specific: swap the API and the operation and the agent builds whatever connector you asked for.
 
@@ -43,6 +47,9 @@ healthy.
 
 <!-- step: fsa09-04-deploy-connector -->
 
+<!-- capture: fsa09-04-deploy-connector -->
+![fsa09-04-deploy-connector](fsa09-04-deploy-connector.png?height=600px)
+
 Installing a connector is confirm-gated (it puts executable code on the appliance): the agent must tell you what it is installing and get your go-ahead. The healthcheck after install closes the loop.
 
 ## 3. Run it
@@ -55,6 +62,9 @@ returned.
 ```
 
 <!-- step: fsa09-05-run-own-connector -->
+
+<!-- capture: fsa09-05-run-own-connector-joke -->
+![fsa09-05-run-own-connector-joke](fsa09-05-run-own-connector-joke.png?height=600px)
 
 **You are done when:** a real dad joke comes back - produced by code your agent wrote, calling a live external API from inside FortiSOAR's connector runtime.
 
@@ -70,6 +80,7 @@ returned.
 | pyfsr: command not found | The CLI is in a venv the agent's shell does not see | `pip install fsr-agentic-toolkit` into the active environment |
 | package fails: missing required file | A core file was renamed or deleted | info.json, connector.py, operations.py, requirements.txt must all exist |
 | Install succeeds, operation unknown | info.json and operations.py disagree | The operation name must match in both; repackage and redeploy (deploys replace) |
+| get_joke returns fields your code does not (or the health check behaves like the old code) right after a reinstall | The appliance's connector workers are still serving the previous version | Wait a few minutes and run it again; the workers pick up the new code on their own |
 | Healthcheck or get_joke times out | The box cannot reach icanhazdadjoke.com | The connector runs on the appliance, which needs outbound HTTPS to the API. On an air-gapped box, point the connector at a service the box can reach instead |
 
 <!-- agent-drive:begin -->

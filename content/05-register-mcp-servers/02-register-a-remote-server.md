@@ -27,7 +27,7 @@ Use the same validate-then-persist flow as the previous page: validation perform
 
 1. Open the AI configuration area and add an MCP server (kind: external).
 2. Enter the name (`agentlab-deepwiki`), transport (`http`), the URL, and authentication type `none`.
-3. Run **Validate** first. It must come back listing the server's tools (for DeepWiki: `read_wiki_structure`, `ask_question` and similar).
+3. Run **Validate** first. It must come back listing the server's tools (for DeepWiki: `read_wiki_structure`, `read_wiki_contents` and `ask_wiki_question`).
 4. Save, note the server's UUID, and check its status shows healthy.
 
 ## 3. Grant it to one agent

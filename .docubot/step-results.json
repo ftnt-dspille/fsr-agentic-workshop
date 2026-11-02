@@ -1,28 +1,10 @@
 {
   "steps": [
     {
-      "id": "fsa06-01-create-user",
+      "id": "fsa10-07-schedule-and-prove",
       "status": "passed",
-      "durationMs": 17003,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/06-setup-agent/chapter.spec.ts"
-    },
-    {
-      "id": "fsa06-05-claude-approval",
-      "status": "passed",
-      "durationMs": 22078,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/06-setup-agent/chapter.spec.ts"
-    },
-    {
-      "id": "fsa06-06-codex-approval",
-      "status": "passed",
-      "durationMs": 28354,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/06-setup-agent/chapter.spec.ts"
-    },
-    {
-      "id": "fsa06-08-opencode-setup",
-      "status": "passed",
-      "durationMs": 11427,
-      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/06-setup-agent/chapter.spec.ts"
+      "durationMs": 179056,
+      "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/10-capstone-investigation/chapter.spec.ts"
     }
   ]
 }

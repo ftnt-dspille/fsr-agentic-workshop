@@ -17,7 +17,8 @@
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, findAlert, openRecord, test } from 'docubot';
-import { agentScreen, labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
+import * as path from 'path';
+import { AGENT_CWD, agentScreen, labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. The alert record shows dates and record
@@ -165,4 +166,84 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
 
   // fsa10-03-native-compare is a manual step on the page (it needs the native
   // AI Investigation configured and spends credits), so the spec has no step.
+});
+
+// The Advanced Labs page: four agent-only labs, each one agent conversation
+// captured in the TUI and backed by an effect check on the box (or, for the
+// connector review, on the folder ch09 left in the agent's working dir).
+// Every lab is an agent turn, so the whole block is behind SPEND_AI=1.
+test('chapter 10 - advanced labs', async ({ local, capture }) => {
+  test.setTimeout(30 * 60 * 1000);
+  test.skip(!SPEND, 'advanced labs are agent turns: set SPEND_AI=1');
+  const PAGE = '03-advanced-labs';
+  const run = async (n: number, confirm?: string) => {
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { confirm, timeoutMs: 10 * 60 * 1000 });
+  };
+
+  if (shouldRunStep('fsa10-04-registered-mcp-tool')) await test.step('fsa10-04-registered-mcp-tool', async () => {
+    // Precondition: chapter 5's registration. Fail as setup, not content.
+    const listed = toolkit('list_registered_mcp_tools', { server: 'agentlab-deepwiki' });
+    expect(listed.tools?.length, 'agentlab-deepwiki is not registered: run chapter 5 page 2 first').toBeGreaterThan(0);
+    const screen = await run(1, 'Yes, go ahead and call it.');
+    await capture.screen('fsa10-04-registered-mcp-tool', screen, agentScreen());
+    // The answer must come from the registered server's own tool, not memory.
+    expect(screen).toMatch(/ask_wiki_question/);
+    expect(screen).toMatch(/SSE|Server-Sent/i);
+    expect(screen).not.toMatch(/couldn't finish|failed|RuntimeError/i);
+  });
+
+  if (shouldRunStep('fsa10-05-repair-playbook')) await test.step('fsa10-05-repair-playbook', async () => {
+    const screen = await run(2, 'Yes, go ahead.');
+    await capture.screen('fsa10-05-repair-playbook', screen, agentScreen());
+    // The fix must be repair_playbook's, not a hand edit the agent fell back to.
+    expect(screen).toMatch(/repair_playbook/);
+    expect(screen).not.toMatch(/by hand|manually|myself|no change made/i);
+    // Effect: the practice playbook's newest run finished (the repair held).
+    const last = toolkit('last_playbook_run', { playbook: 'Agent Lab Repair Practice' });
+    expect(JSON.stringify(last)).toMatch(/finished/i);
+  });
+
+  if (shouldRunStep('fsa10-06-review-connector')) await test.step('fsa10-06-review-connector', async () => {
+    const conndir = path.join(AGENT_CWD, 'agentlab-dadjoke');
+    const screen = await run(3);
+    await capture.screen('fsa10-06-review-connector', screen, agentScreen());
+    expect(screen).toMatch(/verif/i);
+    // Effect: the revert held, so the folder scans clean again.
+    expect(toolkit('scan_connector_code', { directory: conndir }).clean).toBe(true);
+  });
+
+  if (shouldRunStep('fsa10-07-schedule-and-prove')) await test.step('fsa10-07-schedule-and-prove', async () => {
+    // Start from no schedule so "it fired on its own" is this run's evidence.
+    try {
+      toolkit('delete_schedule', { name: 'Agent Lab heartbeat', confirm: true });
+    } catch {
+      // absent already: the state this step wants
+    }
+    // Two turns, as on the page: schedule it, let beat fire it and record the fire
+    // (beat saves its counters minutes after firing), then diagnose and delete.
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 4), { confirm: 'Yes, go ahead.' });
+    let fired = false;
+    for (let i = 0; i < 36 && !fired; i++) {
+      await new Promise((r) => setTimeout(r, 10_000));
+      fired = Boolean(toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }).ever_fired);
+    }
+    expect(fired, 'beat never recorded a fire within 6 minutes').toBe(true);
+    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 5), {
+      confirm: 'Yes, delete it.',
+      timeoutMs: 10 * 60 * 1000,
+    });
+    await capture.screen('fsa10-07-schedule-and-prove', screen, agentScreen());
+    expect(screen).toMatch(/diagnose_schedule|no problems/i);
+    // Effect: the heartbeat ran on its own and finished, and the schedule is gone.
+    expect(JSON.stringify(toolkit('last_playbook_run', { playbook: 'Agent Lab Heartbeat' }))).toMatch(/finished/i);
+    let gone = '';
+    try {
+      gone = JSON.stringify(toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }));
+    } catch (err: any) {
+      gone = String(err?.message ?? err);
+    }
+    expect(gone).toMatch(/No scheduled task|exit|Command failed/);
+  });
 });
