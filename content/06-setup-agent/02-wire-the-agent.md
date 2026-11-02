@@ -74,7 +74,28 @@ The `connected:` line names the login the agent authenticates as; that is why th
 {{% /tab %}}
 {{% /tabs %}}
 
-## 4. First contact
+## 4. Install the skills
+
+The toolkit ships short skills that teach your agent how to use it well: check a playbook before publishing it, repair a failed run with the toolkit's own fix, read every write back, keep secrets out of the chat. Install them into the lab folder:
+
+{{% tabs groupid="agent" %}}
+{{% tab title="Claude Code" %}}
+```bash
+fsr-agentic-toolkit skills --install
+```
+
+Restart `claude`; the skills load from `.claude/skills`.
+{{% /tab %}}
+{{% tab title="Codex / OpenCode" %}}
+```bash
+fsr-agentic-toolkit skills --install --agents-md AGENTS.md
+```
+
+This adds a block to `AGENTS.md` that points the agent at each skill.
+{{% /tab %}}
+{{% /tabs %}}
+
+## 5. First contact
 
 <!-- step: fsa06-04-whoami manual: runs a read-only whoami turn in the agent; spends tokens -->
 

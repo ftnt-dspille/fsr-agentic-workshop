@@ -159,7 +159,10 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     const trace = await openTracePanel(soar);
     expect(trace.length).toBeGreaterThan(0);
     // Whether the question reached the custom agent depends on the row wording and
-    // the model; the person reads the trace. The page has no capture for this step.
+    // the model, so the capture shows the trace and the log says what it found.
+    // The capture is proof only if the trace shows the custom agent answering.
+    expect(JSON.stringify(trace), `the trace never reached ${AGENT}: tighten the TOOL_LIST row`).toContain(AGENT);
+    await capture.shot(soar, 'fsa04-03-route-check-trace', SKIP_RECORD);
   });
 
   // Page 03 s3: route A, the Invoke AI Agent connector operation, with a Decision

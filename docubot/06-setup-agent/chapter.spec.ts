@@ -14,7 +14,7 @@
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
 import { expect, goToState, test, type AgentShotRun } from 'docubot';
-import { promptFor, shouldRunStep } from '../lib/agentlab';
+import { agentScreen, agentTurn, promptFor, shouldRunStep, startAgent } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -81,5 +81,21 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
       prompt: 'In one short paragraph, who are you and what can you help me do with this FortiSOAR box?',
       waitFor: /tok\/s/i,
     });
+  });
+});
+
+// Page 04: the first real question, against the live box (not the stub). Read-only,
+// but it spends model credits, so it rides SPEND_AI.
+test('chapter 6 - map the box', async ({ local, capture }) => {
+  test.setTimeout(15 * 60 * 1000);
+  test.skip(process.env.SPEND_AI !== '1', 'agent turn: set SPEND_AI=1');
+  if (shouldRunStep('fsa06-11-map-the-box')) await test.step('fsa06-11-map-the-box', async () => {
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const screen = await agentTurn(agent, promptFor('06-setup-agent', '04-map-the-box'), { timeoutMs: 10 * 60 * 1000 });
+    await capture.screen('fsa06-11-map-the-box', screen, agentScreen());
+    expect(screen).toMatch(/8\.\d+\.\d+/);
+    expect(screen).toMatch(/MCP/);
+    // Read-only: the agent must not have asked to change anything.
+    expect(screen).not.toMatch(/Do you want to proceed|approve this/i);
   });
 });

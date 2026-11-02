@@ -1,9 +1,9 @@
 {
   "steps": [
     {
-      "id": "fsa10-07-schedule-and-prove",
+      "id": "fsa10-08-plan-and-build",
       "status": "passed",
-      "durationMs": 179056,
+      "durationMs": 397359,
       "file": "/Users/dylanspille/PycharmProjects/TEC/fsr-agentic-workshop/docubot/10-capstone-investigation/chapter.spec.ts"
     }
   ]

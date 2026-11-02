@@ -35,6 +35,8 @@ Four rules are enforced by the tool, not by good manners:
 
 ## 2. Ask the agent
 
+Give your agent this prompt:
+
 ```text
 Configure the virustotal connector with a configuration named "Lab". Use
 setup_connector. The server URL is www.virustotal.com. The API key is in the
@@ -58,6 +60,11 @@ The call the agent makes looks like this. Notice there is no key in it:
 - The `check_only` call answers that it is ready to create the configuration and that one secret resolved, naming `env FSR_SECRET_VIRUSTOTAL__API_KEY` as its source and never its value.
 - The write reports the configuration was created and the healthcheck says `Available`.
 - Nothing in the reply, the findings or the transcript contains the key.
+
+<!-- step: fsa09-08-configure-safely -->
+
+<!-- capture: fsa09-08-configure-safely -->
+![fsa09-08-configure-safely](fsa09-08-configure-safely.png?height=600px)
 
 **Verify in the UI:** open the connector's **Configurations** and find "Lab". The API key field shows as a masked password.
 

@@ -155,4 +155,28 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     }
     expect(line, `${HUB} has no configuration. Agent screen:\n${agent.plainScreen().trim().slice(-3000)}`).toMatch(/\(\d+ configs?\)/);
   });
+
+  if (shouldRunStep('fsa09-08-configure-safely')) await test.step('fsa09-08-configure-safely', async () => {
+    // The page's premise is a real key in the server's env, referenced by name.
+    // Supply it with DOCUBOT_VT_API_KEY; without one the step logs and skips.
+    const key = process.env.DOCUBOT_VT_API_KEY;
+    if (!key) {
+      console.log('[ch09] fsa09-08 skipped: set DOCUBOT_VT_API_KEY to a VirusTotal key');
+      return;
+    }
+    const agent = await startAgent(local, 'laptop', {
+      cols: 100,
+      rows: 40,
+      mcpEnv: { FSR_SECRET_VIRUSTOTAL__API_KEY: key },
+    });
+    const screen = await agentTurn(agent, promptFor('09-connectors', '01c-configure-without-sharing-secrets', 1), {
+      confirm: 'Yes, go ahead and install it if it is missing.',
+    });
+    // The point of the page: the key never reaches the chat.
+    expect(screen.includes(key), 'the API key appeared on the agent screen').toBe(false);
+    await capture.screen('fsa09-08-configure-safely', screen, agentScreen());
+    expect(screen).toMatch(/FSR_SECRET_VIRUSTOTAL__API_KEY/);
+    const health = toolkit('healthcheck_connector', { connector: 'virustotal', config: 'Lab' });
+    expect(JSON.stringify(health)).toContain('Available');
+  });
 });

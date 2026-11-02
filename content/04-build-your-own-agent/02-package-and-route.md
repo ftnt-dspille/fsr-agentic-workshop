@@ -131,6 +131,9 @@ Open the `TOOL_LIST` record. Add one row for your agent. Its description should 
 
 Run an investigation on a seeded alert that has the entity your agent needs. When the run finishes, open its trace and find the question your row produced. Then find the call to your agent.
 
+<!-- capture: fsa04-03-route-check-trace -->
+![fsa04-03-route-check-trace](fsa04-03-route-check-trace.png?height=600px)
+
 **You are done when**
 
 - The trace shows a question for your row.

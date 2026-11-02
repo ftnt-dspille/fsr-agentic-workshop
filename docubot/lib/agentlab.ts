@@ -222,9 +222,9 @@ export function queryRows(module: string, filters: unknown[], extra: Record<stri
 export async function startAgent(
   local: (name: string, opts?: any) => Promise<LocalSession>,
   name: string,
-  opts: { cols?: number; rows?: number } = {},
+  opts: { cols?: number; rows?: number; mcpEnv?: Record<string, string> } = {},
 ): Promise<LocalSession> {
-  const mcp = process.env.DOCUBOT_MCP_CONFIG;
+  let mcp = process.env.DOCUBOT_MCP_CONFIG;
   if (!mcp || !fs.existsSync(mcp)) {
     throw new Error(
       'DOCUBOT_MCP_CONFIG must point at a .mcp.json with the box fortisoar server ' +
@@ -232,6 +232,24 @@ export async function startAgent(
     );
   }
   fs.mkdirSync(AGENT_CWD, { recursive: true });
+  // The page has students install the toolkit's skills; captures run with them
+  // too. DOCUBOT_NO_SKILLS=1 runs without, for a with/without comparison.
+  const skillsDir = path.join(AGENT_CWD, '.claude', 'skills');
+  fs.rmSync(skillsDir, { recursive: true, force: true });
+  if (process.env.DOCUBOT_NO_SKILLS !== '1') {
+    const py = process.env.FSR_PYTHON;
+    const cli = py ? path.join(path.dirname(py), 'fsr-agentic-toolkit') : 'fsr-agentic-toolkit';
+    execFileSync(cli, ['skills', '--install', '--dir', skillsDir], { encoding: 'utf8' });
+  }
+  if (opts.mcpEnv) {
+    // Extra server env (a page's FSR_SECRET_* reference) goes into a private copy
+    // of the config, never into the shared one.
+    const cfg = JSON.parse(fs.readFileSync(mcp, 'utf8'));
+    for (const server of Object.values<any>(cfg.mcpServers ?? {})) server.env = { ...server.env, ...opts.mcpEnv };
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsa-mcp-'));
+    mcp = path.join(dir, '.mcp.json');
+    fs.writeFileSync(mcp, JSON.stringify(cfg, null, 2), { mode: 0o600 });
+  }
   const { file, args } = claudeAdapter.launchArgv({ type: 'agent', tool: 'claude' } as any, path.resolve(mcp));
   const term = await local(name, { file, args, cwd: AGENT_CWD, cols: opts.cols ?? 100, rows: opts.rows ?? 40 });
   await claudeAdapter.clearStartupGates(term);

@@ -211,4 +211,67 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     expect(text).toContain('agent-lab-ok');
     expect(playbookRows(PROBE_PLAYBOOK), `cleanup=true left the probe playbook on the box. Toolkit said: ${text.slice(0, 1500)}`).toHaveLength(0);
   });
+
+  // Page 05: playbooks the agent designs from a sentence. Agent-only (no YAML on
+  // the page to fall back on), so these run under SPEND_AI=1 and skip otherwise.
+  const GALLERY = '05-playbook-gallery';
+  const val = (v: any) => (v && typeof v === 'object' ? v.itemValue ?? v['@id'] : v);
+  const alertsLike = (prefix: string): any[] => {
+    const out = toolkit('search_records', {
+      module: 'alerts', term: prefix, fields: ['name', 'status', 'severity', 'hostIPAddress'], summary: false, limit: 50,
+    });
+    return (out?.members ?? out?.records ?? out?.['hydra:member'] ?? out ?? []).filter?.((r: any) => String(r?.name ?? '').startsWith(prefix)) ?? [];
+  };
+  const fresh = (prefix: string, playbook: string) => {
+    labSeed('delete-prefix', 'alerts', 'name', prefix);
+    labSeed('delete-records', 'workflows', 'name', playbook);
+  };
+  const gallery = async (id: string, n: number, prefix: string, playbook: string, check: () => void) => {
+    if (!shouldRunStep(id)) return;
+    await test.step(id, async () => {
+      if (!AGENT) {
+        console.log(`[ch08] ${id} skipped: the agent designs this playbook; set SPEND_AI=1`);
+        return;
+      }
+      fresh(prefix, playbook);
+      const screen = await agentTurn(await freshAgent(), promptFor(CHAPTER, GALLERY, n), {
+        confirm: 'Yes, go ahead.',
+        timeoutMs: 15 * 60 * 1000,
+      });
+      await capture.screen(id, screen, agentScreen());
+      expect(screen).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
+      // Triggers run server-side after the agent's last call: give them a moment.
+      for (let i = 0; i < 12; i++) {
+        try {
+          check();
+          return;
+        } catch {
+          await new Promise((r) => setTimeout(r, 5000));
+        }
+      }
+      check();
+    });
+  };
+
+  await gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', () => {
+    const rows = alertsLike('Agent Lab crit');
+    const crit = rows.filter((r) => /critical/i.test(String(val(r.severity))));
+    const low = rows.filter((r) => /low/i.test(String(val(r.severity))));
+    expect(crit.length && low.length, `want a Critical and a Low test alert, got ${JSON.stringify(rows)}`).toBeTruthy();
+    // A first failed attempt may leave an earlier Critical Open; the agent reports that on screen.
+    expect(crit.some((r) => val(r.status) === 'Investigating'), JSON.stringify(rows)).toBe(true);
+    expect(low.every((r) => val(r.status) === 'Open')).toBe(true);
+  });
+
+  await gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', () => {
+    const rows = alertsLike('Agent Lab ioc');
+    expect(rows.some((r) => r.hostIPAddress === '198.51.100.23'), JSON.stringify(rows)).toBe(true);
+  });
+
+  await gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', () => {
+    const rows = alertsLike('Agent Lab sweep');
+    expect(rows.length).toBe(3);
+    expect(rows.every((r) => val(r.status) === 'Closed'), JSON.stringify(rows)).toBe(true);
+    expect(playbookRows('Agent Lab Sweep'), 'run_playbook_yaml left the sweep playbook behind').toHaveLength(0);
+  });
 });

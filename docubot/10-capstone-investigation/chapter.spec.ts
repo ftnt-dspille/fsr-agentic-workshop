@@ -16,9 +16,10 @@
 // Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
-import { expect, findAlert, openRecord, test } from 'docubot';
+import { expect, findAlert, forgetModuleCache, openRecord, test } from 'docubot';
+import { execFileSync } from 'child_process';
 import * as path from 'path';
-import { AGENT_CWD, agentScreen, labSeed, promptFor, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
+import { AGENT_CWD, agentScreen, labSeed, promptFor, rows, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. The alert record shows dates and record
@@ -164,16 +165,31 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     });
   });
 
-  // fsa10-03-native-compare is a manual step on the page (it needs the native
-  // AI Investigation configured and spends credits), so the spec has no step.
+  if (shouldRunStep('fsa10-03-native-compare')) await test.step('fsa10-03-native-compare', async () => {
+    if (!SPEND) {
+      console.log('[ch10] fsa10-03-native-compare skipped (spends credits); set SPEND_AI=1');
+      return;
+    }
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const screen = await agentTurn(agent, promptFor(CHAPTER, PAGE, 3), {
+      confirm: 'Yes, go ahead.',
+      timeoutMs: 25 * 60 * 1000,
+      quietMs: 8_000,
+    });
+    await capture.screen('fsa10-03-native-compare', screen, agentScreen());
+    // The comparison must rest on a native run the agent actually started.
+    expect(screen).toMatch(/agree|differ/i);
+    // A comparison against a verdict that never arrived is not the page's result.
+    expect(screen).not.toMatch(/provisional|returned early|Tooling problems|keep polling|404/i);
+  });
 });
 
 // The Advanced Labs page: four agent-only labs, each one agent conversation
 // captured in the TUI and backed by an effect check on the box (or, for the
 // connector review, on the folder ch09 left in the agent's working dir).
 // Every lab is an agent turn, so the whole block is behind SPEND_AI=1.
-test('chapter 10 - advanced labs', async ({ local, capture }) => {
-  test.setTimeout(30 * 60 * 1000);
+test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
+  test.setTimeout(90 * 60 * 1000);
   test.skip(!SPEND, 'advanced labs are agent turns: set SPEND_AI=1');
   const PAGE = '03-advanced-labs';
   const run = async (n: number, confirm?: string) => {
@@ -223,7 +239,10 @@ test('chapter 10 - advanced labs', async ({ local, capture }) => {
     // Two turns, as on the page: schedule it, let beat fire it and record the fire
     // (beat saves its counters minutes after firing), then diagnose and delete.
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 4), { confirm: 'Yes, go ahead.' });
+    const created = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 4), { confirm: 'Yes, go ahead.' });
+    await capture.screen('fsa10-07-schedule-create', created, agentScreen());
+    expect(created).toMatch(/schedule/i);
+    expect(created).not.toMatch(/trigger_schedule_now|fired it (by hand|manually)/i);
     let fired = false;
     for (let i = 0; i < 36 && !fired; i++) {
       await new Promise((r) => setTimeout(r, 10_000));
@@ -246,4 +265,116 @@ test('chapter 10 - advanced labs', async ({ local, capture }) => {
     }
     expect(gone).toMatch(/No scheduled task|exit|Command failed/);
   });
+
+  if (shouldRunStep('fsa10-08-plan-and-build')) await test.step('fsa10-08-plan-and-build', async () => {
+    // Start from no module, playbook or lab alerts, so the build is this run's.
+    labSeed('delete-records', 'workflows', 'name', 'Agent Lab Lost Device Alert');
+    labSeed('delete-prefix', 'alerts', 'name', 'Agent Lab lost device');
+    try {
+      // Records outlive a module delete: a rebuilt module still showed the last
+      // run's LT-0042 row. Clear them first (every uuid starts with '').
+      labSeed('delete-prefix', 'agentlab_lost_devices', 'uuid', '');
+    } catch {
+      // no module, so no records
+    }
+    try {
+      toolkit('delete_module', { module: 'agentlab_lost_devices', confirm: true });
+    } catch {
+      // absent already
+    }
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 6), {
+      confirm: 'Yes, go ahead.',
+      timeoutMs: 30 * 60 * 1000,
+    });
+    await capture.screen('fsa10-08-plan-and-build', screen, agentScreen());
+    expect(screen).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
+    // Effect: the test record exists, and the playbook raised its alert.
+    const devices = rows(toolkit('search_records', { module: 'agentlab_lost_devices', term: 'LT-0042' }));
+    expect(devices.length, 'no LT-0042 record in agentlab_lost_devices').toBeGreaterThan(0);
+    let alerts: any[] = [];
+    for (let i = 0; i < 12 && !alerts.length; i++) {
+      alerts = rows(toolkit('find_records', { module: 'alerts', where: 'name=Agent Lab lost device LT-0042' }));
+      if (!alerts.length) await new Promise((r) => setTimeout(r, 5000));
+    }
+    expect(alerts.length, 'the playbook raised no alert for LT-0042').toBeGreaterThan(0);
+    // Proof in the product itself: the module the agent built, showing its record.
+    const newest = devices.reduce((a: any, b: any) => (Number(b.createDate) > Number(a.createDate) ? b : a));
+    const soar = await gui('soar');
+    // The saved session's cached module list predates the agent's module.
+    await forgetModuleCache(soar);
+    await openRecord(soar, 'agentlab_lost_devices', String(newest.uuid ?? newest['@id']).split('/').pop()!);
+    await expect(soar.getByText('LT-0042').first()).toBeVisible({ timeout: 30_000 });
+    await capture.shot(soar, 'fsa10-08-module-in-soar', { scrubSkip: ['date-or-time', 'key-like-token'] });
+  });
+
+  if (shouldRunStep('fsa10-09-record-forensics')) await test.step('fsa10-09-record-forensics', async () => {
+    // Precondition: the capstone alert (page 1) with its history.
+    expect(stagedAlerts().length, 'stage the capstone alert first (fsa10-01)').toBeGreaterThan(0);
+    const screen = await run(7);
+    await capture.screen('fsa10-09-record-forensics', screen, agentScreen());
+    expect(screen).toMatch(/Tag Agent Lab Alerts|playbook/i);
+    expect(screen).not.toMatch(/couldn't|could not read/i);
+  });
+
+  if (shouldRunStep('fsa10-10-staging-vs-production')) await test.step('fsa10-10-staging-vs-production', async () => {
+    // Two real boxes under the page's aliases. The lab box is "staging"; the
+    // second comes from the author's own instances file (DOCUBOT_PROD_ALIAS), and
+    // the file written here holds env_file paths and copied tables, never printed.
+    const alias = process.env.DOCUBOT_PROD_ALIAS;
+    const stagingEnv = process.env.DOCUBOT_STAGING_ENV;
+    if (!alias || !stagingEnv) {
+      console.log('[ch10] fsa10-10 skipped: set DOCUBOT_PROD_ALIAS and DOCUBOT_STAGING_ENV');
+      return;
+    }
+    const py = process.env.FSR_PYTHON || 'python3';
+    const out = execFileSync(py, ['-c', INSTANCES_PY, path.resolve(stagingEnv), alias], { encoding: 'utf8' });
+    const { file, urls } = JSON.parse(out);
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40, mcpEnv: { PYFSR_INSTANCES: file } });
+    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 8), { timeoutMs: 15 * 60 * 1000 });
+    const shown = agentScreen();
+    // The real box addresses never reach the picture.
+    shown.replace.push(...(urls as string[]).flatMap((u, i) => {
+      const host = new URL(u).host;
+      const name = i === 0 ? 'staging.example.com' : 'production.example.com';
+      return [[u, `https://${name}`], [host, name]] as Array<[string, string]>;
+    }));
+    await capture.screen('fsa10-10-staging-vs-production', screen, shown);
+    expect(screen).toMatch(/staging/i);
+    expect(screen).toMatch(/production/i);
+    expect(screen).not.toMatch(/could not reach|unknown instance|couldn't/i);
+  });
 });
+
+// Writes a private instances file: "staging" = the lab box's env file, "production"
+// = a copy of the author's own alias. Prints only the path and the two base URLs.
+const INSTANCES_PY = String.raw`
+import json, os, sys, tempfile, tomllib
+from pathlib import Path
+staging_env, alias = sys.argv[1], sys.argv[2]
+src = Path(os.environ.get("PYFSR_INSTANCES_SOURCE", "~/.pyfsr/instances.toml")).expanduser()
+prod = tomllib.loads(src.read_text())["instances"][alias]
+if "env_file" in prod and not Path(prod["env_file"]).expanduser().is_absolute():
+    prod["env_file"] = str(src.parent / prod["env_file"])
+prod.pop("appliance", None)
+def val(v):
+    return json.dumps(v) if isinstance(v, str) else ("true" if v is True else "false" if v is False else str(v))
+lines = ["default = \"staging\"", "", "[instances.staging]", f"env_file = {json.dumps(staging_env)}", "", "[instances.production]"]
+lines += [f"{k} = {val(v)}" for k, v in prod.items() if not isinstance(v, dict)]
+for k, v in prod.items():
+    if isinstance(v, dict):
+        lines += ["", f"[instances.production.{k}]"] + [f"{kk} = {val(vv)}" for kk, vv in v.items()]
+fd, path = tempfile.mkstemp(prefix="fsa-instances-", suffix=".toml")
+os.write(fd, ("\n".join(lines) + "\n").encode()); os.close(fd); os.chmod(path, 0o600)
+def url_of(env_path=None, table=None):
+    if table and table.get("base_url"):
+        return table["base_url"]
+    for line in Path(env_path).expanduser().read_text().splitlines():
+        if line.startswith("FSR_BASE_URL="):
+            return line.split("=", 1)[1].strip().strip('"')
+    return ""
+u1 = url_of(staging_env)
+u2 = url_of(prod.get("env_file"), prod)
+fix = lambda u: u if "://" in u else ("https://" + u if u else u)
+print(json.dumps({"file": path, "urls": [fix(u1), fix(u2)]}))
+`;

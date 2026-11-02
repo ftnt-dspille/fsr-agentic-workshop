@@ -451,7 +451,7 @@ def cmd_reset_alerts(client) -> int:
     failed = 0
     for r in doomed:
         try:
-            client.records("alerts").delete(r["uuid"])
+            client.records("alerts").delete(r["uuid"], hard=True)
             print(f"deleted: {r.get('name')}")
         except Exception as exc:
             print(f"FAILED delete: {r.get('name')}: {exc}")
@@ -479,13 +479,29 @@ def cmd_delete_records(client, module: str, field: str, value: str) -> int:
     """Delete every record in `module` whose `field` equals `value` (exact).
 
     A page that asks the agent to create a named record would otherwise add a
-    duplicate on every rerun. A no-op when none match.
+    duplicate on every rerun. A no-op when none match. Hard delete: a soft-deleted
+    playbook sits in the recycle bin and the agent's next publish restores it, so
+    the run reports an existing playbook overwritten instead of a new one.
     """
     recs = client.records(module)
     hits = [r for r in recs.iterate(raw=True) if r.get(field) == value]
     for r in hits:
-        recs.delete(r["uuid"])
+        recs.delete(r["uuid"], hard=True)
     print(f"delete-records: {len(hits)} {module} with {field}={value} removed")
+    return 0
+
+
+def cmd_delete_prefix(client, module: str, field: str, prefix: str) -> int:
+    """Delete every record in `module` whose `field` starts with `prefix`.
+
+    For pages where the agent names its own test records under a prefix. Hard
+    delete, as in cmd_delete_records.
+    """
+    recs = client.records(module)
+    hits = [r for r in recs.iterate(raw=True) if str(r.get(field) or "").startswith(prefix)]
+    for r in hits:
+        recs.delete(r["uuid"], hard=True)
+    print(f"delete-prefix: {len(hits)} {module} with {field} starting {prefix!r} removed")
     return 0
 
 
@@ -522,6 +538,35 @@ def cmd_reset_connector(client, name: str) -> int:
 # ---------------------------------------------------------------------------
 # check
 
+# code-snippet (ch8: a Python code step fails at run time without a configuration)
+
+CODE_SNIPPET_CONFIG = "Agent Lab"
+
+
+def cmd_code_snippet(client) -> int:
+    """Give code-snippet a default configuration (only json importable), idempotently.
+
+    Python code steps run through the code-snippet connector. With no
+    configuration on the box every such step fails at run time with
+    INTEGRATION-12, after the playbook compiled and published cleanly; with
+    Custom Code Execution off they fail with "Custom Code Execution is disabled".
+    """
+    try:
+        client.system_settings.set_custom_code_execution(True)
+    except Exception as exc:  # noqa: BLE001 - report and fail the step
+        print(f"code-snippet FAILED: could not enable Custom Code Execution: {exc}")
+        return 1
+    print("code-snippet: Custom Code Execution is on")
+    try:
+        client.connectors.ensure_configured(
+            "code-snippet", {"allow_imports": False, "restrict_imports": "json"}, config_name=CODE_SNIPPET_CONFIG, default=True)
+    except Exception as exc:  # noqa: BLE001 - report and fail the step
+        print(f"code-snippet FAILED: {exc}")
+        return 1
+    print(f"code-snippet: configuration {CODE_SNIPPET_CONFIG!r} is the default")
+    return 0
+
+
 def cmd_check(client) -> int:
     print("connection: ok" if client else "connection: FAILED")
     have = existing_alert_names(client)
@@ -531,6 +576,18 @@ def cmd_check(client) -> int:
         print(f"  [{'x' if full in have else ' '}] {spec['name']}")
     if len(have) < len(DEMO_ALERTS):
         print("  -> run: python3 tools/lab_setup.py seed")
+    try:
+        has = bool(client.connectors.configurations("code-snippet"))
+    except Exception:  # noqa: BLE001 - not installed reads the same as unconfigured
+        has = False
+    try:
+        code_on = client.system_settings.get_development_mode().get("connectors", False)
+    except Exception:  # noqa: BLE001 - unreadable reads the same as off
+        code_on = False
+    print(f"custom code execution: {'on' if code_on else 'OFF'}")
+    print(f"code-snippet configuration: {'present' if has else 'MISSING'}")
+    if not has or not code_on:
+        print("  -> run: python3 tools/lab_setup.py code-snippet")
     # Permission probe: can this principal see the module-schema module?
     try:
         mods = {m.get("plural") or m.get("name") for m in client.modules.list()}
@@ -589,10 +646,13 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("install-agent", help="import the chapter-4 hello agent bundle (idempotent)")
     sub.add_parser("mcp-server", help="register the shipped external MCP servers (idempotent)")
     sub.add_parser("records", help="seed records from static/examples/records (idempotent)")
+    sub.add_parser("code-snippet", help="turn on Custom Code Execution and give code-snippet a default configuration (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
     sub.add_parser("reset-alerts", help="return the Agent Lab alerts to the demo set, all Open")
     dr = sub.add_parser("delete-records", help="delete records whose field equals a value")
     dr.add_argument("module"); dr.add_argument("field"); dr.add_argument("value")
+    dp = sub.add_parser("delete-prefix", help="delete records whose field starts with a prefix")
+    dp.add_argument("module"); dp.add_argument("field"); dp.add_argument("prefix")
     rc = sub.add_parser("reset-connector", help="uninstall a connector so a hub-install lab starts clean")
     rc.add_argument("name")
     args = ap.parse_args(argv)
@@ -614,8 +674,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_lab_records(client)
     if args.cmd == "delete-records":
         return cmd_delete_records(client, args.module, args.field, args.value)
+    if args.cmd == "delete-prefix":
+        return cmd_delete_prefix(client, args.module, args.field, args.prefix)
     if args.cmd == "reset-alerts":
         return cmd_reset_alerts(client)
+    if args.cmd == "code-snippet":
+        return cmd_code_snippet(client)
     if args.cmd == "reset-connector":
         return cmd_reset_connector(client, args.name)
     return cmd_check(client)

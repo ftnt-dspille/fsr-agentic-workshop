@@ -65,15 +65,18 @@ Let it run. A good transcript reads like an analyst's notebook: each claim trace
 
 ## 4. Optional: hand it to the platform
 
-If your box has FortiSOAR's native AI Investigation configured (Part 1), run both on the same alert and compare:
+If your box has FortiSOAR's native AI Investigation configured (Part 1), run both on the same alert and compare. Give your agent this prompt:
 
 ```text
-Trigger a native FortiSOAR AI investigation of that same alert, wait for the
-verdict, and compare it with yours: where do you agree, where do you differ,
-and why?
+Trigger a native FortiSOAR AI investigation of the "Agent Lab - beaconing
+from web-server-01" alert, wait for the verdict, and compare it with yours:
+where do you agree, where do you differ, and why?
 ```
 
-<!-- step: fsa10-03-native-compare manual: runs a native FortiAI investigation for comparison; spends tokens -->
+<!-- step: fsa10-03-native-compare -->
+
+<!-- capture: fsa10-03-native-compare -->
+![fsa10-03-native-compare](fsa10-03-native-compare.png?height=600px)
 
 ## 5. Bottle it
 

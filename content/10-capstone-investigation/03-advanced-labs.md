@@ -139,6 +139,9 @@ playbooks:
         type: end
 ```
 
+<!-- capture: fsa10-07-schedule-create -->
+![fsa10-07-schedule-create](fsa10-07-schedule-create.png?height=600px)
+
 Now wait about three minutes. The scheduler fires the playbook on the minute, and it records that it fired a little later. Then give your agent this prompt:
 
 ```text
@@ -156,13 +159,93 @@ Then delete the schedule.
 
 **You are done when:** `diagnose_schedule` reports that the schedule has fired and its runs finish, with no problems, and the schedule is gone afterwards.
 
+## 5. Plan a use case and build it end to end
+
+One sentence in, a working use case out: a custom module, a playbook on it, and a test record that proves both.
+
+Give your agent this prompt:
+
+```text
+I want to track lost or stolen laptops. Plan it with plan_use_case, then
+build it: a custom module "agentlab_lost_devices" (singular "Lost Device")
+with an asset tag, the owner's email, the date it was reported and a status,
+and a playbook "Agent Lab Lost Device Alert" in the "Agent Lab" collection
+that raises a Critical alert named "Agent Lab lost device <asset tag>" when a
+device is reported. Prove it with one test report for asset tag LT-0042,
+reported 2026-03-14, and show me the alert it raised.
+```
+
+<!-- step: fsa10-08-plan-and-build -->
+
+<!-- capture: fsa10-08-plan-and-build -->
+![fsa10-08-plan-and-build](fsa10-08-plan-and-build.png?height=600px)
+
+The module in FortiSOAR, with the test record the agent created:
+
+<!-- capture: fsa10-08-module-in-soar -->
+![fsa10-08-module-in-soar](fsa10-08-module-in-soar.png?height=600px)
+
+Watch the chain: `plan_use_case` classifies the request, `provision_module` creates and publishes the module and checks the agent can use it, `build_playbook` checks the playbook against the module's real fields, `publish_playbook` deploys it, and the test record's read-back and the new alert are the proof. Publishing a module takes a few minutes; let it run.
+
+**You are done when:** the LT-0042 record exists with its reported date, and a Critical "Agent Lab lost device LT-0042" alert was raised by the playbook.
+
+## 6. Record forensics
+
+Every record keeps an audit trail and a list of the playbook runs that touched it. The agent can turn them into a timeline in one prompt.
+
+Give your agent this prompt:
+
+```text
+Build a timeline for the alert "Agent Lab - beaconing from web-server-01":
+every change, when it happened, which fields changed, and whether a person,
+an API user or a playbook made it. Mark anything you cannot attribute.
+```
+
+<!-- step: fsa10-09-record-forensics -->
+
+<!-- capture: fsa10-09-record-forensics -->
+![fsa10-09-record-forensics](fsa10-09-record-forensics.png?height=600px)
+
+`get_record_history` merges the audit rows with the playbook runs, and `list_record_activity` adds the comments and links. The capstone alert has a good story to tell: created by the agent, tagged by your chapter 8 playbook, then rewritten by the investigation.
+
+**You are done when:** the timeline shows the creation, the playbook's tag and the investigation's write-back in order, each attributed.
+
+## 7. Optional: compare staging and production
+
+If you have access to two FortiSOAR boxes, the agent can compare them. Name both in `~/.pyfsr/instances.toml`, each pointing at an env file that holds that box's `FSR_*` login, so no credential sits in the file itself:
+
+```toml
+[instances.staging]
+env_file = "~/agent-lab/.env.staging"
+
+[instances.production]
+env_file = "~/agent-lab/.env.production"
+```
+
+Restart the agent. Every toolkit call then takes an `instance` argument, and `list_instances` shows both.
+
+Give your agent this prompt:
+
+```text
+Compare the FortiSOAR instances "staging" and "production" without changing
+anything: version, installed connectors and their versions, playbook
+collections, and custom modules. Give me one table of the differences, and
+say which differences would break a playbook copied from staging to
+production.
+```
+
+<!-- step: fsa10-10-staging-vs-production -->
+
+<!-- capture: fsa10-10-staging-vs-production -->
+![fsa10-10-staging-vs-production](fsa10-10-staging-vs-production.png?height=600px)
+
+This is the check to run before promoting content: a playbook that uses a connector version or a module field production does not have will fail there, and the table says so before you find out the hard way.
+
+**You are done when:** the table lists real differences from both boxes, and the agent names at least one that would break a promoted playbook (or says there is none).
+
 ## More one-prompt jobs
 
-These need nothing beyond the agent you already set up:
-
 - **Connector health sweep.** "Check the health of every configured connector and give me a table of connector, configuration, status and error, broken ones first." Read-only.
-- **Record forensics.** "Build a timeline for the alert named Agent Lab diag repair: every change, who made it, and whether a playbook or a person did it." `get_record_history` merges audit rows and playbook runs into one story.
-- **Use case to design.** "I want to track phishing reports, enrich the sender domain and open a case when it is malicious. Classify this and sketch the modules, playbook and connector it needs." `plan_use_case` turns a sentence into a buildable plan.
 
 ## The pattern behind all of them
 
