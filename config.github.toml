@@ -1,3 +1,6 @@
 baseURL = "https://ftnt-dspille.github.io/fsr-agentic-workshop/"
 canonifyURLs = false
 relativeURLs = false
+
+[params]
+  logoBannerSubText = ""
