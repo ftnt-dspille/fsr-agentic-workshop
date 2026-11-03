@@ -33,12 +33,16 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import {
-  askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, expect, fillAgentConfig, fillConnectMcpServer,
+  askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, expect, BUILT_IN_MCP_SERVERS, fillAgentConfig, fillConnectMcpServer,
   findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord,
   readAgentConfig, saveAgentConfig, saveMcpServer, test,
   skipStep,
 } from 'docubot';
-import { labSeed, shouldRunStep } from '../lib/agentlab';
+import { labSeed, pageMd, shellShot, shouldRunStep } from '../lib/agentlab';
+import { execFileSync, spawn } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -175,7 +179,10 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // a set of <select>s (Configuration Type, Name, LLM Provider, MCP Server,
       // Masking Agent); "Custom Configuration" is an <option>, not clickable text.
       expect(await findMcpServerRow(soar, NAME), `no ${NAME} server to grant: run fsa05-01 or seed it with DOCUBOT_SEED=1`).toBeTruthy();
-      await fillAgentConfig(soar, origin, AGENT, { name: 'Agent Lab DeepWiki', mcpServer: NAME });
+      // A custom configuration REPLACES the default server list: keep the built-in
+      // servers selected, or the agent loses SOC Framework and every later
+      // investigation silently stops writing its verdict back to the alert.
+      await fillAgentConfig(soar, origin, AGENT, { name: 'Agent Lab DeepWiki', mcpServer: [...BUILT_IN_MCP_SERVERS, NAME] });
       await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', SKIP);
       if (process.env.DOCUBOT_CH05_GRANT !== '1') {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
@@ -187,6 +194,8 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       const cfg = await readAgentConfig(soar, AGENT);
       expect(cfg?.config?.config_type, 'the saved config is the custom one').toBe('custom');
       expect(JSON.stringify(cfg?.config?.mcp_server || []), 'the lab server is granted on the agent').toContain(String(serverUuid));
+      const soc = (await findMcpServerRow(soar, 'SOC Framework'))?.uuid;
+      expect(JSON.stringify(cfg?.config?.mcp_server || []), 'SOC Framework stays granted (it writes the investigation verdict)').toContain(String(soc));
     });
 
     if (shouldRunStep('fsa05-05-chat-runs-tool')) await test.step('fsa05-05-chat-runs-tool', async () => {
@@ -226,4 +235,74 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     // Leave the box as found, even when a step failed.
     if (ownsLab && process.env.DOCUBOT_KEEP_LAB !== '1') await deleteMcpServer(soar, NAME).catch(() => undefined);
   }
+});
+
+// Page 03 s2: the curl handshake against the weather-lab example, on localhost. The
+// example is copied to a scratch folder, its own venv and server commands run from
+// the page (the first two lines are setup, the last line serves it), and the page's
+// four curl commands run as a script: the same commands, with the protocol version
+// and the session ID filled in from the first response. The shot is the terminal
+// output of that script (bash -v shows each command as it runs). The server is
+// stopped afterwards. FSA_LAB_SCRATCH picks the scratch root (default: a temp folder).
+const WEATHER_LAB = path.join(__dirname, '..', '..', 'static', 'examples', 'mcp-servers', 'weather-lab');
+const LAB_PORT_URL = 'http://localhost:8000/mcp';
+
+/** The bash fence on a page whose text matches `marker`. */
+function bashFence(md: string, marker: RegExp): string {
+  for (const m of md.matchAll(/```bash\n([\s\S]*?)```/g)) if (marker.test(m[1])) return m[1].replace(/\n+$/, '');
+  throw new Error(`no bash fence matching ${marker} on the page`);
+}
+
+test('chapter 5 - curl handshake', async ({ capture }) => {
+  test.setTimeout(15 * 60 * 1000);
+  if (!shouldRunStep('fsa05-06-handshake')) return;
+
+  await test.step('fsa05-06-handshake', async () => {
+    const md = pageMd('05-register-mcp-servers', '03-advanced-build-your-own');
+    const serve = bashFence(md, /python3 -m venv/).split('\n');
+    const handshake = bashFence(md, /# 1\. initialize/);
+    const dir = path.join(process.env.FSA_LAB_SCRATCH || path.join(os.tmpdir(), 'fsa-workshop'), 'weather-lab');
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.cpSync(WEATHER_LAB, dir, { recursive: true });
+
+    // Setup: the page's venv and install lines, in the scratch copy.
+    execFileSync('bash', ['-c', serve.slice(0, -1).join('\n')], { cwd: dir, encoding: 'utf8', timeout: 5 * 60 * 1000 });
+    // Serve: the page's uvicorn line, in its own process group so it can be stopped.
+    const log = fs.openSync(path.join(dir, 'server.log'), 'w');
+    const server = spawn('bash', ['-c', `. .venv/bin/activate && ${serve[serve.length - 1]}`], { cwd: dir, detached: true, stdio: ['ignore', log, log] });
+    try {
+      const deadline = Date.now() + 60_000;
+      for (;;) {
+        const code = (() => { try { return execFileSync('curl', ['-s', '-o', '/dev/null', '-w', '%{http_code}', LAB_PORT_URL], { encoding: 'utf8' }); } catch { return '000'; } })();
+        if (code !== '000') break;
+        if (Date.now() > deadline) throw new Error(`the weather-lab server did not answer on ${LAB_PORT_URL}: see ${path.join(dir, 'server.log')}`);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      // The protocol version the SDK supports, from the server's own venv (the page's instruction).
+      const version = execFileSync(path.join(dir, '.venv', 'bin', 'python'), ['-c', 'from mcp.types import LATEST_PROTOCOL_VERSION as v; print(v)'], { encoding: 'utf8' }).trim();
+      // The four curl commands as the page writes them, one script. Command 1's headers go to init.txt,
+      // and the session ID it returns is read from there for commands 2 to 4.
+      const chunks = handshake.split('\n\n');
+      if (chunks.length !== 4) throw new Error(`the page's handshake fence has ${chunks.length} commands, expected 4`);
+      const script = [
+        chunks[0] + ' | tee init.txt',
+        "SID=$(tr -d '\\r' < init.txt | awk -F': ' 'tolower($1)==\"mcp-session-id\"{print $2}')",
+        ...chunks.slice(1).map((c) => c.split('<session-id-from-step-1>').join('$SID')),
+      ].join('\n\n').split('<protocol-version-your-sdk-supports>').join(version);
+      fs.writeFileSync(path.join(dir, 'handshake.sh'), script + '\n', { mode: 0o600 });
+
+      await shellShot(capture, 'fsa05-06-curl-handshake', {
+        command: 'bash -v handshake.sh',
+        cwd: dir,
+        from: /^# 1\. initialize/,
+        // Checked on the masked output: the session ID came back, the tool list names get_forecast, and the forecast returned.
+        expect: [/mcp-session-id/i, /"name":"get_forecast"/, /Sunny, 24 C/],
+        timeoutMs: 3 * 60 * 1000,
+      });
+    } finally {
+      try { process.kill(-server.pid!, 'SIGTERM'); } catch { /* already stopped */ }
+      fs.closeSync(log);
+    }
+  });
 });

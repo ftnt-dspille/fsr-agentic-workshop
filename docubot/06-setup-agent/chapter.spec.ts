@@ -13,9 +13,9 @@
 //
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
-import { expect, goToState, test, type AgentShotRun } from 'docubot';
+import { expect, goToState, skipStep, test, type AgentShotRun } from 'docubot';
 import {
-  agentScreen, agentTurn, alertsNamed, boxHost, boxIdentity, codexScreen, codexShell, promptFor, shellShot, shouldRunStep,
+  SHOWN_LOGIN, agentScreen, agentTurn, alertsNamed, boxHost, boxIdentity, codexScreen, codexShell, promptFor, shellShot, shouldRunStep,
   startAgent, startCodex, writeClaudeMcpJson,
 } from '../lib/agentlab';
 import { labSeed } from '../lib/agentlab';
@@ -73,6 +73,12 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
       ...approvalRun('claude', /requests your input|Do you want to proceed/i),
       declineWaitFor: DECLINED, declineId: 'fsa06-09-claude-declined',
     });
+  });
+
+  // OpenCode's write-approval prompt, one try: its MCP tools did not reliably surface
+  // headless before, so a miss here is reported, not worked around.
+  if (shouldRunStep('fsa06-07-opencode-approval')) await test.step('fsa06-07-opencode-approval', async () => {
+    await capture.agentShot('fsa06-07-opencode-approval', approvalRun('opencode', /is requesting input/i));
   });
 
   if (shouldRunStep('fsa06-08-opencode-setup')) await test.step('fsa06-08-opencode-setup', async () => {
@@ -169,6 +175,60 @@ test('chapter 6 - install and check', async ({ capture }) => {
       // The line the page says a good file shows.
       expect: [/fortisoar[^\n]*Pending approval/],
     });
+  });
+});
+
+// Page 01 s1-2, the user form's roles: the workshop login's existing record, opened
+// and read only. Nothing is saved; the form is closed. If the login does not exist the
+// step fails rather than creating it (page 01 creates it by hand).
+test('chapter 6 - user roles', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa06-01b-user-roles')) return;
+  const soar = await gui('soar');
+
+  await test.step('fsa06-01b-user-roles', async () => {
+    await goToState(soar, 'main.iam.people');
+    await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+    // The page's login is "agentlab" (the masked name the shots show). The box's own login
+    // is not the workshop user, so only the page's name is looked for.
+    const row = soar.getByText(SHOWN_LOGIN, { exact: true }).filter({ visible: true }).first();
+    if (!(await row.waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false))) {
+      // Not created here: a missing login is reported, so the capture is skipped, not faked.
+      skipStep('fsa06-01b-user-roles', `no ${SHOWN_LOGIN} login on this box: page 01 creates it by hand`);
+      return;
+    }
+    await row.click();
+    // Checked before the capture: the roles the page says the login holds.
+    for (const role of ['Full App Permissions', 'Application Administrator', 'Security Administrator', 'Playbook Administrator']) {
+      await expect(soar.getByText(role, { exact: true }).filter({ visible: true }).first(), `role ${role} is assigned`).toBeVisible({ timeout: 30_000 });
+    }
+    await soar.waitForTimeout(1500);
+    await capture.shot(soar, 'fsa06-01b-user-roles', {
+      scrubSkip: ['email', 'date-or-time'],
+    });
+  });
+});
+
+// Page 02 Codex tab, step 4: Codex's /mcp screen with the fortisoar server connected.
+// Starting Codex and typing /mcp is not a model turn, so no tokens are spent.
+test('chapter 6 - codex mcp connected', async ({ capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa06-12b-codex-mcp-connected')) return;
+  await test.step('fsa06-12b-codex-mcp-connected', async () => {
+    const session = await startCodex('codex-mcp');
+    try {
+      // Type the command, let Codex's slash popup settle, then submit it with its own Enter.
+      session.write('/mcp');
+      await new Promise((r) => setTimeout(r, 2000));
+      session.write('\r');
+      await session.waitFor(/fortisoar: connected/, { timeoutMs: 120_000 });
+      await session.waitScreen(/fortisoar: connected/, { settleMs: 1500, timeoutMs: 30_000 });
+      // Checked before the capture: the server reads connected, with its tools.
+      expect(session.plainScreen()).toMatch(/fortisoar: connected \(\d+ tools?\)/);
+      await capture.screen('fsa06-12b-codex-mcp-connected', session.screen(), codexScreen());
+    } finally {
+      session.kill();
+    }
   });
 });
 

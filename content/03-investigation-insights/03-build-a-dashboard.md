@@ -28,6 +28,10 @@ Build the three widgets:
 - **Verdict types** (Chart, Bar, View Option **Table Only**): X-Axis (Categories) is **AI Verdict**. The builder has no Top X widget, so this is a list of every verdict value with its count, with no row limit.
 - **Investigation funnel** (three Card Count widgets in one row, one per stage): the builder has no funnel widget, so each stage is its own card. The first is `Investigation funnel: new` (Group By **Status**, Status equals **Open**). The second is `Investigation funnel: investigated` (Group By **AI Verdict**, AI Verdict not equals **Not Investigated**). The third is `Investigation funnel: verdict` (Group By **AI Verdict**, AI Verdict is in the list **Benign, Suspicious, Malicious, Inconclusive**). A Card Count also needs a Time Range; enter 365 days.
 
+  <!-- step: fsa03-07c-funnel-card-config -->
+  <!-- capture: fsa03-07c-funnel-card-config -->
+  ![fsa03-07c-funnel-card-config](fsa03-07c-funnel-card-config.png?height=600px)
+
 The widgets are built in, so no Content Hub package is needed.
 
 <!-- step: fsa03-07-verdict-dashboard -->

@@ -67,6 +67,10 @@ Decline, and Codex reports that the alert was not created:
 {{% /tab %}}
 {{% tab title="OpenCode" %}}
 OpenCode shows the same approval in its own prompt. Approve it to run the write, or decline it to stop the write. Run the test above to see how your version shows it.
+
+<!-- step: fsa06-07-opencode-approval -->
+<!-- capture: fsa06-07-opencode-approval -->
+![fsa06-07-opencode-approval](fsa06-07-opencode-approval.png?height=600px)
 {{% /tab %}}
 {{% /tabs %}}
 

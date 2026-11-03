@@ -340,6 +340,41 @@ def execute(client, plan: Plan) -> int:
     return failures
 
 
+
+def restore_agent_mcp_servers(client) -> None:
+    """Give every "Agent Lab..." agent configuration the default MCP servers back.
+
+    Chapter 5 saves a custom configuration on Alert Investigation. A custom
+    configuration replaces the default server list, so a grant that drops SOC
+    Framework silently stops every later investigation from writing its verdict
+    to the alert. Dead server references (a deleted registration) are dropped.
+    """
+    try:
+        default = client.get("/api/ai/agent/config/default")["config"]["mcp_server"]
+        live = {m["@id"].split("/")[-1] for m in client.get("/api/3/mcp_configurations", params={"$limit": 200}).get("hydra:member", [])}
+        agents = client.ai.list_agents()
+    except Exception as exc:  # noqa: BLE001 - report, do not abort the reset
+        print(f"agent configs: could not read ({exc})")
+        return
+    for agent in agents:
+        name, version = getattr(agent, "name", None), getattr(agent, "version", None)
+        if not name or not version:
+            continue
+        try:
+            cur = client.get(f"/api/ai/agent/config/{name}/{version}")
+        except Exception:  # noqa: BLE001 - agent without a readable config
+            continue
+        cfg = dict(cur.get("config") or {})
+        if not str(cfg.get("name") or "").startswith("Agent Lab"):
+            continue
+        servers = [u for u in dict.fromkeys(default + list(cfg.get("mcp_server") or [])) if u in live]
+        if servers == list(cfg.get("mcp_server") or []):
+            print(f"agent config ok: {name} ({cfg.get('name')})")
+            continue
+        cfg["mcp_server"] = servers
+        client.ai.update_agent_config(name, version, cfg, name=cur.get("name") or None, config_id=cur.get("config_id"))
+        print(f"restored default MCP servers on agent {name} ({cfg.get('name')})")
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="LIVE, DESTRUCTIVE: remove the agentlab_ workshop objects from a FortiSOAR box.")
     ap.add_argument("--check-only", action="store_true", help="report what exists and change nothing")
@@ -371,6 +406,7 @@ def main(argv: list[str] | None = None) -> int:
     # Chapter 3 fills the shipped APPROVED_BACKUP_SYSTEM record; put its placeholder back.
     from lab_setup import cmd_approved_backup  # same tools/ directory
     cmd_approved_backup(client, clear=True)
+    restore_agent_mcp_servers(client)
     if plan.is_empty():
         print("nothing to remove")
         return 0

@@ -33,7 +33,7 @@ Replace the URL and the login id with yours. The two flags matter here:
 `init` checks the connection, then prints the config snippet for your agent:
 
 ```text
-connected: agentlab <agentlab@example.com> @ https://fortisoar.example.com
+connected: agentlab <admin@example.com> @ fortisoar.example.com
 --- claude-code ---
 # .mcp.json (project root), or merge into ~/.claude.json
 {
@@ -122,6 +122,10 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
 
 3. In the lab folder, start `codex`. If it shows an update prompt, press **Esc** to skip it. Do not press Enter there. Its first choice is "Update now".
 4. In Codex, type `/mcp`. Wait for `fortisoar: connected (N tools)`. Then type `/new` to start a fresh chat. Codex gives a chat the server's tools only when that chat starts.
+
+   <!-- step: fsa06-12b-codex-mcp-connected -->
+   <!-- capture: fsa06-12b-codex-mcp-connected -->
+   ![fsa06-12b-codex-mcp-connected](fsa06-12b-codex-mcp-connected.png?height=600px)
 
 {{% /tab %}}
 {{% tab title="OpenCode" %}}

@@ -10,7 +10,7 @@
 #
 # Serve it with an ASGI server, bound to localhost only:
 #     uvicorn server:app --host 127.0.0.1 --port 8000
-# then register the on-box URL http://localhost:8000/mcp/ with FortiSOAR.
+# then register the on-box URL http://localhost:8000/mcp with FortiSOAR.
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("fortinet-weather", instructions="Read-only weather lookups for Fortinet office cities.")

@@ -15,12 +15,12 @@ pip install -r requirements.txt
 uvicorn server:app --host 127.0.0.1 --port 8000
 ```
 
-The MCP endpoint is then `http://localhost:8000/mcp/`.
+The MCP endpoint is then `http://localhost:8000/mcp`.
 
 ## Where to run it
 
 - On the FortiSOAR appliance itself (SSH in, serve on a local port, register
-  `http://localhost:8000/mcp/`). The box can always reach its own localhost, so no
+  `http://localhost:8000/mcp`). The box can always reach its own localhost, so no
   TLS or firewall work is needed. Bind to localhost only.
 - On a lab VM or container the box can reach, behind TLS.
 

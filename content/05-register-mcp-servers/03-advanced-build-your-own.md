@@ -40,7 +40,7 @@ def get_forecast(city: str) -> dict:
 app = mcp.streamable_http_app()
 ```
 
-If the import fails, your SDK may be version 2. Version 2 renamed `FastMCP` to `MCPServer`, in the module `mcp.server.mcpserver`. Check the SDK docs for the import path.
+`requirements.txt` pins the version 1 SDK (`mcp<2`), because `server.py` imports `FastMCP`. Version 2 renamed `FastMCP` to `MCPServer`, in the module `mcp.server.mcpserver`. Only change the import if you move to version 2.
 
 The tool returns `status`, `result` and `error`. FortiSOAR agents expect this shape.
 
@@ -56,35 +56,35 @@ Leave the server running. Open a second shell for the curl checks in the next se
 
 ## 2. Check the handshake with curl
 
-<!-- step: fsa05-06-handshake manual: a curl handshake run from a shell against the server, not a box UI step -->
+<!-- step: fsa05-06-handshake -->
 
 Check the server before FortiSOAR sees it. Every request must send an `Accept` header that lists both JSON and event-stream. The server returns a session ID in the `mcp-session-id` response header. Every later call must send that ID back.
 
-Run these four commands in order. Replace `<protocol-version-your-sdk-supports>` with the protocol version your SDK supports. Replace `<session-id-from-step-1>` with the value from the first response.
+Run these four commands in order. Replace `<protocol-version-your-sdk-supports>` with the protocol version your SDK supports. In the server's venv, `python -c "from mcp.types import LATEST_PROTOCOL_VERSION as v; print(v)"` prints it. Replace `<session-id-from-step-1>` with the value from the first response.
 
 ```bash
 # 1. initialize: note the mcp-session-id response header
-curl -i -X POST http://localhost:8000/mcp/ \
+curl -i -X POST http://localhost:8000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"<protocol-version-your-sdk-supports>","capabilities":{},"clientInfo":{"name":"curl","version":"0.0.1"}}}'
 
 # 2. notifications/initialized: send the session ID
-curl -s -X POST http://localhost:8000/mcp/ \
+curl -s -X POST http://localhost:8000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "mcp-session-id: <session-id-from-step-1>" \
   -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 # 3. tools/list: send the session ID
-curl -s -X POST http://localhost:8000/mcp/ \
+curl -s -X POST http://localhost:8000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "mcp-session-id: <session-id-from-step-1>" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
 
 # 4. tools/call: ask for a forecast
-curl -s -X POST http://localhost:8000/mcp/ \
+curl -s -X POST http://localhost:8000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "mcp-session-id: <session-id-from-step-1>" \
@@ -97,13 +97,16 @@ curl -s -X POST http://localhost:8000/mcp/ \
 - The tools list includes `get_forecast` with its input schema.
 - The `tools/call` response returns the envelope with the Sunnyvale forecast.
 
+<!-- capture: fsa05-06-curl-handshake -->
+![fsa05-06-curl-handshake](fsa05-06-curl-handshake.png?height=600px)
+
 ## 3. Register it and grant it
 
 Register the server as you did the DeepWiki server. On the MCP Servers page, click **Connect MCP Server** and fill in the form:
 
 - **Server Name:** `weather-lab`
 - **Transport Type:** `http`
-- **URL:** `http://localhost:8000/mcp/`
+- **URL:** `http://localhost:8000/mcp`
 - **Authentication > Type:** `None`
 
 Click **Test Connection**. It must list `get_forecast`. Then click **Save** and check the status.
@@ -149,7 +152,7 @@ Remove the broken copy when you finish. A leftover broken row can make the statu
 |---|---|---|
 | Handshake returns 406 | The `Accept` header lacks event-stream | Send both JSON and event-stream in `Accept` |
 | Tool call fails with no session | The `mcp-session-id` header was not sent back | Read it from the initialize response and send it on every later call |
-| Validation returns no tools | The server is not running, or the URL is wrong | Check that uvicorn is still running, and that the URL ends in `/mcp/` |
+| Validation returns no tools | The server is not running, or the URL is wrong | Check that uvicorn is still running, and that the URL ends in `/mcp` |
 | Agent says the tool is not allowed | The tool name in the allowlist does not match the server's name | Copy the name from the tools list exactly |
 | Agent calls tools you did not grant | No allowlist, or the allowlist is missing | Write an allowlist with only `get_forecast` |
 | Status route fails for every server | A row has `authentication` stored as an object | Rewrite that row's `authentication` as a string, as in section 4 |

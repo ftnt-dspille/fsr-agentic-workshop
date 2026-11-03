@@ -15,7 +15,7 @@ import {
   skipStep,
   addCardCountWidget, addChartWidget, addRow, apiViaApp, enterEditMode, gotoDashboards,
   openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
-  fillChartWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
+  fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
 } from 'docubot';
 import { labSeed, shouldRunStep } from '../lib/agentlab';
 
@@ -355,6 +355,39 @@ test('chapter 3 - widget builder chart', async ({ gui, capture }) => {
       expect(await picked('select#assignedToSetting'), 'Record Assignment is All').toBe('All');
       await soar.waitForTimeout(1000);
       await capture.shot(soar, 'fsa03-07b-widget-builder-chart', { target: modal, ...SKIP });
+      await cancelBuilder(soar);
+    } finally {
+      // Discard the scratch edits, then remove the scratch dashboard. Nothing was saved.
+      if (await isEditing(soar)) await soar.locator('#revert-view-template').first().click().catch(() => undefined);
+      await removeDashboard(soar, SCRATCH_DASHBOARD).catch(() => false);
+    }
+  });
+});
+
+// Page 03 s2, the first funnel card: the Card Count builder filled and shot BEFORE
+// Save, on the same throwaway dashboard as fsa03-07b. Nothing is saved; the builder
+// is cancelled and the scratch dashboard removed.
+test('chapter 3 - funnel card config', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa03-07c-funnel-card-config')) return;
+  const soar = await gui('soar');
+
+  await test.step('fsa03-07c-funnel-card-config', async () => {
+    await openOrCreateDashboard(soar, SCRATCH_DASHBOARD);
+    try {
+      await enterEditMode(soar);
+      await addRow(soar, 3);
+      const modal = await fillCardCountWidget(soar, {
+        title: FUNNEL[0], dataSource: 'Alerts', groupBy: 'Status',
+        filters: [LAB_FILTER, { field: 'Status', operator: 'Equals', value: 'Open' }],
+      });
+      // Checked before the capture: the builder holds what the page says to set.
+      expect(await modal.locator('input#title').first().inputValue(), 'the card is titled Investigation funnel: new').toBe(FUNNEL[0]);
+      expect(await modal.locator('select#fieldName option:checked').first().textContent(), 'Group By is Status').toBe('Status');
+      expect(await modal.locator('input#dayRange').first().inputValue(), 'Time Range is 365 days').toBe('365');
+      expect(await modal.innerText(), 'the Status = Open condition shows').toMatch(/Status[\s\S]*Equals[\s\S]*Open/);
+      await soar.waitForTimeout(1000);
+      await capture.shot(soar, 'fsa03-07c-funnel-card-config', { target: modal, ...SKIP });
       await cancelBuilder(soar);
     } finally {
       // Discard the scratch edits, then remove the scratch dashboard. Nothing was saved.

@@ -31,7 +31,11 @@ The upload control stays hidden until an administrator turns on the **Import/Upl
 1. Open **System** > **System Configuration**.
 2. Select the **Advanced Development Features** tab.
 3. Find the **Import/Upload Custom AI Agent** section. Open its **Important Notice** and **Risk** panels and read them.
-4. Click **Edit**. Tick the accept checkbox in that section, then click **Submit**.
+4. Click **Edit**. The accept checkbox in that section shows whether the toggle is on. If it is not ticked, tick it, then click **Submit**. If it is already ticked, click **Cancel**: nothing needs to change.
+
+   <!-- step: fsa04-00-advanced-toggle-edit -->
+   <!-- capture: fsa04-00-advanced-toggle-edit -->
+   ![fsa04-00-advanced-toggle-edit](fsa04-00-advanced-toggle-edit.png?height=600px)
 
 <!-- capture: fsa04-00-advanced-toggle -->
 ![fsa04-00-advanced-toggle](fsa04-00-advanced-toggle.png?height=600px)
@@ -91,10 +95,14 @@ An investigation plans one question for each row of the `TOOL_LIST` record. It s
 
    - **Avenue**: a short name for the row, such as `Workshop hello`.
    - **Source**: the source the agent reads. For the hello agent, use `Workshop Hello Agent`.
-   - **Required field**: the field the agent needs from the alert. For the hello agent, use `entity`.
+   - **Required field**: the field the agent needs from the alert. For the hello agent, use `host`.
    - **Active**: `Yes`.
 
 4. Click **Save**.
+
+<!-- step: fsa04-02-tool-list-row-saved -->
+<!-- capture: fsa04-02-tool-list-row-saved -->
+![fsa04-02-tool-list-row-saved](fsa04-02-tool-list-row-saved.png?height=600px)
 
 **You are done when**
 

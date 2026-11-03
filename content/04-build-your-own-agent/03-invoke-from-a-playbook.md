@@ -15,6 +15,11 @@ The Remote FortiSOAR connector in the Content Hub does not have the **Invoke AI 
 
 1. Download [`remote-fortisoar-2.1.0.tgz`](/examples/connectors/remote-fortisoar-2.1.0.tgz).
 2. Open **Content Hub**, then select **Manage**. Click **Upload**, then choose **Upload Connector**, and pick the file.
+
+   <!-- step: fsa04-01b-upload-connector-dialog -->
+   <!-- capture: fsa04-01b-upload-connector-dialog -->
+   ![fsa04-01b-upload-connector-dialog](fsa04-01b-upload-connector-dialog.png?height=600px)
+
 3. Open the installed **FortiSOAR** connector (Remote FortiSOAR) and add a configuration:
    - **FortiSOAR Endpoint URL**: your box's URL, the same one you open in the browser, for example `https://fortisoar.example.com`. The connector calls your own box.
    - **Authentication Type**: **Basic**. Enter your FortiSOAR login and password. An API key does not work: the AI service rejects it.
@@ -46,6 +51,11 @@ Build the playbook in the playbook designer. Put it in the **Agent Lab** collect
    ![fsa04-04-invoke-step-config](fsa04-04-invoke-step-config.png?height=600px)
 
 4. Add a **Decision** step named **Confidence Check**. Use the `confidence` value from the Invoke AI Agent output as its input. That value sits under `data` in the step output. Add two branches: **High confidence** and **Low confidence**.
+
+   <!-- step: fsa04-04-decision-config -->
+   <!-- capture: fsa04-04-decision-config -->
+   ![fsa04-04-decision-config](fsa04-04-decision-config.png?height=600px)
+
 5. Add a step to each branch. The example uses **Auto Close** on the High confidence branch and **Needs Review** on the Low confidence branch, so the run log shows which branch it took.
 6. Save the playbook. Its status shows **Active**.
 

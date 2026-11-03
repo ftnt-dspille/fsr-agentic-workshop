@@ -426,6 +426,16 @@ function applyMasks(text: string, masks: Array<[string | RegExp, string]>): stri
   return out;
 }
 
+/**
+ * Swap for the toolkit's venv root (the folder above FSR_PYTHON's bin folder): a
+ * shot shows it as /your/venv, the placeholder the pages use.
+ */
+export function toolkitVenvMasks(): Array<[string, string]> {
+  const py = process.env.FSR_PYTHON;
+  if (!py || !py.includes(path.sep)) return [];
+  return [[path.dirname(path.dirname(path.resolve(py))), '/your/venv']];
+}
+
 /** Index range [first, last] of the lines from the first line matching `from` through the first matching `to`. */
 function cropRange(lines: string[], from?: RegExp, to?: RegExp): [number, number] {
   const first = from ? lines.findIndex((l) => from.test(l)) : 0;
@@ -501,6 +511,9 @@ export async function shellShot(capture: Capture, id: string, opts: ShellShotOpt
     const [first, last] = opts.from || opts.to ? cropRange(plainLines, opts.from, opts.to) : [0, plainLines.length - 1];
     const home = process.env.HOME || '';
     const masks: Array<[string | RegExp, string]> = [
+      // The toolkit's venv (FSR_PYTHON's root) is a local path: the page shows the
+      // command as /your/venv/bin/fsr-agentic-toolkit, so it is masked first.
+      ...toolkitVenvMasks(),
       ...(home ? [[home, '~'] as [string, string]] : []),
       ...boxMasks(),
       ...secretMasks(opts),
@@ -510,6 +523,9 @@ export async function shellShot(capture: Capture, id: string, opts: ShellShotOpt
     for (const [v] of secretMasks(opts)) {
       if (maskedPlain.includes(v)) throw new Error(`shellShot ${id}: a secret still shows in the output. Nothing was written.`);
     }
+    // A local machine path is never shown: refuse the shot rather than publish it.
+    const localPath = /\/(?:Users|home)\/[^\s/]+\/|\/private\/(?:var|tmp)\/|\/var\/folders\//.exec(maskedPlain);
+    if (localPath) throw new Error(`shellShot ${id}: a local path shows in the output (${localPath[0]}). Nothing was written.`);
     for (const re of opts.expect ?? []) {
       if (!re.test(maskedPlain)) throw new Error(`shellShot ${id}: expected ${re} in the output. Nothing was written.\n${maskedPlain.slice(-1200)}`);
     }

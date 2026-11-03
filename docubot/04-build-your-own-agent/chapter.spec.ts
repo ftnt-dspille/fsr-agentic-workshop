@@ -19,7 +19,7 @@ import {
   agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel, openMcpServers, openPlaybookLogs, openRecord,
   openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep,
   runInvestigation, test, triggerAgent, uploadAgentBundle, waitForInvestigation,
-  skipStep, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner,
+  skipStep, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector,
 } from 'docubot';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
@@ -295,5 +295,100 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
     await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
     await leaveDesigner(soar, origin);
+  });
+});
+
+// Page 03 s1 step 2: the Content Hub upload panel for a connector, opened with no
+// file chosen. Opening it uploads nothing; the panel is only looked at.
+test('chapter 4 - upload connector dialog', async ({ gui, capture }) => {
+  test.setTimeout(5 * 60 * 1000);
+  if (!shouldRunStep('fsa04-01b-upload-connector-dialog')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  await test.step('fsa04-01b-upload-connector-dialog', async () => {
+    await openUploadConnector(soar, origin);
+    // Checked before the capture: the connector panel is open and no file is chosen.
+    const chosen = await soar.locator('input[type=file]').first().evaluate((el) => (el as HTMLInputElement).files?.length ?? 0);
+    expect(chosen, 'no file is chosen').toBe(0);
+    await expect(soar.getByText(/Drag and Drop/i).first(), 'the upload panel is open').toBeVisible({ timeout: 20_000 });
+    await soar.waitForTimeout(1000);
+    await capture.shot(soar, 'fsa04-01b-upload-connector-dialog', SKIP);
+  });
+});
+
+// Page 03 s2 step 4: the Confidence Check decision in the designer. Opened and read
+// only; the designer is left without saving.
+test('chapter 4 - decision config', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa04-04-decision-config')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  await test.step('fsa04-04-decision-config', async () => {
+    await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    await soar.locator('#designer-container .step-container').filter({ hasText: 'Confidence Check' }).first().dblclick({ timeout: 15000 });
+    // Checked before the capture: the two branches the page names are the decision's conditions.
+    await expect(soar.getByText('High confidence', { exact: false }).first(), 'the High confidence branch shows').toBeVisible({ timeout: 30_000 });
+    await expect(soar.getByText('Low confidence', { exact: false }).first(), 'the Low confidence branch shows').toBeVisible();
+    await soar.waitForTimeout(1500);
+    await capture.shot(soar, 'fsa04-04-decision-config', SKIP_RECORD);
+    // Leave without saving: nothing was changed.
+    await leaveDesigner(soar, origin);
+  });
+});
+
+// Page 02 s2 step 4: the Advanced Development section in edit mode, with the accept
+// checkbox showing. Nothing is submitted: Cancel leaves the toggle as it was, and the
+// checkbox state is read before and after to prove it.
+/** A visible action in the section's bottom bar (Edit, Cancel, ...), matched by its text. */
+const barAction = (page: Page, label: string) =>
+  page.locator('button, a').filter({ hasText: new RegExp(`^\\s*${label}\\s*$`) }).filter({ visible: true }).first();
+
+test('chapter 4 - advanced toggle edit', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa04-00-advanced-toggle-edit')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  await test.step('fsa04-00-advanced-toggle-edit', async () => {
+    await openMcpServers(soar, origin);
+    await soar.getByText('System Configuration', { exact: true }).first().click();
+    await soar.getByText('Advanced Development Features', { exact: true }).first().click();
+    await expect(soar.getByText(/Import\/Upload Custom AI Agent/i).first()).toBeVisible({ timeout: 30_000 });
+    const before = await readFieldAfterLabel(soar, 'Import/Upload Custom AI Agent');
+    await barAction(soar, 'Edit').click();
+    await expect(barAction(soar, 'Cancel'), 'edit mode is open').toBeVisible({ timeout: 20_000 });
+    // The accept checkbox sits below the fold: scroll it into view, then shoot it.
+    const accept = soar.getByText(/accept responsibility for enabling Import\/Export and Upload of AI Agent/i).first();
+    await expect(accept, 'the Import/Upload accept checkbox shows in edit mode').toBeVisible({ timeout: 20_000 });
+    await accept.scrollIntoViewIfNeeded();
+    await soar.waitForTimeout(1000);
+    await capture.shot(soar, 'fsa04-00-advanced-toggle-edit', { highlight: accept, ...SKIP });
+    // Cancel, never Submit: the section goes back to read-only with its state unchanged.
+    await barAction(soar, 'Cancel').click();
+    await expect(barAction(soar, 'Edit'), 'back to read-only').toBeVisible({ timeout: 20_000 });
+    const after = await readFieldAfterLabel(soar, 'Import/Upload Custom AI Agent');
+    expect(JSON.stringify(after), 'the toggle is unchanged after Cancel').toBe(JSON.stringify(before));
+  });
+});
+
+// Page 02 s5 step 4: the TOOL_LIST record after the learner's row is saved. The row
+// is added by tools/lab_setup.py tool-list-row (idempotent); this step only shows it.
+test('chapter 4 - tool list row saved', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa04-02-tool-list-row-saved')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  await test.step('fsa04-02-tool-list-row-saved', async () => {
+    const uuid = await openOrgContextRecord(soar, origin, 'TOOL_LIST').catch(() => null);
+    expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
+    for (const label of DEFAULT_TOOL_ROWS) {
+      await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+    }
+    // The hello row, the tenth line: no row, no capture (run tools/lab_setup.py tool-list-row).
+    await expect(soar.getByText('Workshop Hello Agent', { exact: false }).first(), 'the hello row is saved: run tools/lab_setup.py tool-list-row').toBeVisible({ timeout: 20_000 });
+    await capture.shot(soar, 'fsa04-02-tool-list-row-saved', SKIP_RECORD);
   });
 });

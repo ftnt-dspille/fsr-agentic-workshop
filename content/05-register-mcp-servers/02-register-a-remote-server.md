@@ -47,11 +47,15 @@ Click `agentlab-deepwiki` to open it. Under **Discovered Capabilities**, the pan
 3. Set **Configuration Type** to **Custom Configuration**. Then set:
    - **Name:** `Agent Lab DeepWiki`
    - **LLM Provider:** the profile that answers for this agent, for example `Low Reasoning`.
-   - **MCP Server:** `agentlab-deepwiki`. An agent can use only the servers selected here.
+   - **MCP Server:** keep the four built-in servers selected (**FortiSOAR Module Management**, **FortiSOAR Playbook Management**, **Utility Tools** and **SOC Framework**), and add `agentlab-deepwiki`. A custom configuration replaces the agent's default server list, and the agent can use only the servers selected here.
    - **Masking Agent** (optional): for example `IOC Masking`, which hides indicators before data goes to the LLM.
 4. Click **Save**.
 
 The grant gives the agent every tool that the server offers. For anything beyond the lab, pin a tool allowlist in the agent's bundle.
+
+{{% notice warning %}}
+Do not leave **SOC Framework** out. Alert Investigation uses it to write its verdict and summary back to the alert. Without it, investigations still finish and show a verdict on the AI Investigation tab, but the alert's **AI Verdict** field stays **Not Investigated**, and no error is shown.
+{{% /notice %}}
 
 <!-- capture: fsa05-04-grant-allowlist-agent-config -->
 ![fsa05-04-grant-allowlist-agent-config](fsa05-04-grant-allowlist-agent-config.png?height=600px)
