@@ -5,7 +5,7 @@ weight: 10
 description: "One prompt, a full investigation: enrich, correlate, conclude, and write the findings back to the alert."
 ---
 
-Everything so far was a drill. Now the agent runs a real investigation shape: take an alert, gather evidence with the tools it has learned, reach a conclusion, and - the part that matters - write the findings back to the record so the next analyst sees them where they work.
+In this investigation the agent takes an alert, gathers evidence with the tools from earlier chapters, reaches a verdict, and writes the findings back to the alert. The next analyst then sees the findings on the record.
 
 ## 1. Stage the scenario
 
@@ -23,7 +23,7 @@ web-server-01 to 203.0.113.99 since 02:00 UTC."
 <!-- capture: fsa10-01-stage-alert -->
 ![fsa10-01-stage-alert](fsa10-01-stage-alert.png?height=600px)
 
-(The chapter 8 playbook will tag it within seconds - that is expected, and the first piece of history on the record.)
+The playbook from chapter 8 tags the alert within seconds. That is expected. It is the first entry in the alert's history.
 
 ## 2. Run the investigation
 
@@ -47,25 +47,25 @@ its severity if your verdict warrants it. Do not close the alert.
 
 <!-- step: fsa10-02-investigate -->
 
-Let it run. A good transcript reads like an analyst's notebook: each claim traceable to a tool result, gaps stated honestly ("no reputation connector is configured, so the destination is unverified"), and a verdict that distinguishes evidence from inference.
-
-## 3. You are done when
-
-- The agent correlated across modules: the asset record from chapter 7 (web-server-01, owner web-team, criticality Medium) appears in its reasoning.
-- The verdict cites evidence, including what it could NOT check.
-- The alert's description now carries the structured findings, and the severity change (if any) is justified.
-
-**Verify in the UI:** open the alert. The description is the agent's write-back; the audit timeline shows the whole investigation imprint.
+Let the agent run. A good transcript shows each claim with the tool result behind it. It also states gaps, for example "no reputation connector is configured, so the destination is unverified."
 
 <!-- capture: fsa10-02-investigate -->
 ![fsa10-02-investigate](fsa10-02-investigate.png?height=600px)
 
+## 3. You are done when
+
+- The agent used the asset record from chapter 7 (web-server-01, owner web-team, criticality Medium) in its reasoning.
+- The verdict cites its evidence, and it says what the agent could not check.
+- The alert's description holds the structured findings. The severity change, if any, is justified.
+
+**Verify in the UI:** open the alert. The description is the agent's write-back.
+
 <!-- capture: fsa10-02-investigate-findings-on-alert -->
 ![fsa10-02-investigate-findings-on-alert](fsa10-02-investigate-findings-on-alert.png?height=600px)
 
-## 4. Optional: hand it to the platform
+## 4. Optional: compare with the platform's own AI investigation
 
-If your box has FortiSOAR's native AI Investigation configured (Part 1), run both on the same alert and compare. Give your agent this prompt:
+If your box has FortiSOAR's native AI Investigation set up (Part 1), run both on the same alert and compare the results. Give your agent this prompt:
 
 ```text
 Trigger a native FortiSOAR AI investigation of the "Agent Lab - beaconing
@@ -78,15 +78,15 @@ where do you agree, where do you differ, and why?
 <!-- capture: fsa10-03-native-compare -->
 ![fsa10-03-native-compare](fsa10-03-native-compare.png?height=600px)
 
-## 5. Bottle it
+## 5. Take it further
 
-The investigation worked once; chapter 8 showed you how to make it permanent. As a take-home exercise, have the agent author a playbook that automates steps 1-4 for any "Agent Lab" alert and publishes it. That is the full arc: AI finds the pattern, a playbook runs it forever.
+Chapter 8 showed how to turn a proven investigation into a playbook. As a take-home exercise, ask the agent to build a playbook that repeats the investigation steps in the prompt above for any "Agent Lab" alert, and publish it.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Agent invents enrichment results | No suitable connector, model filled the gap | Call it out; re-prompt with "only claim what a tool result shows; state gaps explicitly" |
-| Write-back overwrote the playbook's tag | Full description replace | Fine for the lab; for surgical edits, ask it to append instead |
-| investigate_alert errors | Native AI investigation not configured on this box | Expected on a bare lab box; skip step 4 |
-| Investigation stalls on huge results | Tool outputs hit the size cap | The truncation envelope tells the agent to narrow; nudge it to use summary=true and filters |
+| Agent invents enrichment results | No suitable connector, so the model filled the gap | Say so, then ask again with: "only claim what a tool result shows; state gaps explicitly" |
+| The write-back replaced the playbook's tag | The write-back overwrites the whole description | Fine for the lab. To keep the tag, ask the agent to append the summary instead |
+| `investigate_alert` errors | Native AI investigation is not set up on this box | Expected on a bare lab box. Skip step 4 |
+| Investigation stalls on large results | Tool output hit the size cap | Ask the agent to narrow its queries (for example `summary=true` and filters) |

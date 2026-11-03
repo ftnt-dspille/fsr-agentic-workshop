@@ -5,16 +5,16 @@ weight: 30
 description: "Four more agent jobs with proof: call a FortiSOAR-registered MCP server, let the agent repair a playbook, security-review your connector, and schedule automation that proves it fires."
 ---
 
-By now the agent has oriented, triaged in bulk, built a module, authored and published a playbook, built a connector and run an investigation. These labs push further. Each one is a job that is slow or impossible to do by clicking, each ends in evidence you can check, and each uses the same agent and `.mcp.json` you already set up.
+These labs give the agent larger jobs. Each job ends with evidence you can check. Each lab uses the same agent and `.mcp.json` you set up earlier.
 
-Run them in any order. Turn the read-only guard off (`FSR_MCP_READONLY` unset) for labs 1, 2 and 4; lab 3 only reads.
+Turn the read-only guard off (`FSR_MCP_READONLY` unset) for labs 1, 2, 4 and 5. Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapter 9. Lab 6 needs the capstone alert from page 1.
 
 ## 1. Call a tool on an MCP server registered in FortiSOAR
 
-In chapter 5 you registered `agentlab-deepwiki` with FortiSOAR so its built-in agents could use it. Your coding agent can use that same registration: the toolkit reads the server's URL and authentication from FortiSOAR and calls the tool directly. FortiSOAR stays the single place where MCP servers and their credentials are managed, and every agent, inside the product or outside it, reaches the same servers.
+In chapter 5 you registered `agentlab-deepwiki` with FortiSOAR. Your coding agent can use the same registration. The toolkit reads the server's URL and login from FortiSOAR and calls the tool.
 
 {{% notice note %}}
-This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If you skipped it, register it first, or point the prompt at one of the built-in servers (for example `Utility Tools` and its `get_current_datetime` tool).
+This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If you skipped it, point the prompt at a built-in server instead, for example `Utility Tools` and its `get_current_datetime` tool.
 {{% /notice %}}
 
 Give your agent this prompt:
@@ -31,13 +31,13 @@ replace?" Tell me the server and tool that answered, and the answer.
 <!-- capture: fsa10-04-registered-mcp-tool -->
 ![fsa10-04-registered-mcp-tool](fsa10-04-registered-mcp-tool.png?height=600px)
 
-Watch the tool sequence: `list_ai_config` finds the registrations, `list_registered_mcp_tools` opens a real MCP `tools/list` against the server, and `call_registered_mcp_tool` runs the tool. The call is confirm-gated, because a registered tool can do anything on its server: the agent names the server and tool and waits for your go-ahead.
+The agent lists the registrations, lists the server's tools, and then calls the question tool. The call needs your go-ahead, because a registered tool can do anything on its server.
 
 **You are done when:** the agent reports an answer from `agentlab-deepwiki` and names the tool it called (`ask_wiki_question`).
 
 ## 2. Let the agent repair a playbook on its own
 
-In chapter 8 you told the agent what the fix was. Here you do not. The playbook below carries one of the most common mistakes in FortiSOAR playbooks: a record reference built as `/api/3/alerts/` plus the record's `@id`, which is already a full `/api/3/alerts/<uuid>` reference, so the path is doubled and the update 404s. The agent runs it, reads the failed run, has `repair_playbook` produce the fix, and proves it with a second run.
+In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. The record reference is `/api/3/alerts/` plus the record's `@id`. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with a 404.
 
 Give your agent this prompt:
 
@@ -81,13 +81,13 @@ playbooks:
 <!-- capture: fsa10-05-repair-playbook -->
 ![fsa10-05-repair-playbook](fsa10-05-repair-playbook.png?height=600px)
 
-`debug_playbook_run` names the failing step and the doubled reference, and `repair_playbook` takes that diagnosis plus the YAML, drops the extra `/api/3/alerts/` prefix, and re-validates the result. It only applies fixes it can make mechanically; anything else it reports as needing a hand edit rather than guessing. The second `wait_for_playbook_run` is the proof.
+`debug_playbook_run` names the failing step and the doubled reference. `repair_playbook` removes the extra `/api/3/alerts/` prefix and checks the result. It applies only fixes it can make mechanically. Anything else, it reports as a change for you to make by hand.
 
-**You are done when:** the first run is `failed` at Tag Alert, the second run is `finished`, and the change shown is `repair_playbook`'s.
+**You are done when:** the first run is `failed` at Tag Alert, the second run is `finished`, and the change shown is the one `repair_playbook` made.
 
 ## 3. Security-review the connector you built
 
-The agent wrote `agentlab-dadjoke` in chapter 9. Before code like that goes on a production box, it should pass the same gates a reviewer would apply. This lab runs them and then proves they catch a bad change.
+The agent wrote `agentlab-dadjoke` in chapter 9. Before code like that goes on a production box, it should pass the same checks a reviewer would apply. This lab runs the checks, then adds a deliberate security flaw to confirm the checks catch it.
 
 Give your agent this prompt:
 
@@ -103,13 +103,13 @@ scan once more to confirm it is clean.
 <!-- capture: fsa10-06-review-connector -->
 ![fsa10-06-review-connector](fsa10-06-review-connector.png?height=600px)
 
-Nothing here touches the box: both gates read the connector folder. Disabling TLS verification is a classic shortcut in connector code, and the scan flags it.
+Both checks read the connector folder only, so nothing on the box changes. Turning off TLS certificate verification (`verify=False`) is a common shortcut in connector code. The scan flags it.
 
-**You are done when:** the first and last scans are clean and the middle one reports the disabled TLS verification.
+**You are done when:** the first and last scans are clean, and the middle scan reports the disabled TLS verification.
 
 ## 4. Schedule automation and prove it fires
 
-A schedule that points at a deleted playbook, or never fires, fails silently. Have the agent stand one up, let the scheduler fire it on its own, and prove it from the run history. A scheduled run has no triggering record, so this lab uses a small heartbeat playbook that counts the open Agent Lab alerts.
+A schedule has no triggering record, so this lab uses a small heartbeat playbook. It counts the open Agent Lab alerts on each run. You prove the schedule fired on its own, with no manual run.
 
 Give your agent this prompt:
 
@@ -142,7 +142,9 @@ playbooks:
 <!-- capture: fsa10-07-schedule-create -->
 ![fsa10-07-schedule-create](fsa10-07-schedule-create.png?height=600px)
 
-Now wait about three minutes. The scheduler fires the playbook on the minute, and it records that it fired a little later. Then give your agent this prompt:
+Now wait about three minutes. The scheduler fires the playbook on the minute, but it records the fire a little later. If the next prompt says the schedule has not fired yet, wait a few more minutes and run it again.
+
+Give your agent this prompt:
 
 ```text
 Run diagnose_schedule on "Agent Lab heartbeat" and tell me whether it has
@@ -155,9 +157,7 @@ Then delete the schedule.
 <!-- capture: fsa10-07-schedule-and-prove -->
 ![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png?height=600px)
 
-`schedule_playbook` creates the task, `diagnose_schedule` reads the scheduler's own record (has it fired, how often) next to the playbook's run history, and `delete_schedule` cleans up behind a confirm.
-
-**You are done when:** `diagnose_schedule` reports that the schedule has fired and its runs finish, with no problems, and the schedule is gone afterwards.
+**You are done when:** `diagnose_schedule` reports that the schedule has fired, its runs finish, and it has no problems. The schedule is gone afterwards.
 
 ## 5. Plan a use case and build it end to end
 
@@ -185,13 +185,13 @@ The module in FortiSOAR, with the test record the agent created:
 <!-- capture: fsa10-08-module-in-soar -->
 ![fsa10-08-module-in-soar](fsa10-08-module-in-soar.png?height=600px)
 
-Watch the chain: `plan_use_case` classifies the request, `provision_module` creates and publishes the module and checks the agent can use it, `build_playbook` checks the playbook against the module's real fields, `publish_playbook` deploys it, and the test record's read-back and the new alert are the proof. Publishing a module takes a few minutes; let it run.
+Publishing a module takes a few minutes. Let the agent finish.
 
 **You are done when:** the LT-0042 record exists with its reported date, and a Critical "Agent Lab lost device LT-0042" alert was raised by the playbook.
 
 ## 6. Record forensics
 
-Every record keeps an audit trail and a list of the playbook runs that touched it. The agent can turn them into a timeline in one prompt.
+Every record keeps an audit trail and a list of the playbook runs that touched it. The agent can combine them into a timeline.
 
 Give your agent this prompt:
 
@@ -206,13 +206,11 @@ an API user or a playbook made it. Mark anything you cannot attribute.
 <!-- capture: fsa10-09-record-forensics -->
 ![fsa10-09-record-forensics](fsa10-09-record-forensics.png?height=600px)
 
-`get_record_history` merges the audit rows with the playbook runs, and `list_record_activity` adds the comments and links. The capstone alert has a good story to tell: created by the agent, tagged by your chapter 8 playbook, then rewritten by the investigation.
-
-**You are done when:** the timeline shows the creation, the playbook's tag and the investigation's write-back in order, each attributed.
+**You are done when:** the timeline shows the creation, the playbook's tag and the investigation's write-back in order, and each change is attributed.
 
 ## 7. Optional: compare staging and production
 
-If you have access to two FortiSOAR boxes, the agent can compare them. Name both in `~/.pyfsr/instances.toml`, each pointing at an env file that holds that box's `FSR_*` login, so no credential sits in the file itself:
+If you have access to two FortiSOAR boxes, the agent can compare them. Name both boxes in `~/.pyfsr/instances.toml`. Each entry points at an env file that holds that box's `FSR_*` login, so no credential goes in the TOML file:
 
 ```toml
 [instances.staging]
@@ -222,9 +220,7 @@ env_file = "~/agent-lab/.env.staging"
 env_file = "~/agent-lab/.env.production"
 ```
 
-Restart the agent. Every toolkit call then takes an `instance` argument, and `list_instances` shows both.
-
-Give your agent this prompt:
+Restart the agent. Then give it this prompt:
 
 ```text
 Compare the FortiSOAR instances "staging" and "production" without changing
@@ -239,14 +235,8 @@ production.
 <!-- capture: fsa10-10-staging-vs-production -->
 ![fsa10-10-staging-vs-production](fsa10-10-staging-vs-production.png?height=600px)
 
-This is the check to run before promoting content: a playbook that uses a connector version or a module field production does not have will fail there, and the table says so before you find out the hard way.
-
-**You are done when:** the table lists real differences from both boxes, and the agent names at least one that would break a promoted playbook (or says there is none).
+**You are done when:** the table lists real differences from both boxes, and the agent names at least one difference that would break a promoted playbook. If there is none, it says so.
 
 ## More one-prompt jobs
 
-- **Connector health sweep.** "Check the health of every configured connector and give me a table of connector, configuration, status and error, broken ones first." Read-only.
-
-## The pattern behind all of them
-
-Every lab is the same shape: the agent reads the current state, acts under the guardrails, and then checks its own work against the box. That last step is what makes an outside agent trustworthy on FortiSOAR: it does not just say it did something, it shows you the evidence.
+- **Connector health sweep.** "Check the health of every configured connector and give me a table of connector, configuration, status and error, broken ones first." This is read-only.

@@ -70,7 +70,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
   // builds the playbook (SPEND_AI=1) nothing is pre-seeded, so its publish is the
   // real first publish; otherwise the shipped page-1 playbook is installed.
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
-    if (!AGENT) labSeed('playbooks');
+    if (!AGENT) ensureTagPlaybook(); // publishes the page-1 playbook from its YAML (lab_setup.py has no playbooks subcommand)
   });
 
   // One agent session carries pages 1's two prompts (the second says "you just
@@ -149,6 +149,11 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
 
     // UI: the alert's Executed Playbook Logs (historical) draw the run's step graph.
     await openRecord(soar, 'alerts', alertUuid, { tab: null });
+    // The alert's description carries the playbook's appended text (page 02 s2).
+    // The record opens on its last tab, so select Alert Details explicitly.
+    await soar.getByText('Alert Details', { exact: true }).first().click();
+    await expect(soar.getByText(TAG_TEXT).first(), 'the alert description does not show the playbook text').toBeVisible({ timeout: 30_000 });
+    await capture.shot(soar, 'fsa08-03-trigger-and-verify-alert', SKIP_RECORD);
     // A run that just finished is listed under Recent Playbook Logs, not the
     // Historical table (which only holds aged/persisted runs), so read Recent.
     await openPlaybookLogs(soar, { select: 'Tag Agent Lab' });

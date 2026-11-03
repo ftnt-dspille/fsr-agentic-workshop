@@ -1,0 +1,48 @@
+collection: Agent Lab
+visible: true
+playbooks:
+  - name: Agent Lab - Invoke Hello Agent
+    steps:
+      - name: On Alert Created
+        type: start_on_create
+        module: alerts
+        when:
+          logic: AND
+          filters:
+            - field: name
+              op: like
+              value: "Agent Lab hello%"
+        next: Invoke AI Agent
+      - name: Invoke AI Agent
+        type: connector
+        connector: remote-fortisoar
+        operation: invoke_agent
+        params:
+          agent_name: workshop_hello_agent
+          body: {"entity": "host-01.example.com"}
+        next: Confidence Check
+      - name: Confidence Check
+        type: decision
+        conditions:
+          - display: High confidence
+            when: "{{ vars.steps.Invoke_AI_Agent.data.confidence == 'high' }}"
+            next: Auto Close
+          - display: Low confidence
+            when: "{{ vars.steps.Invoke_AI_Agent.data.confidence != 'high' }}"
+            next: Needs Review
+      - name: Auto Close
+        type: update_record
+        module: alerts
+        record: "{{ vars.input.records[0]['@id'] }}"
+        fields:
+          description: "{{ vars.input.records[0].description | default('', true) }} Hello agent: high confidence"
+        next: Done
+      - name: Needs Review
+        type: update_record
+        module: alerts
+        record: "{{ vars.input.records[0]['@id'] }}"
+        fields:
+          description: "{{ vars.input.records[0].description | default('', true) }} Hello agent: needs review"
+        next: Done
+      - name: Done
+        type: end

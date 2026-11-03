@@ -5,61 +5,41 @@ weight: 30
 description: "A guided walk through the AI screens on your box: create an alert, confirm AI is on, read the agent catalog, the MCP servers and an SOP, and ask the assistant one question."
 ---
 
-This tour creates one practice alert and asks the AI Assistant a read-only question about it. The goal is to know where things are before chapter 3 starts writing alert fields.
+This tour creates one practice alert and asks the AI Assistant one read-only question about it. It changes nothing else on the box. Work through the steps in order. Each step shows you where a screen is, so you know where things are before chapter 3.
 
-## 1. Create an alert in the UI
+## 1. Create a practice alert
 
 <!-- step: fsa02-00-create-alert -->
 
-Open the **Alerts** module and choose **Add**. Fill in the alert form:
+1. Open the **Alerts** module and choose **Add**.
+2. In **Name**, enter a name you will recognize. Use `Agent Lab - orientation` and add a unique number at the end.
+3. In **Source**, enter `edr-sensor-01`. In **Source ID**, enter `203.0.113.42`.
+4. In **Description**, paste the JSON below. Chapter 3 reads the raw event from the alert. An alert with no event data gets only the generic `DEFAULT` SOP.
 
-- **Name:** a recognizable practice name, such as `Agent Lab - orientation` plus a unique suffix
-- **Description:** the JSON source payload from the example below
-- **Source:** `edr-sensor-01`
-- **Source ID:** `203.0.113.42`
-- Leave **Status**, **Severity**, and **Type** at their defaults for this first alert.
+   ```json
+   {
+     "alert_type": "Suspicious Outbound Connection",
+     "indicator": "203.0.113.42",
+     "source": "edr-sensor-01",
+     "severity_raw": "high"
+   }
+   ```
 
-Review the fields, choose **Save**, and confirm the new alert appears in the list.
+5. Leave **Status**, **Severity** and the other fields at their defaults.
+6. Choose **Save**. Confirm the new alert appears in the list.
+
+The form before you save looks like this:
 
 <!-- capture: fsa02-00-create-alert -->
 ![fsa02-00-create-alert](fsa02-00-create-alert.png?height=600px)
 
-This screenshot shows the form before saving. The example uses the documentation-only `203.0.113.0/24` range, so the value is safe to reproduce in a public workshop.
-
-## 1.1 Create the remaining practice data
-
-Investigations need an alert with source data. Without it, the alert gets the generic `DEFAULT` SOP, and an SOP for its alert type never applies.
-
-{{% notice warning %}}
-An alert created by hand, or through the API, with no raw source data always gets the `DEFAULT` SOP. Type-specific SOPs only apply when the alert carries its source JSON. Put the raw payload in the alert's **source data** field when you create it, or the SOP exercise in chapter 3 will not show what you expect.
-{{% /notice %}}
-
-Create three to five alerts before chapter 3. Repeat the same **Add** flow and vary the name, type, source, and source ID. Use realistic-looking values like the example below:
-
-```json
-{
-  "alert_type": "Suspicious Outbound Connection",
-  "indicator": "203.0.113.42",
-  "source": "edr-sensor-01",
-  "severity_raw": "high"
-}
-```
-
-Vary the values across your alerts (a different indicator and type each time). Include **one** alert with no source data at all: you will use it in chapter 3 to show the `DEFAULT` SOP behavior.
-
-{{% notice note %}}
-Chapter 3 also asks you to investigate an alert whose indicator a threat-intel feed will actually rate as malicious. A documentation-range address like the one above will not resolve in any feed, so for that step use a known-bad indicator your instructor supplies, or one from a reputation source your box is configured to query.
-{{% /notice %}}
-
 ## 2. Confirm AI is on
-
-Open the AI Configurations group of the left navigation and read what it shows. It holds MCP Servers, Prompts, Organizational Context and Insights. The agent catalog is not in this group; it is in the Content Hub (step 3).
 
 <!-- step: fsa02-01-ai-enabled -->
 
-1. Look for the AI Configurations group in the left navigation.
-2. Confirm there is no "AI feature not enabled" banner. The enablement switch and the token balance are under **System** > **System Configuration** > **FortiAI**, not in the AI Configurations group.
-3. If a token balance is shown there, note it. Do not change any setting.
+1. Look at the left navigation. Open the **AI Configurations** group.
+2. Confirm there is no "AI feature not enabled" banner.
+3. If you have permission, open **System** > **System Configuration** > **FortiAI**. The enablement switch and the token balance are there. Change nothing.
 
 <!-- capture: fsa02-01-ai-enabled -->
 ![fsa02-01-ai-enabled](fsa02-01-ai-enabled.png?height=600px)
@@ -67,129 +47,121 @@ Open the AI Configurations group of the left navigation and read what it shows. 
 **You are done when**
 
 - The AI area opens without an enablement banner.
-- You can say where the token balance appears, or that it is not shown on your build.
+- You can say where the token balance appears, or that your build does not show it.
 
 {{% notice note %}}
-Enabling AI features is an administrator task. If the banner appears, ask your instructor or box administrator to enable it. Do not work around it.
+Turning on AI features is an administrator task. If the banner appears, ask your box administrator to turn it on. Do not work around it.
 {{% /notice %}}
 
 ## 3. Read the agent catalog
 
 <!-- step: fsa02-02-agent-catalog manual: the catalog and its AI Agent filter are captured; reading each Triage and Insight agent LLM profile, MCP servers and masking setting is by hand -->
 
-Open the **Content Hub**, go to **Discover**, and tick **AI Agent** under Content Type. The catalog lists the shipped AI agents; the total varies by build. Filter by tag, then open one agent tagged `Triage` and one tagged `Insight`. For each, write down:
-
-- the LLM profile it points to
-- the MCP servers it is allowed to use
-- its masking setting
+1. Open **Content Hub**, then **Discover**.
+2. Under **Content Type**, tick **AI Agent**.
+3. Under **Tags**, find the agents tagged `Triage` (used by investigations) and `Insight` (used by insights).
 
 <!-- capture: fsa02-02-agent-catalog -->
 ![fsa02-02-agent-catalog](fsa02-02-agent-catalog.png?height=600px)
 
-Open one agent and switch to its **Configurations** tab. This is where the agent's settings live: the **LLM Provider** it reasons with, the **MCP Server** list it is allowed to call, and its optional **Masking Agent**. These three settings are what make one agent behave differently from another.
-
 <!-- step: fsa02-02-agent-settings -->
+
+4. Click **Alert Investigation**, then select its **Configurations** tab.
+5. Note three settings:
+   - **LLM Provider**: the model the agent reasons with.
+   - **MCP Server**: the servers the agent may call.
+   - **Masking Agent**: the agent that masks indicators before they reach the model.
 
 <!-- capture: fsa02-02-agent-settings -->
 ![fsa02-02-agent-settings](fsa02-02-agent-settings.png?height=600px)
 
 **You are done when**
 
-- You can say which tag routes an agent into an investigation and which routes it into insights.
-- You can name the MCP servers one `Triage` agent uses, and read them off its Configurations tab.
+- You can name the tag that routes an agent into an investigation, and the tag that routes it into insights.
+- You can name the MCP servers that Alert Investigation uses.
 
 ## 4. Inspect the MCP servers
 
 <!-- step: fsa02-03-mcp-servers -->
 
-Open the MCP servers list under AI Configurations. Identify the built-in servers and say what each one is for. A fresh 8.0.1 box lists the four built-in families, all active and all on the HTTP transport:
-
-- **FortiSOAR Module Management**: reads and writes records and modules.
-- **FortiSOAR Playbook Management**: runs playbooks and reports their status.
-- **SOC Framework**: alert and indicator tools.
-- **Utility Tools**: helper tools.
-
-Any external or connector-backed server someone has registered (for example a FortiSIEM endpoint, or a public docs server like deepwiki) shows up in this same list. You register one yourself in chapter 5.
+1. Open **AI Configurations**, then **MCP Servers**.
+2. Find the four built-in servers and note what each one is for:
+   - **FortiSOAR Module Management**: reads and writes records and modules.
+   - **FortiSOAR Playbook Management**: runs playbooks and reports their status.
+   - **SOC Framework**: alert and indicator tools.
+   - **Utility Tools**: helper tools.
 
 <!-- capture: fsa02-03-mcp-servers -->
 ![fsa02-03-mcp-servers](fsa02-03-mcp-servers.png?height=600px)
 
-Open one server (for example **SOC Framework**) to see its detail: the transport, the on-box URL it serves, and its **Discovered Capabilities**, the actual tools it exposes. SOC Framework, for instance, lists `get_alert`, `enrich_indicator`, `hunt_ioc_siem` and the other alert and indicator tools an investigation calls.
-
 <!-- step: fsa02-03-mcp-server-detail -->
+
+3. Click **SOC Framework**. Read its transport, its URL and its **Discovered Capabilities**. These are the tools the server exposes. Name one tool, such as `get_alert`.
 
 <!-- capture: fsa02-03-mcp-server-detail -->
 ![fsa02-03-mcp-server-detail](fsa02-03-mcp-server-detail.png?height=600px)
 
+Servers that someone registered also appear in this list. You register one yourself in chapter 5. If the names on your build differ, use the names the list shows.
+
 **You are done when**
 
-- You can name the built-in servers and their purpose.
+- You can name the built-in servers and what each one does.
 - You can tell which servers are built in and which wrap a connector.
 - You can open a server and name a tool it exposes.
 
-If the names on your build differ, use what the list shows.
+## 5. Find the SOP records
 
-## 5. Compare an SOP with the planner
-
-Organization context is your SOC's own knowledge: the SOPs, working hours and approved activity an investigation reads before it calls anything malicious. It is retrieved per investigation, not baked into the model, which is why the same inputs produce the same reasoning on your box.
+A SOP (standard operating procedure) is the written rule your SOC uses for one alert type. Its **Questions** are what an investigation asks before it decides. Organization context holds the SOPs, the tool table and the approved activity that investigations read.
 
 ![Organization context: what goes in (SOPs per alert type, working hours and maintenance windows, approved systems, trusted networks and risk criteria) and how agents use it (retrieved per investigation, the SOP decides which questions get asked, approved activity rules out false positives)](diagram-organization-context.png)
 
 <!-- step: fsa02-04-sop-compare -->
 
-Open the organizational context records for investigation SOPs. Find the `DEFAULT` SOP, and one SOP for an alert type. Read the question lists they contain.
-
-You will compare these with the questions the planner actually writes in chapter 3. Come back to this step then.
-
-**You are done when**
-
-- You can point to where an SOP's questions are stored.
-- You understand that SOP lookups are exact and case-sensitive. A subcategory that differs in case from the alert type does not match.
-
-If you cannot find the SOP records under the AI configuration area, check the list view for the organizational context module.
+1. Open **AI Configurations**, then **Organizational Context**.
+2. In the **Title** filter, type `SOP -`. The list shows the SOP records. Find **SOP - Malware Detection**.
 
 <!-- capture: fsa02-04-sop-compare -->
 ![fsa02-04-sop-compare](fsa02-04-sop-compare.png?height=600px)
 
-Open one SOP record (for example **SOP - Malware Detection**) and read its **Questions** list. These are the exact questions an investigation of that alert type asks before it reaches a verdict. In chapter 3 you compare them with the questions the planner writes for a real alert.
-
 <!-- step: fsa02-04-sop-detail -->
+
+3. Open **SOP - Malware Detection** and read its **Questions** list. These are the questions an investigation of that alert type asks. In chapter 3 you compare them with the questions the investigation actually writes.
 
 <!-- capture: fsa02-04-sop-detail -->
 ![fsa02-04-sop-detail](fsa02-04-sop-detail.png?height=600px)
 
-## 6. Ask the assistant a read-only question
+**You are done when**
+
+- You can point to the place where an SOP's questions are stored.
+
+## 6. Ask the assistant one read-only question
 
 <!-- step: fsa02-05-assistant-readonly manual: a FortiAI chat turn; spends tokens; automated when SPEND_AI=1 -->
 
-Open the alert you created in step 1. Use the AI Assistant on that alert and ask a question that only reads data, such as:
+1. Open the alert you created in step 1. Use the AI Assistant on that alert.
+2. Ask this question:
 
-```text
-Summarize the source data on this alert and list the indicators it contains.
-Do not change anything.
-```
-
-Then ask one multi-step read-only question, such as asking for the alert's related records and their status. This is a chat exercise. It is not an orchestrator run.
-
-**You are done when**
-
-- The assistant answers from the alert's data, without inventing indicators.
-- You checked the alert afterward and nothing on it changed.
+   ```text
+   Summarize the source data on this alert and list the indicators it contains.
+   Do not change anything.
+   ```
 
 <!-- capture: fsa02-05-assistant-readonly -->
 ![fsa02-05-assistant-readonly](fsa02-05-assistant-readonly.png?height=600px)
 
+**You are done when**
+
+- The assistant answers from the alert's data and does not invent indicators.
+- You checked the alert afterward, and nothing on it changed.
+
 {{% notice warning %}}
-Keep this chapter read-only. Do not ask the assistant to block, close, assign or update anything on a shared box. Chapter 3 is where alerts start to change.
+Keep this chapter read-only. Do not ask the assistant to block, close, assign or update anything on a shared box. Those changes come in chapter 3.
 {{% /notice %}}
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| AI area missing from the navigation | Your user lacks AI permissions | Ask your administrator to grant the workshop role AI read access |
-| Enablement banner on every AI page | AI features are off | Ask your administrator to enable them |
-| SOP looks empty or wrong | The alert has no source data, or the subcategory does not match exactly | Add source JSON to the alert, and check the subcategory spelling and case |
-| Assistant invents indicators | The alert has little source data | Add the source payload and ask again |
-| Assistant ignores the alert | Question did not name the alert | Name the alert by its title or identifier |
-
+| The AI area is missing from the navigation | Your user has no AI permissions | Ask your administrator to give the workshop role AI read access |
+| An enablement banner appears on every AI page | AI features are off | Ask your administrator to turn them on |
+| The assistant invents indicators | The alert has little source data | Check that the Description holds the JSON, then ask again |

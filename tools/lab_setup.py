@@ -124,6 +124,62 @@ DEMO_ALERTS: list[dict[str, Any]] = [
     },
 ]
 
+# Chapter 3 (investigations): three alerts the SOP and benign-verdict exercises
+# use. Kept out of DEMO_ALERTS so the chapters 6-10 demo set does not change.
+# `sourcedata` is the alert's raw source JSON. An investigation picks its SOP
+# from it (the alert type inside the JSON): no source data gets the DEFAULT SOP.
+INVESTIGATION_ALERTS: list[dict[str, Any]] = [
+    {
+        # Benign on purpose: a scheduled backup. Expect Inconclusive more often
+        # than Benign, because no approved-activity record covers the backup.
+        "name": "nightly backup push to backup-01",
+        "type": "Data Exfiltration",
+        "severity": "Low",
+        "source": "Firewall",
+        "description": "Scheduled outbound transfer from file-srv-02 to backup-01 at "
+                       "01:30 UTC. Large volume, same destination as the last 30 nights.",
+        "sourceIp": "203.0.113.80",
+        "sourcedata": json.dumps({
+            "alert_type": "Data Exfiltration",
+            "source_ip": "203.0.113.80",
+            "destination_ip": "203.0.113.81",
+            "destination_domain": "backup-01.corp.example",
+            "bytes_transferred": 48318382080,
+            "protocol": "HTTPS",
+            "schedule": "daily 01:30 UTC",
+            "change_ticket": "CHG-2041",
+        }),
+    },
+    {
+        # Same type as the next alert, with source JSON: gets the MALWARE SOP.
+        "name": "C2 callback from dev-laptop-12",
+        "type": "Malware",
+        "severity": "High",
+        "source": "Firewall",
+        "description": "Repeated outbound HTTPS connections to an address in a "
+                       "feed-flagged range, from a developer laptop.",
+        "sourceIp": "203.0.113.120",
+        "sourcedata": json.dumps({
+            "alert_type": "Malware",
+            "source_ip": "203.0.113.120",
+            "destination_ip": "203.0.113.121",
+            "process_name": "updater.exe",
+            "interval_seconds": 60,
+            "bytes_per_session": 512,
+        }),
+    },
+    {
+        # Same type as the one before, with NO source data: gets the DEFAULT SOP.
+        "name": "C2 callback from dev-laptop-13",
+        "type": "Malware",
+        "severity": "High",
+        "source": "Firewall",
+        "description": "Repeated outbound HTTPS connections to an address in a "
+                       "feed-flagged range, from a developer laptop. No raw event attached.",
+        "sourceIp": "203.0.113.122",
+    },
+]
+
 # Roles whose combined rights cover the whole workshop (module schema changes,
 # connector install, playbook publish). Named, not UUID'd, so this stays
 # box-independent. "grant" unions these onto the key's role.
@@ -164,6 +220,19 @@ def read_instance(name: str) -> dict[str, str]:
     if not inst:
         have = ", ".join((data.get("instances") or data).keys())
         sys.exit(f"lab_setup: instance '{name}' not in {path} (have: {have})")
+    if inst.get("env_file") and not inst.get("base_url"):
+        # Instances may keep everything in a gitignored env file instead.
+        env: dict[str, str] = {}
+        for raw in Path(inst["env_file"]).expanduser().read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                env[k.strip()] = v.strip().strip("\"'")
+        base = env.get("FSR_BASE_URL", "").rstrip("/")
+        port = env.pop("FSR_PORT", "")
+        if base and port and base.count(":") < 2:  # scheme://host without a port
+            env["FSR_BASE_URL"] = f"{base}:{port}"
+        return env
     auth = inst.get("auth", {})
     out = {"FSR_BASE_URL": inst.get("base_url", "")}
     if auth.get("type") == "api_key" and auth.get("key"):
@@ -229,10 +298,10 @@ def existing_alert_names(client) -> set[str]:
     return out
 
 
-def cmd_seed(client) -> int:
+def cmd_seed(client, specs: list[dict[str, Any]] | None = None) -> int:
     have = existing_alert_names(client)
     created = skipped = failed = 0
-    for spec in DEMO_ALERTS:
+    for spec in (DEMO_ALERTS if specs is None else specs):
         full = ALERT_NAME_PREFIX + spec["name"]
         if full in have:
             print(f"skip (exists): {full}")
@@ -325,6 +394,39 @@ def cmd_org_context(client) -> int:
             failed += 1
     print(f"\norg-context: {created} created, {skipped} already present, {failed} failed")
     return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
+# approved-backup (chapter 3 benign re-run)
+
+BACKUP_KEY = ("ORGANIZATION_CONTEXT", "APPROVED_BACKUP_SYSTEM")
+BACKUP_PLACEHOLDER = "\n\n".join(f"{f}: No Information Available" for f in (
+    "Backup System Name", "Backup Server(s)", "Backup Destination(s)", "Backup Schedule",
+    "Authorized Service Account(s)", "Additional Notes"))
+# Matches the chapter 3 "nightly backup push to backup-01" alert field for field.
+BACKUP_APPROVED = "\n\n".join((
+    "Backup System Name: Agent Lab nightly backup",
+    "Backup Server(s): file-srv-02 (203.0.113.80)",
+    "Backup Destination(s): backup-01.corp.example (203.0.113.81), HTTPS",
+    "Backup Schedule: daily 01:30 UTC, about 45 GB per run",
+    "Authorized Service Account(s): svc-backup",
+    "Additional Notes: Approved under change ticket CHG-2041.",
+))
+
+
+def cmd_approved_backup(client, clear: bool = False) -> int:
+    """Fill the shipped APPROVED_BACKUP_SYSTEM record, or put the placeholder back."""
+    rec = existing_org_context(client).get(BACKUP_KEY)
+    if rec is None:
+        print("approved-backup: no APPROVED_BACKUP_SYSTEM record on this box")
+        return 1
+    want = BACKUP_PLACEHOLDER if clear else BACKUP_APPROVED
+    if (rec.get("content") or "").strip() == want:
+        print("skip (already set): APPROVED_BACKUP_SYSTEM")
+        return 0
+    client.put(rec["@id"], data={"content": want})
+    print(f"{'cleared' if clear else 'filled'}: APPROVED_BACKUP_SYSTEM")
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -591,14 +693,25 @@ def cmd_code_snippet(client) -> int:
     return 0
 
 
+def cmd_prepare(client) -> int:
+    """One command for a student's own box: everything the labs expect but do not build."""
+    rc = cmd_seed(client)
+    rc |= cmd_seed(client, INVESTIGATION_ALERTS)
+    rc |= cmd_code_snippet(client)
+    print()
+    cmd_check(client)
+    return rc
+
+
 def cmd_check(client) -> int:
     print("connection: ok" if client else "connection: FAILED")
     have = existing_alert_names(client)
-    print(f"demo alerts: {len(have)}/{len(DEMO_ALERTS)} present")
+    present = sum(1 for spec in DEMO_ALERTS if ALERT_NAME_PREFIX + spec["name"] in have)
+    print(f"demo alerts: {present}/{len(DEMO_ALERTS)} present")
     for spec in DEMO_ALERTS:
         full = ALERT_NAME_PREFIX + spec["name"]
         print(f"  [{'x' if full in have else ' '}] {spec['name']}")
-    if len(have) < len(DEMO_ALERTS):
+    if present < len(DEMO_ALERTS):
         print("  -> run: python3 tools/lab_setup.py seed")
     try:
         has = bool(client.connectors.configurations("code-snippet"))
@@ -665,6 +778,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--instance", help="pyfsr instance name in ~/.pyfsr/instances.toml")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check", help="report readiness, change nothing")
+    sub.add_parser("prepare", help="student one-shot: demo alerts, chapter 3 alerts, code-snippet, then check (idempotent)")
     sub.add_parser("seed", help="create the demo alerts (idempotent)")
     sub.add_parser("org-context", help="create the shipped org-context records, e.g. TOOL_LIST (idempotent)")
     sub.add_parser("tool-list-row", help="add the hello agent's row to TOOL_LIST, keeping the defaults (idempotent)")
@@ -674,6 +788,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("code-snippet", help="turn on Custom Code Execution and give code-snippet a default configuration (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
     sub.add_parser("reset-alerts", help="return the Agent Lab alerts to the demo set, all Open")
+    ab = sub.add_parser("approved-backup", help="fill the APPROVED_BACKUP_SYSTEM org-context record for the chapter 3 re-run (idempotent)")
+    ab.add_argument("--clear", action="store_true", help="put the shipped placeholder back")
+    sub.add_parser("investigation-alerts", help="create the chapter 3 alerts: benign backup, source-data and no-source-data pair (idempotent)")
     dr = sub.add_parser("delete-records", help="delete records whose field equals a value")
     dr.add_argument("module"); dr.add_argument("field"); dr.add_argument("value")
     dp = sub.add_parser("delete-prefix", help="delete records whose field starts with a prefix")
@@ -687,6 +804,8 @@ def main(argv: list[str] | None = None) -> int:
         client = build_client(env, require_admin=True)
         return cmd_grant(client, env)
     client = build_client(env)
+    if args.cmd == "prepare":
+        return cmd_prepare(client)
     if args.cmd == "seed":
         return cmd_seed(client)
     if args.cmd == "org-context":
@@ -705,6 +824,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_delete_prefix(client, args.module, args.field, args.prefix)
     if args.cmd == "reset-alerts":
         return cmd_reset_alerts(client)
+    if args.cmd == "approved-backup":
+        return cmd_approved_backup(client, args.clear)
+    if args.cmd == "investigation-alerts":
+        return cmd_seed(client, INVESTIGATION_ALERTS)
     if args.cmd == "code-snippet":
         return cmd_code_snippet(client)
     if args.cmd == "reset-connector":

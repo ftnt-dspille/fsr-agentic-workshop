@@ -122,8 +122,6 @@ Rendered by `tools/agent-drive/render_shots.py` from the saved transcripts: the 
 | `08-playbook/01#1` | `content/08-playbook/agent-run-01-author-and-publish-1.png` |
 | `08-playbook/01#2` | `content/08-playbook/agent-run-01-author-and-publish-2.png` |
 | `08-playbook/02#1` | `content/08-playbook/agent-run-02-trigger-and-verify-1.png` |
-| `09-connectors/01#1` | `content/09-connectors/agent-run-01-explore-and-run-1.png` |
-| `09-connectors/01#2` | `content/09-connectors/agent-run-01-explore-and-run-2.png` |
 | `09-connectors/02#1` | `content/09-connectors/agent-run-02-build-a-connector-1.png` |
 | `09-connectors/02#2` | `content/09-connectors/agent-run-02-build-a-connector-2.png` |
 | `09-connectors/02#3` | `content/09-connectors/agent-run-02-build-a-connector-3.png` |

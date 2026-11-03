@@ -10,7 +10,8 @@ instance (`--instance NAME`, resolved from `~/.pyfsr/instances.toml`), or from
 ```bash
 # 1. Tear down the previous run's objects (DESTRUCTIVE; owner-run, asks for RESET).
 #    Removes the agentlab_ modules (dropping their tables), the Agent Lab
-#    playbook collection, seeded demo alerts, workshop users and schedules.
+#    playbook collection, seeded demo alerts, workshop users and schedules,
+#    and puts the APPROVED_BACKUP_SYSTEM org-context placeholder back.
 python3 tools/reset_lab.py --instance soar143            # or --check-only first
 
 # 2. Re-seed the demo alerts the labs investigate (idempotent).
@@ -46,6 +47,14 @@ any remain.
 
 - `reset_lab.py` is **destructive** and refuses to run without a typed `RESET`.
   Run it yourself; it is not for CI or an agent.
+### Chapter 3 approved-backup record
+
+Chapter 3's benign re-run fills the shipped `APPROVED_BACKUP_SYSTEM`
+org-context record so it matches the nightly backup alert. `lab_setup.py
+approved-backup` fills it, and `approved-backup --clear` (or `reset_lab.py`) puts
+the shipped placeholder back. The record is shared by every investigation on the
+box, so clear it before you run the "before" half of the exercise again.
+
 ### Orphaned module tables on FortiSOAR 8.0.1 (handled automatically)
 
 On 8.0.1, `delete_module` removes the module's metadata and registry entry but

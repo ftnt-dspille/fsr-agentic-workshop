@@ -6,8 +6,9 @@ the latest run per prompt), resolved through run.transcript_path so this never d
 from where run.py saves them. Defaults to the baseline model (run.DEFAULT_MODEL);
 --model picks another. Falls back to the legacy top-level .transcripts/<prompt>.jsonl
 for transcripts saved before the per-model layout. Output: content/<chapter>/agent-run-<n>.png,
-and a collapsed "What the agent did" block appended to each chapter page (between
-markers, so reruns replace it).
+and, for pages that keep the agent-drive markers, a collapsed "What the agent did"
+block regenerated in place between them. Pages without markers are left alone
+(their PNG is refreshed only if the page already shows it).
 
 Shows: the prompt, the tool calls (name and short args), and the trimmed final answer.
 Scrubbed: local paths, IPs (except RFC 5737 documentation space), dates and times,
@@ -210,15 +211,24 @@ def main(argv: list[str] | None = None) -> int:
         events = [json.loads(line) for line in f.read_text().splitlines() if line.strip()]
         calls, answer = transcript_lines(events)
         name = SHOT_NAME.get(p.pid) or f"agent-run-{p.page.stem}-{p.pid.split('#')[-1]}.png"
+        page_text = p.page.read_text()
+        # Opt-in only: render for pages that keep the agent-drive markers, or whose
+        # prose already shows this PNG. A page whose proof was moved into the main
+        # flow (markers removed) must not get a collapsed block re-appended.
+        if MARK_BEGIN not in page_text and name not in page_text:
+            print(f"skip {p.pid}: page has no agent-drive markers and does not show {name}")
+            continue
         out = p.page.parent / name
         render_png(p.pid, p.text, calls, answer, out)
         print(f"wrote {out.relative_to(REPO)}")
         by_page.setdefault(p.page, []).append((p.pid, name, calls, answer))
     for page, entries in by_page.items():
         text = page.read_text()
-        if MARK_BEGIN in text:
-            text = re.sub(re.escape(MARK_BEGIN) + r".*?" + re.escape(MARK_END) + r"\n?", "", text, flags=re.S)
-        page.write_text(text.rstrip() + "\n\n" + chapter_block(entries, model))
+        if MARK_BEGIN not in text:
+            continue  # PNG refreshed in place; the page's own prose stays as written
+        block = chapter_block(entries, model)
+        text = re.sub(re.escape(MARK_BEGIN) + r".*?" + re.escape(MARK_END) + r"\n?", lambda _m: block, text, flags=re.S)
+        page.write_text(text)
         print(f"updated {page.relative_to(REPO)}")
     return 0
 

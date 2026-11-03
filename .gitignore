@@ -20,7 +20,8 @@ tools/proof-report.md
 tools/agent-shots/.capwork/
 tools/agent-shots/__pycache__/
 .docubot/state-*.json
-.docubot/test-output/
+.docubot/test-output*/
+.docubot/highlight-report.jsonl
 
 # docubot agent SPEND runs: holds .mcp.json with box creds
 .agent-lab/

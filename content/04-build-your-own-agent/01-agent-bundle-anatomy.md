@@ -5,76 +5,53 @@ weight: 10
 description: "What an agent is in FortiSOAR: a code bundle with a manifest, a class, prompts and an allowlist, and the rules that make it import cleanly."
 ---
 
-An agent in FortiSOAR is a code bundle, not a point-and-click designer. You write a small package on your laptop, upload it, and then configure it in the UI: its LLM profile, its MCP servers and its masking. This page covers what goes in the bundle and the rules that stop it importing cleanly. The next page packages, uploads and routes one.
+A FortiSOAR agent is a code bundle: a folder of files that you zip and upload. After the upload you configure the agent in the UI, with its LLM profile, its MCP servers and its masking. This page explains the files in a bundle. The next page uses the example bundle.
 
 ## 1. Know the bundle layout
 
 | File or folder | What it does | Rules |
 |---|---|---|
-| `info.json` | The manifest: name, label, the agent class, version, description, tags, publisher, category, minimum FortiSOAR version, input and output formats, and the configuration form | Required fields must be present. Publisher and category are required. |
-| `agent.py` | A class that subclasses `BaseAgent` (`from agents.base_agent import BaseAgent`) and implements `act(self, input_data)` | Call `self.initialize()` before doing work. Its class name must be unique across installed agents and must match `agentclass` in the manifest. |
-| `prompt.yaml` | Prompts under a top-level `prompts:` key. Each has a name, a system instruction, a user instruction and a response format. | Every prompt UUID your code uses must exist in this file. |
-| `config/memory.yaml` | The tool allowlist (`allowed_tools`): a map of tool-source UUID to the list of operations the agent may call | The folder must be named exactly `config`. A missing file means every tool from every source is allowed. |
-| `images/` | Icons named in the manifest | A missing icon fails validation. |
-| `requirements.txt` (optional) | PyPI packages and pins only | Index URLs, find-links, git URLs, direct URLs and FTP are rejected at import. |
+| `info.json` | The manifest: name, label, agent class, version, description, tags, publisher, input format and output format | Every key must be present. |
+| `agent.py` | A class that subclasses `BaseAgent` (`from agents.base_agent import BaseAgent`) and has an `act(self, input_data)` method | Call `self.initialize()` first. The class name must be unique and must match `agentclass` in the manifest. |
+| `prompt.yaml` | Prompts under a top-level `prompts:` key. Each prompt has a name, a system instruction, a user instruction and a response format. | Every prompt UUID that the code uses must exist in this file. |
+| `config/memory.yaml` | The tool allowlist. It maps each tool source UUID to the operations the agent may call. | The folder must be named `config`. If the file is missing, every tool from every source is allowed. |
+| `images/` | The icons named in the manifest | A missing icon fails validation. |
+| `requirements.txt` (optional) | PyPI packages and version pins only | Index URLs, git URLs and direct URLs are rejected. |
 
-## 2. Write the manifest carefully
+## 2. Fill in the manifest
 
 Most import failures come from one missing or mistyped manifest key.
 
-- The `name` must equal the name of the top folder in the zip.
-- `agentclass` must match a class in `agent.py`, and be unique across every installed agent. Do not reuse a built-in class name.
-- Declare every key, even when its value is empty. A key you leave out is stored as null, and a null can break list calls for every user, not only your agent. Use an empty list or an empty string instead of omitting it.
-- Tags are routing. Use `Triage` for an agent that investigations should route to, and `Insight` for one that insight planning should use. Do not tag a custom agent `Assistant`. That tag is reserved for designer and connector widgets.
-- A `Test` tag makes the agent reachable only by a direct trigger.
+- `name` must match the name of the top folder in the zip.
+- `agentclass` must match the class in `agent.py`. It must be unique, so do not reuse a built-in class name.
+- Declare every key, even when its value is empty. Use `""` for an empty text value and `[]` for an empty list. A missing key is stored as null, and a null can break agent lists for every user.
+- `tags` route the agent. Use `Triage` for an agent that investigations should route to, and `Insight` for one that insight planning should use. Do not tag a custom agent `Assistant`. That tag is reserved for designer widgets.
 
 ## 3. Follow the code rules
 
-- Call `self.initialize()` at the start of `act()`. Without it, execution fails during output validation with a null-reference error.
-- Every prompt UUID referenced in code must exist in `prompt.yaml`. Otherwise the agent raises at runtime.
-- Return a structured result with `answer`, `confidence` and `evidence`. A tool result should use an envelope with `status`, `result` and `error`. A bare dictionary breaks some agents that expect the envelope.
-- Keep `requirements.txt` to plain PyPI names and pins.
+- Call `self.initialize()` at the start of `act()`. Without it, the agent fails during output validation with a null-reference error.
+- Every prompt UUID that the code uses must exist in `prompt.yaml`. Otherwise the agent raises an error at runtime.
+- Return a result with `answer`, `confidence` and `evidence`. Tool results use an envelope with `status`, `result` and `error`.
 
-Prompts that ship in code are re-imported on upgrade, and that reverts any edits you made to them. Keep your own prompts in your own bundle.
+FortiSOAR ships its own agents as open source, at `github.com/fortinet-fortisoar/ai-agent-alert-investigation` and `github.com/fortinet-fortisoar/ai-agent-ioc-masking`. Read one before you write your own.
 
-{{% notice note %}}
-Read a real one before you write yours. FortiSOAR ships its agents as open source: see `github.com/fortinet-fortisoar/ai-agent-alert-investigation` and `ai-agent-ioc-masking`. On an 8.0.1 appliance they are installed under `/opt/fsr-ai/ai-agents/<name>_<version>/`. Each is a working example of the exact base class, the `act()` entrypoint, `prompt.yaml` and `config/memory.yaml`. Copy the structure from one of these rather than from memory.
-{{% /notice %}}
+## 4. Read the example manifest
 
-## 4. Read a sample manifest
-
-The manifest below is the one shipped in this workshop's example bundle, and it validates on a real 8.0.1 appliance. Team-specific values are placeholders. Every key is present: `category` and `help_online` are empty strings and `additional_information` is an empty list, which is how you declare a key you have nothing for.
+These are the key lines from the example bundle's `info.json`. Open the full file in the next page's download list to see every key.
 
 ```json
 {
   "name": "workshop_hello_agent",
   "label": "Workshop Hello Agent",
   "agentclass": "WorkshopHelloAgent",
-  "version": "1.0.0",
-  "description": "<one sentence the router can match>",
-  "publisher": "<your-team>",
-  "cs_approved": false,
-  "cs_compatible": true,
-  "contributor": "",
-  "category": "",
-  "icon_small_name": "small.png",
-  "icon_large_name": "large.png",
   "tags": ["Triage"],
-  "fsrMinCompatibility": "8.0.1",
-  "help_online": "",
-  "additional_information": [],
-  "inputformat": {"entity": "<entity-name>"},
-  "outputformat": {"answer": "", "confidence": "", "evidence": []}
+  "inputformat": {"entity": "Host to look up"}
 }
 ```
 
-{{% notice tip %}}
-The full example bundle is downloadable at [`/examples/workshop_hello_agent/`](/examples/workshop_hello_agent/): `info.json`, `agent.py`, `prompt.yaml` and `config/memory.yaml`, the exact files that pass the 8.0.1 validator. The next page packages and uploads it.
-{{% /notice %}}
+The `inputformat` tells callers what to send. The hello agent expects an `entity`, such as a host name.
 
 ## You are done when
 
 - You can name the job of each file in the bundle.
-- You can say why a missing `config/memory.yaml` gives an agent too much access, and why a missing manifest key can break lists for every user.
-- You can point to the rule that stops a custom agent from being routed by its tag alone. It needs a row in the tool table, which the next page covers.
-
+- You can explain why a missing `config/memory.yaml` gives an agent too much access, and why a missing manifest key can break lists for every user.

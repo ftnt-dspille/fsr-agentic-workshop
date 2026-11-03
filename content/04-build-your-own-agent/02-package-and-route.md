@@ -2,134 +2,114 @@
 title: Package, Upload and Route an Agent
 linkTitle: Package and Route
 weight: 20
-description: "Package a small agent, upload it, test it directly, then make an investigation route questions to it through the tool table."
+description: "Package a small agent, upload it, check it is active, then make an investigation route questions to it through the tool table."
 ---
 
-On this page you package a small agent, upload it, prove it runs, and make an investigation send it a question. Most people miss the last part: a tag alone does not route a question to your agent. The tool table does.
+On this page you package the example agent, upload it, check that it is active, and route an investigation to it. A tag alone does not send questions to an agent. The `TOOL_LIST` record does, so you add a row to it.
 
-## 1. Package the bundle
+## 1. Download the example files
 
-Zip the bundle folder so that its top-level folder has the same name as the `name` in `info.json`. The validator on the box checks exactly that: the archive is a `.zip` or `.tgz`, it holds exactly one `info.json` and exactly one `agent.py`, the top folder equals the manifest `name` (`<name>/info.json`), the `version` reads `N.N.N`, and `requirements.txt`, if present, holds only plain PyPI names and pins. A config field named `default` or `name` is rejected.
+Download each file below. Keep the folder layout: put the files in a folder named `workshop_hello_agent`, and put `memory.yaml` in a `config` folder and the two icons in an `images` folder.
 
-Start from the workshop example at [`/examples/workshop_hello_agent/`](/examples/workshop_hello_agent/), which passes this validator as shipped. Zip its folder:
+- [info.json](/examples/workshop_hello_agent/info.json)
+- [agent.py](/examples/workshop_hello_agent/agent.py)
+- [prompt.yaml](/examples/workshop_hello_agent/prompt.yaml)
+- [__init__.py](/examples/workshop_hello_agent/__init__.py)
+- `config/memory.yaml`: [memory.yaml](/examples/workshop_hello_agent/config/memory.yaml)
+- `images/small.png` and `images/large.png`: [small.png](/examples/workshop_hello_agent/images/small.png), [large.png](/examples/workshop_hello_agent/images/large.png)
+
+Then zip the folder. Run this in the folder that contains `workshop_hello_agent`:
 
 ```bash
 zip -r workshop_hello_agent.zip workshop_hello_agent
 ```
 
-{{% notice note %}}
-The UI upload control is gated. Enable **System Configuration > Advanced Development Features > Import/Upload Custom AI Agent** (it sits next to Custom Code Execution and Build Your Own Widget). It warns that it lets users upload code that runs on the box, so an administrator turns it on deliberately. Until it is on, the **Upload** button in Content Hub offers only "Upload Solution Pack".
-{{% /notice %}}
+## 2. Turn on the upload toggle
 
-## 2. Upload it
+The upload control stays hidden until an administrator turns on the **Import/Upload Custom AI Agent** setting. The setting lets users upload code that runs on the box, so it is an administrator decision. If the toggle is already on, skip this section.
+
+1. Open **System** > **System Configuration**.
+2. Select the **Advanced Development Features** tab.
+3. Find the **Import/Upload Custom AI Agent** section. Open its **Important Notice** and **Risk** panels and read them.
+4. Click **Edit**. Tick the accept checkbox in that section, then click **Submit**.
+
+<!-- capture: fsa04-00-advanced-toggle -->
+![fsa04-00-advanced-toggle](fsa04-00-advanced-toggle.png?height=600px)
+
+## 3. Upload the bundle
 
 <!-- step: fsa04-00-upload-agent -->
 
-There are two supported ways to install the bundle. Use whichever fits.
-
-**A. Through the UI (Content Hub).** With the toggle above on, open **Content Hub > Manage**, filter to **AI Agent**, and use **Upload > Upload AI Agent**. The panel that slides in is a drop zone:
+1. Open **Content Hub**, then select **Manage**.
+2. Click **Upload**, then choose **Upload AI Agent**. The panel that opens is the upload panel.
+3. If an agent with the same name already exists, tick **Replace existing version** before you choose the file.
+4. Click **Browse File** and choose `workshop_hello_agent.zip`. Choosing the file uploads it and activates the agent.
+5. Confirm that the **Workshop Hello Agent** card appears in the AI Agent catalog.
 
 <!-- capture: fsa04-00-upload-agent-dialog -->
 ![fsa04-00-upload-agent-dialog](fsa04-00-upload-agent-dialog.png?height=600px)
 
-Choose your zip (or drag it onto the drop zone). Selecting the file uploads and activates the agent in one step; on success the panel reports it was added. If an agent of the same name already exists, tick **Replace existing version** before choosing the file, or you get a `CS-AI-AGENT-11` conflict. The agent then appears as a card in the catalog with its own detail page.
-
-**B. Through the API.** Post the zip to `POST /ai/agent/import` (singular `agent`, the management route; `?replace=true` overwrites an existing name) as a multipart file under the field name `file`. A successful import returns the stored agent record with `"installed": true` and, when it imports active, `"active": true`. An agent installed this way is active and triggerable but is **not** listed in the Content Hub catalog. Use path A if you want the catalog card and detail page.
-
-{{% notice warning %}}
-A failed import is not rolled back. The unpacked folder can stay on the box. Every later import of the same name then fails with "File exists", even with replace. Clear the leftover folder on the box with the administrator, then import again.
-{{% /notice %}}
-
-After import, check that the agent is active. Some builds import agents inactive until you activate them.
-
-## 3. Prove it runs: a hello agent
-
-Your first agent should not call an LLM. Make it return a fixed structured answer built from its input. That proves packaging, import, activation and a direct call.
+## 4. Check that the agent is active
 
 <!-- step: fsa04-01-hello-agent -->
 
-Open the agent's detail page. Trigger it directly, using the agent's trigger route with the agent name in the path: `POST /ai/agents/{agent_name}/trigger` (note the plural `agents`), with your input as the JSON body: the object your `inputformat` declares, for the hello agent `{"entity": "host-01.example.com"}`. The call returns `202` with a `task_id` and a status:
+The hello agent returns a fixed answer built from its input. It makes no LLM call, so it is a cheap way to prove the upload worked.
 
-```json
-{"task_id": "7699779e-...", "status": "pending"}
-```
-
-Poll `GET /ai/agents/{task_id}/status` until the status reads `completed`, then read `GET /ai/agents/{task_id}/result`. For the hello agent the result is the dict its `act()` returned, plus `logs` and `phases`:
-
-```json
-{
-  "answer": "hello from the workshop agent for entity: host-01.example.com",
-  "confidence": "low",
-  "evidence": ["fixed response; this agent makes no LLM call"],
-  "logs": [],
-  "phases": []
-}
-```
-
-The trigger, poll and result for the hello agent look like this (token, host and task id are placeholders):
-
-<!-- capture: fsa04-01-hello-agent-trigger-result -->
-![fsa04-01-hello-agent-trigger-result](fsa04-01-hello-agent-trigger-result.png?height=600px)
+1. In the AI Agent catalog, open **Workshop Hello Agent**.
+2. Check that the detail page shows the agent as active. This agent has no configuration fields.
 
 <!-- capture: fsa04-01-hello-agent-detail -->
 ![fsa04-01-hello-agent-detail](fsa04-01-hello-agent-detail.png?height=600px)
 
+You call the agent from a playbook on the [next page](../03-invoke-from-a-playbook/). A playbook step handles the login and waits for the answer for you.
+
 **You are done when**
 
-- The result is returned with `answer`, `confidence` and `evidence` keys.
-- The run shows as a task you can poll for its result.
+- The detail page shows **Workshop Hello Agent** as active.
 
-If your build has no trigger control on the detail page, call `POST /ai/agents/{agent_name}/trigger` directly, with the same JSON input, from an API client, and poll `GET /ai/agents/{task_id}/result`. Calling it needs execute and read rights on AI agents.
-
-## 4. Route an investigation to it
-
-Tagging the agent `Triage` is necessary but not sufficient. The investigation plans one question for each row of the tool table. It routes each question to a `Triage` agent based on the row. An agent with no row gets no question.
-
-The recipe has three steps:
-
-1. Tag the agent `Triage`, give it a description the router can match, and declare the entity it needs in `inputformat`.
-2. Install and activate it.
-3. Add a row for it to the `TOOL_LIST` record in organizational context (the investigation finds it by `category:INFRA_INFO subCategory:TOOL_LIST`).
-
-{{% notice warning %}}
-`TOOL_LIST` replaces the built-in tool table for every investigation, not just yours. Copy all nine default rows into the record before you add your row. If you leave a default row out, or write a record with only your row, the questions for that row stop. Setting a row to No stops its questions too.
-{{% /notice %}}
-
-The record holds a markdown table with these columns and nine default rows. Keep every default row, then append yours:
-
-| Avenue | Source | Required field | Active |
-| -- | -- | -- | -- |
-| Approved activity | Org Context | IOCs + activity | Yes |
-| Change authorization | ITSM | host + window | Yes |
-| Detection quality | SIEM (raw event) | case_id + rule | Yes |
-| Historical baseline | SIEM | entity | Yes |
-| Asset criticality | CMDB | host | Yes |
-| Identity status | IAM | user | Yes |
-| IOC reputation | Threat Intel | each public IOC | Yes |
-| Prior disposition | Alert Correlation | each entity | Yes |
-| Endpoint behavior | EDR | process | Yes |
-
-Your row is one more line: a short Avenue name, the Source your agent reads, the Required field it needs, and `Yes` to activate it.
-
-Export or copy the current `TOOL_LIST` record first, then add your row. Do not retype the defaults from memory, because the names and fields must match what the record already holds.
+## 5. Add a row to the TOOL_LIST record
 
 <!-- step: fsa04-02-tool-list-row -->
 
-Open the `TOOL_LIST` record. Add one row for your agent. Its description should name the entity the agent needs, such as a host, and the kind of evidence it returns. Keep the nine defaults.
+An investigation plans one question for each row of the `TOOL_LIST` record. It sends each question to the agent in that row. The record already holds nine default rows. You add a tenth row for your agent.
+
+{{% notice warning %}}
+`TOOL_LIST` replaces the built-in tool table for every investigation on the box. Do not delete or change the nine default rows. Do not replace the record. Only add a line. A setting of No stops the row's questions too.
+{{% /notice %}}
+
+1. Open **AI Configurations**, then **Organizational Context**. Find the record **TOOL_LIST**.
+2. Open the record. The **Content** field holds a markdown table with the nine default rows.
 
 <!-- capture: fsa04-02-tool-list-row-record -->
 ![fsa04-02-tool-list-row-record](fsa04-02-tool-list-row-record.png?height=600px)
 
+3. Click at the end of the last row, `| Endpoint behavior | EDR | process | Yes |`. Press **Enter**, then type a new row in the same format:
+
+   ```text
+   | <Avenue> | <Source> | <Required field> | Yes |
+   ```
+
+   - **Avenue**: a short name for the row, such as `Workshop hello`.
+   - **Source**: the source the agent reads. For the hello agent, use `Workshop Hello Agent`.
+   - **Required field**: the field the agent needs from the alert. For the hello agent, use `entity`.
+   - **Active**: `Yes`.
+
+4. Click **Save**.
+
 **You are done when**
 
-- All nine defaults are still present, and your row is the tenth.
+- All nine default rows are still there, and your row is the tenth.
 - The record saves without an error.
 
-## 5. Check the route with a test investigation
+## 6. Test the route with an investigation
 
 <!-- step: fsa04-03-route-check -->
 
-Run an investigation on a seeded alert that has the entity your agent needs. When the run finishes, open its trace and find the question your row produced. Then find the call to your agent.
+This test runs a FortiAI investigation, which spends tokens. Use the lab alert **Agent Lab - Outbound beacon to known C2 range from 10-net host**.
+
+1. Open the alert and select **AI Investigation**. Click **Begin AI-Powered Alert Investigation**, or open the finished run if one exists.
+2. Wait for the run to finish.
+3. Click **Traces** and find the question your row produced. Then open the step for your agent, **Workshop Hello Agent**.
 
 <!-- capture: fsa04-03-route-check-trace -->
 ![fsa04-03-route-check-trace](fsa04-03-route-check-trace.png?height=600px)
@@ -137,22 +117,15 @@ Run an investigation on a seeded alert that has the entity your agent needs. Whe
 **You are done when**
 
 - The trace shows a question for your row.
-- The question was answered by your agent, and the answer reached the summary or the next actions.
+- Your agent answered that question.
 
-{{% notice note %}}
-The platform's routing instruction maps the built-in agents by name. Routing to your agent worked in testing, but a strong mismatch between your row and your description may not route. If the question goes to a built-in agent, tighten your row's wording first. Changing the routing instruction itself is an export, edit and re-import, and an upgrade reverts it.
-{{% /notice %}}
+If the question goes to a built-in agent instead, make your row's **Avenue** and **Required field** more specific, then run the test again.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Upload fails with "field required" | The upload is not reaching the AI service as a file | Ask the administrator which import path your build supports |
-| Every later import fails with "File exists" | A failed import left its folder on the box | Have the administrator delete the leftover folder, then import again |
-| Agent runs but the investigation never asks it anything | No `TOOL_LIST` row, or the row is set to No | Add the row, and keep the nine defaults |
-| Investigation stops asking the default questions | `TOOL_LIST` was replaced with a short table | Restore all nine default rows from the export |
-| Agent dies during `act()` with a null-reference error | `self.initialize()` was not called | Call it first in `act()` |
-| "Tool not allowed" when the agent calls a tool | The server UUID in `memory.yaml` is wrong, the server is missing from the agent config, or the tool name changed | Check all three. Read the tool names from the server's list, not from memory |
-| Agent list call fails for everyone | A manifest key was left out and stored as null | Declare every key, using an empty value where you have nothing |
-| Replace import gives the agent a new ID | Replace creates a new UUID on some builds | Check the allowlist and the agent config after every replace |
-
+| The upload fails with `CS-AI-AGENT-11` | An agent with the same name exists | Tick **Replace existing version**, then upload again |
+| Every later upload fails with "File exists" | A failed upload left its folder on the box | Delete the leftover agent folder on the box, then upload again |
+| The agent runs, but no investigation question reaches it | No `TOOL_LIST` row, or the row is set to No | Add the row, and keep the nine default rows |
+| The investigation stops asking its default questions | `TOOL_LIST` was replaced with a short table | Restore all nine default rows |

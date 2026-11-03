@@ -13,42 +13,53 @@ Some vendor material promotes an AI ROI dashboard, or an "automatically investig
 
 ## 2. Build the dashboard
 
-Open the dashboards module and start a new dashboard. Use the widget builder. Do not hand-write HTML.
+Open the Dashboard page and use the dashboard menu at the top right: choose **New Dashboard**, and give it a name you will recognize, such as `Workshop Verdicts`. Add rows and widgets with the widget builder. Do not hand-write HTML.
 
-Build three widgets over the alert records:
+Each widget reads the alert records. Set every widget's **Record Assignment** to **All**. The default, **Only Me**, hides alerts nobody is assigned to, and the seed alerts are not assigned to anyone. Set a filter **Name contains `Agent Lab - `** on every widget too, so only the workshop alerts count.
 
-- **Verdict by severity**: a breakdown of verdicts, grouped by severity.
-- **Verdict types**: a Top X list of verdict values.
-- **Investigation funnel**: alerts that are new, then investigated, then carrying a verdict.
+Build the three widgets:
 
-Some widgets come from the Content Hub. Check that they are installed before you start.
+- **Verdict by severity** (Chart, Bar): X-Axis (Categories) is **Severity**, X-Axis (Values) is **AI Verdict**, and View Option is **Chart & Table**.
 
-<!-- step: fsa03-07-verdict-dashboard manual: builds a dashboard by hand in the UI; no spec yet -->
+  <!-- step: fsa03-07b-widget-builder-chart -->
+  <!-- capture: fsa03-07b-widget-builder-chart -->
+  ![fsa03-07b-widget-builder-chart](fsa03-07b-widget-builder-chart.png?height=600px)
 
-Give the dashboard a name you will recognize, such as `Workshop Verdicts`, and add the three widgets. Filter the alert widgets to the seed alerts you created in chapter 2, so you can count them.
+- **Verdict types** (Chart, Bar, View Option **Table Only**): X-Axis (Categories) is **AI Verdict**. The builder has no Top X widget, so this is a list of every verdict value with its count, with no row limit.
+- **Investigation funnel** (three Card Count widgets in one row, one per stage): the builder has no funnel widget, so each stage is its own card. The first is `Investigation funnel: new` (Group By **Status**, Status equals **Open**). The second is `Investigation funnel: investigated` (Group By **AI Verdict**, AI Verdict not equals **Not Investigated**). The third is `Investigation funnel: verdict` (Group By **AI Verdict**, AI Verdict is in the list **Benign, Suspicious, Malicious, Inconclusive**). A Card Count also needs a Time Range; enter 365 days.
+
+The widgets are built in, so no Content Hub package is needed.
+
+<!-- step: fsa03-07-verdict-dashboard -->
+
+Save the dashboard once all three widgets are on it.
 
 <!-- capture: fsa03-07-verdict-dashboard -->
 ![fsa03-07-verdict-dashboard](fsa03-07-verdict-dashboard.png?height=600px)
 
 **You are done when**
 
-- The dashboard renders all three widgets.
-- Each widget is bound to the alert module, not to a static sample.
+- The dashboard renders all five widgets: the severity chart, the verdict list, and the three funnel cards.
+- Each widget is bound to the alert module, with the lab-alert filter on it.
 
 ## 3. Verify the numbers
 
 A chart that renders proves only that the page drew it. Check the numbers against the records.
 
-<!-- step: fsa03-11-verify-counts manual: checks dashboard numbers against records; needs the dashboard from fsa03-10 -->
+Count the seeded `Agent Lab - ` alerts by hand, grouped by verdict and severity. Write the counts down. Compare them with what each widget shows.
 
-Count the seed alerts by hand, grouped by verdict and severity. Write the counts down. Compare them with what each widget shows.
+<!-- step: fsa03-11-verify-counts -->
+
+<!-- capture: fsa03-11-verify-counts -->
+![fsa03-11-verify-counts](fsa03-11-verify-counts.png?height=600px)
 
 **You are done when**
 
-- The verdict-by-severity counts match your hand count for every cell.
-- The funnel totals match the number of alerts you seeded.
+- Every cell of the verdict-by-severity table matches your hand count.
+- The verdict list's counts match your hand count for each verdict.
+- The first funnel card equals the number of open lab alerts you seeded. The later cards read `NONE 0` until an investigation writes a verdict.
 
-If a count is off, check the widget's filter first. A filter that drops alerts without source data is the most common cause.
+If a count is off, check the widget's filter first. A filter that drops alerts without source data is the most common cause, and so is a Record Assignment still set to Only Me.
 
 {{% notice tip %}}
 Do the counts before you add more widgets. It is much easier to find a wrong filter on a three-widget dashboard than on a ten-widget one.
@@ -62,8 +73,10 @@ Token totals live in the trace. Whether a dashboard can show them depends on whe
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| Widget shows no data, or only some alerts | Record Assignment is Only Me | Set it to All |
 | Widget shows no data | Filter excludes all seed alerts | Widen the filter, then narrow it again |
 | Counts do not match your hand count | Filter or grouping is on the wrong field | Check which field each widget groups by |
-| Widget missing from the list | Content Hub package not installed | Install the widget package, or build the chart from the alert module view |
+| Card Count will not save | Time Range is empty | Enter a number of days |
+| Funnel card reads `NONE 0` | No alert has reached that stage yet | Expected until an investigation writes a verdict |
 | Verdict values look odd | Verdict names differ on your build | Compare the values in the alert record and use those names |
 

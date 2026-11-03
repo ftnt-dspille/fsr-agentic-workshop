@@ -34,7 +34,7 @@
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import {
   askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, expect, fillAgentConfig, fillConnectMcpServer,
-  findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServers, openRecord,
+  findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord,
   readAgentConfig, saveAgentConfig, saveMcpServer, test,
   skipStep,
 } from 'docubot';
@@ -119,6 +119,32 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     });
 
     if (shouldRunStep('fsa05-03-register-remote')) await test.step('fsa05-03-register-remote', async () => {
+      // Validate, then show the saved server. Validate runs the real handshake and
+      // lists the tools; this dialog is cancelled (never saved), so it leaves no row.
+      // A dialog under the registered name cannot test (the name is taken), so the
+      // validate-only dialog uses a scratch name and is cancelled, never saved.
+      const modal = await fillConnectMcpServer(soar, origin, {
+        name: `${NAME}-validate`,
+        description: 'Lab: DeepWiki remote server (public, no credentials)',
+        transport: 'http',
+        url: SERVER_URL,
+        authType: 'None',
+      });
+      await modal.getByRole('button', { name: 'Test Connection' }).click();
+      // Save enables only after the handshake returns a tool list (saveMcpServer's signal).
+      await expect(modal.getByRole('button', { name: 'Save' })).toBeEnabled({ timeout: 120_000 });
+      await capture.shot(soar, 'fsa05-03-register-remote-validate', { target: modal, ...SKIP });
+      const cancel = modal.getByRole('button', { name: /^Cancel$|^Close$/i }).first();
+      if (await cancel.isVisible().catch(() => false)) await cancel.click();
+      else await soar.keyboard.press('Escape');
+      await modal.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => undefined);
+
+      // The saved server, as the MCP Servers list shows it.
+      await openMcpServers(soar, origin);
+      const savedRow = await mcpServerListRow(soar, NAME);
+      await clearMcpServerFilter(soar);
+      await capture.shot(soar, 'fsa05-03-register-remote-saved', { highlight: savedRow, ...SKIP });
+
       // Registration itself was proven by fsa05-01; this step reads the stored
       // row back and checks it is the remote (external, http) shape.
       const row = await findMcpServerRow(soar, NAME);
@@ -127,6 +153,20 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       expect(row!.transport).toBe('http');
       // authentication must be stored as a string (the JSON-string rule), never an object.
       expect(typeof row!.authentication === 'string' || row!.authentication == null).toBe(true);
+    });
+
+    // Click the saved server: its detail panel lists the tools the server returned.
+    if (shouldRunStep('fsa05-03-register-remote-tools')) await test.step('fsa05-03-register-remote-tools', async () => {
+      const origin = new URL(soar.url()).origin;
+      await openMcpServer(soar, origin, NAME);
+      const tools = soar.getByText(/^\s*Tools \(\d+\):?\s*$/).first();
+      await tools.waitFor({ timeout: 30_000 });
+      // Effect: the server's own tool names came back (a real discovery, not an empty list).
+      const n = Number(((await tools.innerText()).match(/\d+/) || ['0'])[0]);
+      expect(n, 'the server returned at least one tool').toBeGreaterThan(0);
+      const list = soar.getByText(/ask_wiki_question/).first();
+      await expect(list).toBeVisible();
+      await capture.shot(soar, 'fsa05-03-register-remote-tools', { highlight: [tools, list], ...SKIP });
     });
 
     if (shouldRunStep('fsa05-04-grant-allowlist')) await test.step('fsa05-04-grant-allowlist', async () => {

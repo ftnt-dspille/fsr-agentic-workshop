@@ -2,81 +2,138 @@
 title: Wire the Agent to FortiSOAR
 linkTitle: Wire the Agent
 weight: 20
-description: "Install your coding agent, point it at FortiSOAR over MCP, and prove the connection."
+description: "Install the FortiSOAR toolkit, generate your agent's MCP config, and check that the agent can reach FortiSOAR."
 ---
 
-Your agent talks to FortiSOAR through the `fsr-agentic-toolkit` MCP server, which builds on the open-source [pyfsr](https://github.com/ftnt-dspille/pyfsr) SDK. It needs the box URL and the login from the previous page.
+Your agent connects to FortiSOAR through the `fsr-agentic-toolkit` MCP server. You need the box URL and the login from the previous page.
 
-## 1. Install the tooling
+## 1. Install the toolkit
 
 <!-- step: fsa06-02-install-tooling manual: installs tooling on the learner workstation, not on the box -->
 
-You need Python 3.10+ and [uv](https://docs.astral.sh/uv/) (or pip). Then:
+You need Python 3.10 or later, and [uv](https://docs.astral.sh/uv/) or pip. Then run:
 
 ```bash
-pip install fsr-agentic-toolkit
+pip install "fsr-agentic-toolkit==0.2.3"
 ```
 
-This also installs `pyfsr`, whose `pyfsr connector` commands you use in chapter 9.
+## 2. Generate the MCP config
 
-## 2. Generate your agent's MCP config
-
-`fsr-agentic-toolkit init` checks the box and prints the config snippet for your agent. Omit `--password` and it prompts for it, so the password never lands in your shell history:
+Run this command. Leave out `--password`. The toolkit then prompts for the password, so it stays out of your shell history.
 
 ```bash
 fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --readonly
 ```
 
-Use your box's URL and the login id from the previous page. Two flags matter here:
+Replace the URL and the login id with yours. The two flags matter here:
 
-- `--no-verify-ssl` trusts a lab box's self-signed certificate.
-- `--readonly` starts the agent with a read-only tool surface. Chapter 7 has you drop it before the first write.
+- `--no-verify-ssl` trusts the self-signed certificate of a lab box.
+- `--readonly` starts the agent with read-only tools. Chapter 7 tells you how to turn this off.
 
-`init` verifies the connection, then prints the snippet:
+`init` checks the connection, then prints the config snippet for your agent:
 
 ```text
 connected: agentlab <agentlab@example.com> @ https://fortisoar.example.com
 --- claude-code ---
 # .mcp.json (project root), or merge into ~/.claude.json
-{ ... }
+{
+  "mcpServers": {
+    "fortisoar": {
+      "command": "/your/venv/bin/fsr-agentic-toolkit",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "FSR_BASE_URL": "fortisoar.example.com",
+        "FSR_USERNAME": "agentlab",
+        "FSR_PASSWORD": "<your-password>",
+        "FSR_VERIFY_SSL": "false",
+        "FSR_SUPPRESS_INSECURE_WARNINGS": "true",
+        "FSR_MCP_READONLY": "1"
+      }
+    }
+  }
+}
 ```
 
-The `connected:` line names the login the agent authenticates as; that is why the audit log attributes the agent's actions to it. If this line fails, the credentials or URL are wrong and no snippet is printed.
+<!-- step: fsa06-02-init-output -->
+<!-- capture: fsa06-02-init-output -->
+![fsa06-02-init-output](fsa06-02-init-output.png?height=600px)
 
-## 3. Install the snippet
+It also prints safety notes and a short guide for the agent. You only need the JSON block. The snippet holds your password, so keep the file out of shared folders and version control.
+
+The `connected:` line names the login the agent signs in as. If that line does not appear, check the URL and the login. No snippet is printed.
+
+## 3. Add the snippet to your agent
+
+You do not start the toolkit yourself. The snippet tells your agent how to: `command` is the toolkit program in your Python environment, `args` (`mcp`) makes it run as an MCP server, and `env` passes it your box URL, login and password. When the agent starts, it launches that program in the background and talks to it directly. Each agent reads the snippet from its own config file.
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
-1. Make a working folder for the lab (`mkdir fsr-agent-lab && cd fsr-agent-lab`).
-2. Save the printed snippet as `.mcp.json` in that folder (re-run `init` with `--claude-code` to print it again).
-3. Start `claude` in the folder and approve the new MCP server when prompted.
-4. Type `/mcp` to confirm the `fortisoar` server is connected and its tools are listed.
+Claude Code reads its MCP servers from `.mcp.json` in the folder where you start `claude`.
 
-<!-- step: fsa06-03-agent-init manual: starts the coding agent against the box; spends tokens -->
+1. In the folder you made on the previous page, save the printed JSON block as `.mcp.json`. To print it again, run the section 2 command with `--claude-code` added.
+2. Still in your shell, run `claude mcp list`. It also checks the file: if the JSON is broken, it prints `[Failed to parse]` with the file name. A good file shows `fortisoar` as `Pending approval`.
+
+   <!-- step: fsa06-03-claude-mcp-list -->
+   <!-- capture: fsa06-03-claude-mcp-list -->
+   ![fsa06-03-claude-mcp-list](fsa06-03-claude-mcp-list.png?height=600px)
+
+3. Start `claude` in that folder. Approve the `fortisoar` server when asked.
+4. Type `/mcp`. The `fortisoar` server should show as connected, with its tools listed.
+
+<!-- step: fsa06-03-agent-init -->
 <!-- capture: fsa06-03-agent-init -->
 ![fsa06-03-agent-init](fsa06-03-agent-init.png?height=600px)
 
 {{% /tab %}}
 {{% tab title="Codex" %}}
-1. Run `fsr-agentic-toolkit init ... --codex` and merge the printed `[mcp_servers.fortisoar]` tables into `~/.codex/config.toml` (or add it with `codex mcp add`).
-2. Add `startup_timeout_sec = 60` to the `[mcp_servers.fortisoar]` table: the default is 10 seconds, which a first `uvx` start can exceed.
-3. Start `codex` and run `codex mcp list`; `fortisoar` should read `enabled`.
+Codex reads its MCP servers from `~/.codex/config.toml`.
+
+1. In your shell, run the section 2 command again with `--codex` added. Use your own URL and login id; it prompts for the password.
+
+   ```bash
+   fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --readonly --codex
+   ```
+
+   It prompts for your password, checks the login, then prints the Codex config. Your password is written into the `env` table, which is how Codex's copy of the toolkit signs in:
+
+   ```toml
+   [mcp_servers.fortisoar]
+   command = "/your/venv/bin/fsr-agentic-toolkit"
+   args = ["mcp"]
+   startup_timeout_sec = 60
+
+   [mcp_servers.fortisoar.env]
+   FSR_BASE_URL = "fortisoar.example.com"
+   FSR_USERNAME = "agentlab"
+   FSR_PASSWORD = "<your-password>"
+   FSR_VERIFY_SSL = "false"
+   FSR_SUPPRESS_INSECURE_WARNINGS = "true"
+   FSR_MCP_READONLY = "1"
+   ```
+
+   Copy both tables into `~/.codex/config.toml`, creating the file if it does not exist. `startup_timeout_sec = 60` is there because a first start can take longer than Codex's 10-second default. The file holds your password, so do not share it or commit it.
+2. Still in your shell, not inside Codex, run `codex mcp list`. It also checks the file: if the TOML is broken, it prints the line and column to fix instead of the table. The `fortisoar` row should read `enabled`. For a full check of the Codex setup, run `codex doctor` and look for `✓ config loaded`.
+
+<!-- step: fsa06-12-codex-mcp-list -->
+<!-- capture: fsa06-12-codex-mcp-list -->
+![fsa06-12-codex-mcp-list](fsa06-12-codex-mcp-list.png?height=600px)
+
+3. In the lab folder, start `codex`. If it shows an update prompt, press **Esc** to skip it. Do not press Enter there. Its first choice is "Update now".
+4. In Codex, type `/mcp`. Wait for `fortisoar: connected (N tools)`. Then type `/new` to start a fresh chat. Codex gives a chat the server's tools only when that chat starts.
+
 {{% /tab %}}
 {{% tab title="OpenCode" %}}
-1. Run `fsr-agentic-toolkit init ... --opencode` and merge the printed `mcp` block into your project's `opencode.json`.
+1. Run the `init` command with `--opencode`. Merge the printed `mcp` block into the `opencode.json` file in your project folder.
 2. Restart OpenCode in the project.
-3. Ask it to list its tools; the FortiSOAR tools should appear.
-{{% /tab %}}
-{{% tab title="GitHub Copilot" %}}
-1. Run `fsr-agentic-toolkit init ... --copilot` and save the snippet as `.vscode/mcp.json`.
-2. In VS Code, open Copilot Chat in agent mode and start the server when prompted.
-3. The tool picker should list the FortiSOAR tools.
+3. Ask it to list its tools. The FortiSOAR tools should appear. In OpenCode 2 they appear inside `execute` as `tools.fortisoar.<tool>`.
 {{% /tab %}}
 {{% /tabs %}}
 
 ## 4. Install the skills
 
-The toolkit ships short skills that teach your agent how to use it well: check a playbook before publishing it, repair a failed run with the toolkit's own fix, read every write back, keep secrets out of the chat. Install them into the lab folder:
+The toolkit ships short skills. They teach the agent good habits, such as checking a playbook before it publishes, reading every write back, and keeping secrets out of the chat. Install them in the lab folder.
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
@@ -84,7 +141,7 @@ The toolkit ships short skills that teach your agent how to use it well: check a
 fsr-agentic-toolkit skills --install
 ```
 
-Restart `claude`; the skills load from `.claude/skills`.
+Restart `claude`. The skills load from `.claude/skills`.
 {{% /tab %}}
 {{% tab title="Codex / OpenCode" %}}
 ```bash
@@ -97,32 +154,44 @@ This adds a block to `AGENTS.md` that points the agent at each skill.
 
 ## 5. First contact
 
-<!-- step: fsa06-04-whoami manual: runs a read-only whoami turn in the agent; spends tokens -->
+<!-- step: fsa06-04-whoami-claude -->
 
-Ask the agent who it is:
+Give your agent this prompt:
 
 ```text
-In one short paragraph, who are you and what can you help me do with this FortiSOAR box?
+In one short paragraph, who are you and what can you help me do with this FortiSOAR box? Call the fortisoar whoami tool first.
 ```
 
-It calls `whoami`, gets back your login id and the box version, and answers in its own words. Nothing on the box changes; `whoami` is read-only. This is the right mental model for the rest of the workshop: every write you are about to allow lands under this login, and the audit log says so.
+The agent calls `whoami`. It answers with your login id and the box version. `whoami` only reads, so nothing on the box changes. Every write that you allow later runs under this login, and the audit log records it under this login.
 
 <!-- capture: fsa06-04-whoami-claude -->
 ![fsa06-04-whoami-claude](fsa06-04-whoami-claude.png?height=600px)
 
-Any wired-up agent answers the same way. OpenCode, for example:
+Codex answers the same way. It shows the `whoami` call as it runs, then the answer:
+
+<!-- step: fsa06-13-codex-whoami -->
+<!-- capture: fsa06-13-codex-whoami -->
+![fsa06-13-codex-whoami](fsa06-13-codex-whoami.png?height=600px)
+
+OpenCode works the same way:
 
 <!-- step: fsa06-08-opencode-setup manual: runs a read-only whoami turn in OpenCode; spends tokens -->
 <!-- capture: fsa06-08-opencode-setup -->
 ![fsa06-08-opencode-setup](fsa06-08-opencode-setup.png?height=600px)
 
-Now give it real work:
+Now give it real work. Give your agent this prompt:
 
 ```text
 List the modules on this box, then show me the few newest alerts, with one
 line on what stands out about each.
 ```
 
-The agent calls `list_modules`, queries the recent alerts, and answers with a short, grounded summary. That is your first win: the connection works and the agent is doing useful read-only work before you grant it a single write.
+The agent calls `list_modules`, reads the newest alerts, and gives a short summary. The agent now reads the box, and nothing has changed.
 
-If the agent says it has no `fortisoar` tools, the MCP config is not loaded. In Claude Code, `.mcp.json` must be in the folder you started `claude` in; run `/mcp` to check. If tools are listed but every call fails to connect, your workstation cannot reach the box: try `curl -k https://fortisoar.example.com` from the same machine.
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| The agent says it has no `fortisoar` tools | The MCP config is not loaded. In Claude Code, `.mcp.json` must be in the folder where you started `claude`. Run `/mcp` to check. |
+| Tools are listed, but every call fails to connect | Your workstation cannot reach the box. Run `curl -k https://fortisoar.example.com` from the same machine. |
+| Codex says the `fortisoar` tools are not available | Codex started the chat before the server connected. Type `/mcp` and wait for `fortisoar: connected`. Then type `/new` and ask again. |

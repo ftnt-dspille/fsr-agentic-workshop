@@ -5,13 +5,13 @@ weight: 30
 description: "Break the playbook on purpose, then have the agent find the failing step and fix it."
 ---
 
-A playbook that runs is not a playbook that works. Sooner or later a run fails, and the question is always the same: which step, and why. The run log answers it eventually; the agent answers it in one prompt. It diffs the playbook's step graph against what actually executed, names the failing step and its error verbatim, and then fixes it.
+When a run fails, you need two answers: which step failed, and why. This page publishes a practice playbook that is broken on purpose, has the agent diagnose the failed run, and then has the agent fix it.
 
-To practice this safely, you publish a dedicated practice playbook that is broken on purpose - a separate playbook, so the good "Tag Agent Lab Alerts" you built earlier is never touched - watch it fail, diagnose it, and fix it.
+The practice playbook has its own name. The "Tag Agent Lab Alerts" playbook from page 1 is not changed.
 
 ## 1. Ask the agent
 
-Give the agent a deliberately broken practice playbook to publish - the Tag Alert step points at a record that does not exist. Give your agent this prompt (paste the YAML as shown):
+The Tag Alert step in this practice playbook points at a record that does not exist. Give your agent this prompt. It includes the practice YAML.
 
 ```text
 Let's practice diagnosing a failure. Publish this practice playbook
@@ -54,38 +54,22 @@ published.
 <!-- capture: fsa08-04-diagnose-run -->
 ![fsa08-04-diagnose-run](fsa08-04-diagnose-run.png?height=600px)
 
-Watch the tool sequence: `publish_playbook` (the broken version), `create_record` to trigger it, `wait_for_playbook_run` which comes back `failed`, then `diagnose_playbook_run`, and finally `publish_playbook` again to restore the good version.
-
-{{% notice note %}}
-Use `diagnose_playbook_run`, not `debug_playbook_run`. `diagnose_playbook_run` reads a finished run and diffs it against the definition; it is the right tool for "why did this fail". (If your agent reaches for a compile-time debugger here, point it at `diagnose_playbook_run`.)
-{{% /notice %}}
+Your agent publishes the broken playbook, triggers it, waits for the failure, diagnoses it, and then republishes the fixed version.
 
 ## 2. What the diagnosis tells you
 
-`diagnose_playbook_run` does not just say "it failed". It returns the whole picture:
+Look for these three things in the diagnosis:
 
-- **`failing_step`**: `Tag Alert` - the exact step, by name.
-- **`error_message`**: the platform's error verbatim, here a `404 Not Found` on the missing record.
-- **the step graph with statuses**: `On Alert Created` finished, `Tag Alert` failed, `Done` was never reached.
+- **`failing_step`**: `Tag Alert`, the step that failed.
+- **`error_message`**: `404 Not Found`. The update step tried to write to a record that does not exist.
+- **Step statuses**: `On Alert Created` finished, `Tag Alert` failed, and `Done` never ran.
 
-That is the difference between "the run is red" and "the update step tried to write to a record that is not there." The second one tells you what to change.
-
-## 3. The break-fix loop
-
-This is the loop you will run for real whenever a playbook misbehaves:
-
-1. **Reproduce**: trigger the playbook so there is a fresh failed run to look at.
-2. **Diagnose**: `diagnose_playbook_run` names the step and the error.
-3. **Fix**: change the one step the diagnosis named, republish, trigger again.
-4. **Confirm**: the run finishes and the effect lands (read the record back, as in page 2).
-
-The agent can do all four from one request. Your job is to read what it changed and confirm the fix, not to hunt through the run log yourself.
+The error message names the record the step tried to write. That is the detail you need to fix the step.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| wait_for_playbook_run never returns failed | The broken playbook did not re-activate after republish | Ask the agent to confirm the playbook is active, then trigger a fresh alert |
-| diagnose_playbook_run says the run was not found | Diagnosing the wrong run, or the run is still in flight | Diagnose the newest run of the playbook by name, after the wait returns |
-| The fix did not take | The restore republished the broken YAML | Check the record reference the agent put back; it must be the triggering alert's id, not the all-zeros placeholder |
-| The good "Tag Agent Lab Alerts" playbook changed | The practice YAML reused its name | It should not - the practice playbook is "Agent Lab Diagnose Practice", a separate playbook; publish that name, not the chapter 8 page 1 one |
+| `wait_for_playbook_run` never returns `failed` | The broken playbook is not active | Ask the agent to confirm the practice playbook is active, then create a new "Agent Lab diag" alert |
+| `diagnose_playbook_run` says the run was not found | The run is still going, or the agent diagnosed an older run | Wait for the run to finish, then diagnose the newest run of the practice playbook |
+| The fix did not take | The restored YAML still has the broken record reference | The Tag Alert record must be `{{ vars.input.records[0]['@id'] }}`, not the all-zeros placeholder |

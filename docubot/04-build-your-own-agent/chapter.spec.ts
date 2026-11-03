@@ -1,11 +1,10 @@
 // Chapter 4 - build your own agent (advanced, optional). Mixed UI + API chapter:
 // the Content Hub upload panel, the hello agent (a fixed answer, NO LLM call, so
 // it spends no FortiAI tokens), the TOOL_LIST routing record, a test
-// investigation, and the two playbook routes.
+// investigation, and the Invoke AI Agent playbook.
 //
 // Opt-in gates (nothing here mutates the box or spends credits by default):
-//   DOCUBOT_AGENT_BUILD=1  zip + import the example hello agent (and re-import it
-//                          with replace in fsa04-06). Needs the Advanced
+//   DOCUBOT_AGENT_BUILD=1  zip + import the example hello agent. Needs the Advanced
 //                          Development "Import/Upload Custom AI Agent" toggle on.
 //   SPEND_AI=1             run a real FortiAI alert investigation (fsa04-03).
 //   DOCUBOT_AGENT_PLAYBOOK  name of a hand-built route-A playbook in the
@@ -17,16 +16,16 @@
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
 import {
-  agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel,
+  agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel, openMcpServers, openPlaybookLogs, openRecord,
   openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep,
   runInvestigation, test, triggerAgent, uploadAgentBundle, waitForInvestigation,
-  skipStep,
+  skipStep, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner,
 } from 'docubot';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { labSeed, sh, shouldRunStep } from '../lib/agentlab';
+import { boxHost, labSeed, pyfsrEnv, queryRows, sh, shouldRunStep, toolkit } from '../lib/agentlab';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. On-screen dates are legitimate content.
@@ -80,7 +79,12 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // capture run never mutates the box. Set DOCUBOT_SEED=1 to seed.
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
     labSeed('org-context');          // the TOOL_LIST record fsa04-02 reads
-    if (build()) labSeed('install-agent'); // the hello agent fsa04-01/05 trigger
+    if (build()) labSeed('install-agent'); // the hello agent fsa04-01 checks
+    // The page-03 playbook, from the shipped "working version" YAML, when absent.
+    if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
+      const yaml = fs.readFileSync(path.join(EXAMPLES, 'playbooks', 'invoke_hello_agent.yaml'), 'utf8');
+      expect(toolkit('publish_playbook', { yaml_text: yaml }).published).toBe(true);
+    }
   });
 
   // Page 02 s2: the Content Hub upload panel. Opening it uploads nothing, so it is
@@ -101,8 +105,20 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     }
   });
 
-  // Page 02 s3: the hello agent. Detail page capture + the async trigger/poll/result
-  // round trip. No LLM call, so no credits.
+  // Page 02 s2 note: where the Import/Upload Custom AI Agent toggle lives. Opens the
+  // AI Configurations page, then its System > System Configuration screen, and shows
+  // the Advanced Development section. Read-only: the toggle is looked at, not changed.
+  if (shouldRunStep('fsa04-00-advanced-toggle')) await test.step('fsa04-00-advanced-toggle', async () => {
+    await openMcpServers(soar, origin);
+    await soar.getByText('System Configuration', { exact: true }).first().click();
+    await soar.getByText('Advanced Development Features', { exact: true }).first().click();
+    const toggle = soar.getByText(/Import\/Upload Custom AI Agent/i).first();
+    await expect(toggle).toBeVisible({ timeout: 30_000 });
+    await capture.shot(soar, 'fsa04-00-advanced-toggle', { highlight: toggle, ...SKIP });
+  });
+
+  // Page 02 s4: the hello agent's detail page. The API round trip below only proves
+  // the upload worked; students call it from a playbook on page 03. No LLM call.
   if (shouldRunStep('fsa04-01-hello-agent')) await test.step('fsa04-01-hello-agent', async () => {
     if (!(await openAgentDetail(soar, origin, AGENT_LABEL))) {
       skipStep('fsa04-01-hello-agent', 'hello agent not installed (set DOCUBOT_AGENT_BUILD=1)');
@@ -115,17 +131,6 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     expect(result.answer).toContain('hello from the workshop agent for entity: host-01.example.com');
     expect(result).toHaveProperty('confidence');
     expect(Array.isArray(result.evidence)).toBe(true);
-    // The page shows the API exchange; render it as a terminal-style capture with
-    // placeholders (no token, host or real task id).
-    const shown = [
-      `$ curl -X POST https://fortisoar.example.com/ai/agents/${AGENT}/trigger -d '{"entity": "host-01.example.com"}'`,
-      '{"task_id": "<task-id>", "status": "pending"}',
-      '$ curl https://fortisoar.example.com/ai/agents/<task-id>/status',
-      '{"status": "completed"}',
-      '$ curl https://fortisoar.example.com/ai/agents/<task-id>/result',
-      JSON.stringify({ answer: result.answer, confidence: result.confidence, evidence: result.evidence }, null, 2),
-    ].join('\n');
-    await capture.screen('fsa04-01-hello-agent-trigger-result', shown, { title: 'api client' });
   });
 
   // Page 02 s4: the TOOL_LIST record in organizational context. Editing the record
@@ -159,7 +164,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       await openAlertAiInvestigation(soar, origin, alert!.id);
       // A finished investigation is read, not run again.
       const inv = (await readInvestigation(soar)).state === 'not-run'
-        ? await runInvestigation(soar, { timeoutMs: 15 * 60 * 1000 })
+        ? await runInvestigation(soar)
         : await waitForInvestigation(soar, { timeoutMs: 60_000 });
       expect(inv.state).toBe('done');
       return openTracePanel(soar);
@@ -195,32 +200,100 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     // The designer header carries a "Last Modified <date> by <user>" line; the date
     // is benign content and the user name is a display name, so leave them visible.
     await capture.shot(soar, 'fsa04-04-playbook-branch-decision', SKIP_RECORD);
+
+    // The run's own output: fire the playbook with a test alert, then open that run's
+    // Executed Playbook Logs. The Invoke AI Agent step's data is what the page branches on.
+    const since = new Date().toISOString();
+    const created = toolkit('create_record', {
+      module: 'alerts',
+      data: { name: `Agent Lab hello test (${Date.now()})`, severity: 'Low', source: 'Agent Lab Workshop', description: 'route A check' },
+    });
+    const run = toolkit('wait_for_playbook_run', { playbook: PLAYBOOK_NAME, since, timeout: 180 });
+    expect(run.status, 'the route-A run did not finish').toBe('finished');
+    await openRecord(soar, 'alerts', created.uuid, { tab: null });
+    await openPlaybookLogs(soar, { select: PLAYBOOK_NAME });
+    await capture.shot(soar, 'fsa04-04-playbook-branch-run', { target: soar.locator('#mySidenav'), ...SKIP_RECORD });
+    // Open the Invoke AI Agent step to see its returned data (the page branches on it).
+    await soar.getByText('Invoke AI Agent', { exact: true }).first().click();
+    await soar.waitForTimeout(2000);
+    // Expand the output's data node so its fields (what the Decision reads) show.
+    // The tree's expand arrow for the data row (the label itself only moves the breadcrumb).
+    const arrow = soar.getByText('data', { exact: true }).last();
+    const box = await arrow.boundingBox();
+    if (box) await soar.mouse.click(box.x - 14, box.y + box.height / 2);
+    await soar.waitForTimeout(1500);
+    const dataFields = await soar.getByText('confidence', { exact: true }).count();
+    console.log(`[ch04] fsa04-04: confidence key shown in the step output: ${dataFields > 0}`);
+    await capture.shot(soar, 'fsa04-04-playbook-branch-step-output', SKIP_RECORD);
+  });
+});
+
+// Page 03 s1 (the Remote FortiSOAR configuration form): read-only. The Lab
+// configuration is the default and is only looked at; its values are not changed.
+// The endpoint and login are shown under the names the page uses (showAs), and the
+// password field is masked.
+test('chapter 4 - remote fortisoar config', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa04-01-remote-fortisoar-config')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  await test.step('fsa04-01-remote-fortisoar-config', async () => {
+    await openConnector(soar, origin, 'FortiSOAR');
+    await soar.getByText('Configurations', { exact: true }).first().click();
+    expect(await selectConfig(soar, 'Lab'), 'the Lab configuration loads').toBe(true);
+    // Checked before the capture: the values the page describes.
+    const endpoint = await readFieldAfterLabel(soar, 'FortiSOAR Endpoint URL');
+    expect(endpoint.kind, 'the form has an Endpoint URL field').toBe('input');
+    expect(endpoint.value, 'the endpoint is the box').toContain(boxHost());
+    expect((await readFieldAfterLabel(soar, 'Authentication Type')).value, 'Authentication Type is Basic').toBe('Basic');
+    expect((await readFieldAfterLabel(soar, 'Verify SSL')).checked, 'Verify SSL is off').toBe(false);
+    expect((await readFieldAfterLabel(soar, 'Mark As Default Configuration')).checked, 'the default-configuration checkbox is ticked').toBe(true);
+    await soar.waitForTimeout(1500);
+    const hostPort = boxHost();
+    const hostname = hostPort.replace(/:\d+$/, '');
+    const login = pyfsrEnv().FSR_USERNAME ?? '';
+    await capture.shot(soar, 'fsa04-01-remote-fortisoar-config', {
+      mask: [soar.locator('input[type=password]')],
+      showAs: { [hostPort]: 'fortisoar.example.com', [hostname]: 'fortisoar.example.com', ...(login ? { [login]: 'agentlab' } : {}) },
+      scrubSkip: ['date-or-time'],
+    });
+  });
+});
+
+// Page 03 s2 (steps 2-3): the Invoke AI Agent step's config in the designer. Opened
+// and read only; the designer is left without saving. DOCUBOT_SEED=1 publishes the
+// playbook from static/examples when it is missing.
+test('chapter 4 - invoke step config', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (!shouldRunStep('fsa04-04-invoke-step-config')) return;
+  const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+
+  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+    if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
+      const yaml = fs.readFileSync(path.join(EXAMPLES, 'playbooks', 'invoke_hello_agent.yaml'), 'utf8');
+      expect(toolkit('publish_playbook', { yaml_text: yaml }).published).toBe(true);
+    }
   });
 
-  // Page 03 s4: route B, the raw async trigger API. The effect is the documented
-  // shape: one call returns a task_id (not the answer), then status, then result.
-  if (shouldRunStep('fsa04-05-playbook-route-b')) await test.step('fsa04-05-playbook-route-b', async () => {
-    if (!(await helloListed(soar, origin)) && !build()) {
-      skipStep('fsa04-05-playbook-route-b', 'hello agent not installed');
-      return;
-    }
-    const result = await triggerHello(soar, 'host-01.example.com');
-    expect(result.answer).toBeTruthy();
-  });
-
-  // Page 03 s5: replace-import, then confirm the agent still runs. Mutates the box,
-  // so it rides the same opt-in as the initial import. Records whether the id moved.
-  if (shouldRunStep('fsa04-06-replace-check')) await test.step('fsa04-06-replace-check', async () => {
-    if (!build()) {
-      skipStep('fsa04-06-replace-check', 'set DOCUBOT_AGENT_BUILD=1 to re-import with replace');
-      return;
-    }
-    if (!fs.existsSync(zip)) sh('zip', ['-r', zip, AGENT], EXAMPLES);
-    const before = (await findAgent(soar, AGENT))?.id;
-    await uploadHello(soar, origin, zip);
-    const after = (await findAgent(soar, AGENT))?.id;
-    console.log(`[ch04] agent id before=${before} after=${after} changed=${before !== after}`);
-    const result = await triggerHello(soar, 'host-01.example.com');
-    expect(result.answer).toContain('hello from the workshop agent');
+  await test.step('fsa04-04-invoke-step-config', async () => {
+    await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    // The canvas node (not the palette entry of the same name), then its config panel.
+    await soar.locator('#designer-container .step-container').filter({ hasText: 'Invoke AI Agent' }).first().dblclick({ timeout: 15000 });
+    await soar.getByText('Agent Name', { exact: false }).first().waitFor({ state: 'visible', timeout: 30000 });
+    // Checked before the capture: the two inputs the page tells the student to set.
+    // The panel's labels are "Agent Name" (the YAML key agent_name) and "Agent Payload" (body).
+    expect((await readFieldAfterLabel(soar, 'Agent Name')).value, 'Agent Name is the hello agent').toBe('workshop_hello_agent');
+    // The payload is an ACE code editor, not an input: read its text inside the field's own group.
+    const payloadText = await soar.evaluate(() => {
+      const l = Array.from(document.querySelectorAll('label')).find((x) => (x.innerText || '').trim().startsWith('Agent Payload') && (x as HTMLElement).offsetParent);
+      return ((l?.closest('.form-group') as HTMLElement | null)?.innerText) ?? '';
+    });
+    expect(payloadText, 'Agent Payload holds the entity JSON').toContain('"entity": "host-01.example.com"');
+    await soar.waitForTimeout(1500);
+    await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
+    // Leave without saving: nothing was changed.
+    await leaveDesigner(soar, origin);
   });
 });

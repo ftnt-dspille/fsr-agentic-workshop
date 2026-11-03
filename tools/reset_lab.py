@@ -9,6 +9,7 @@ Removes everything the workshop created on a FortiSOAR box, identified by the
     playbook collections  name starts with "Agent Lab"         -> collection deleted (hard)
     schedules             name starts with "agentlab_" or "Agent Lab" -> deleted
     connectors            the lab connectors (CONNECTORS), if installed -> uninstalled
+    dashboards            name in DASHBOARD_NAMES (e.g. "Workshop Verdicts") -> removed
 
 Modes
 -----
@@ -40,7 +41,10 @@ MODULE_PREFIX = "agentlab_"
 MODULE_EXACT = "agentlab"
 USER_EMAIL_PREFIX = "agentlab_"
 COLLECTION_PREFIX = "Agent Lab"
-ALERT_NAME_PREFIX = "Agent Lab - "  # matches lab_setup.py's seeded demo alerts
+# Dashboards the labs build in the widget builder (chapter 3). A dashboard is a view
+# template stored at /api/3/dashboard, so it is matched by its displayName.
+DASHBOARD_NAMES = ("Workshop Verdicts",)
+ALERT_NAME_PREFIX = "Agent Lab"  # seeded demo alerts ("Agent Lab - ...") and the agent's own test alerts ("Agent Lab crit/ioc/sweep/...")
 SCHEDULE_PREFIXES = ("agentlab_", "Agent Lab")
 # Connectors the labs install (ch9): the one the student builds+installs, and the
 # one installed from the Content Hub. Uninstalling them lets the build/install
@@ -76,6 +80,10 @@ def build_client(file_env: dict[str, str]):
     if not base:
         sys.exit("reset_lab: FSR_BASE_URL is required (set it in FSR_ENV_FILE or the environment)")
     verify = (setting("FSR_VERIFY_SSL", file_env, "1") or "1").lower() not in ("0", "false", "no")
+    if not verify:
+        # Lab boxes use self-signed certs; verification is off, so drop the per-request warning.
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     # Prefer a user (JWT) login: it is required for install labs (Content Hub /
     # solution-pack / connector installs are not supported with an API key).
     # Fall back to an API key only when no user creds are set.
@@ -97,10 +105,11 @@ class Plan:
     schedules: list[str] = field(default_factory=list)
     alerts: list[dict[str, Any]] = field(default_factory=list)  # {"uuid", "name"}
     connectors: list[dict[str, Any]] = field(default_factory=list)  # {"name", "version"}
+    dashboards: list[dict[str, Any]] = field(default_factory=list)  # {"uuid", "name"}
 
     def is_empty(self) -> bool:
         return not (self.users or self.modules or self.collections or self.schedules
-                    or self.alerts or self.connectors)
+                    or self.alerts or self.connectors or self.dashboards)
 
 
 def collect_plan(client) -> Plan:
@@ -138,6 +147,10 @@ def collect_plan(client) -> Plan:
         if name.startswith(ALERT_NAME_PREFIX):
             plan.alerts.append({"uuid": alert.get("uuid"), "name": name})
 
+    for dash in client.get("/api/3/dashboard", {"$limit": 500}).get("hydra:member", []):
+        if dash.get("displayName") in DASHBOARD_NAMES:
+            plan.dashboards.append({"uuid": dash.get("uuid"), "name": dash.get("displayName")})
+
     for name in CONNECTORS:
         try:
             version = client.connectors.resolve_version(name)
@@ -159,6 +172,7 @@ def print_plan(plan: Plan) -> None:
             [f"{m['name']} ({len(m['records'])} record(s))" for m in plan.modules])
     section("playbook collections (delete)", [c["name"] for c in plan.collections])
     section("schedules (delete)", plan.schedules)
+    section("dashboards (delete)", [d["name"] for d in plan.dashboards])
     section("demo alerts (delete)", [a["name"] for a in plan.alerts])
     if plan.connectors:
         section("connectors (uninstall)",
@@ -193,8 +207,9 @@ def build_appliance(file_env: dict[str, str], instance_name: str | None):
         try:
             return Appliance(instance=instance_name)
         except Exception as exc:
-            print(f"WARN: cannot reach the appliance from instance {instance_name}: {exc}")
-            return None
+            # Fall through: an instance that keeps its SSH target in its env file
+            # (FSR_SSH_*) has no [instances.<name>.appliance] block.
+            print(f"note: no pyfsr appliance profile for instance {instance_name} ({exc}); trying FSR_SSH_*")
     host = setting("FSR_SSH_HOST", file_env)
     if not host:
         return None
@@ -203,7 +218,7 @@ def build_appliance(file_env: dict[str, str], instance_name: str | None):
             host=host,
             user=setting("FSR_SSH_USER", file_env, "csadmin"),
             port=int(setting("FSR_SSH_PORT", file_env, "22") or "22"),
-            key_path=setting("FSR_SSH_KEY", file_env),
+            key_path=os.path.expanduser(setting("FSR_SSH_KEY", file_env) or setting("FSR_SSH_KEY_PATH", file_env) or "") or None,
             insecure_skip_host_key_check=True,
         )
     except Exception as exc:
@@ -306,6 +321,14 @@ def execute(client, plan: Plan) -> int:
             failures += 1
             print(f"FAILED demo alerts: {exc}")
 
+    for dash in plan.dashboards:
+        try:
+            client.delete(f"/api/3/dashboard/{dash['uuid']}")
+            print(f"deleted dashboard {dash['name']}")
+        except Exception as exc:
+            failures += 1
+            print(f"FAILED dashboard {dash['name']}: {exc}")
+
     for conn in plan.connectors:
         try:
             client.connectors.uninstall(conn["name"], version=conn["version"])
@@ -324,6 +347,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yes", action="store_true",
                     help="skip the RESET prompt (non-interactive; for automated pre-run reset). "
                          "Also enabled by FSR_LAB_RESET_YES=1.")
+    ap.add_argument("--sweep-only", nargs="+", metavar="MODULE",
+                    help="only run the 8.0.1 orphan-table sweep for these already-deleted module names")
     args = ap.parse_args(argv)
 
     if args.instance:
@@ -331,12 +356,21 @@ def main(argv: list[str] | None = None) -> int:
         file_env = read_instance(args.instance)
     else:
         file_env = read_env_file(os.environ.get("FSR_ENV_FILE"))
+    if args.sweep_only:
+        appliance = build_appliance(file_env, args.instance)
+        if appliance is None:
+            sys.exit("reset_lab: --sweep-only needs an appliance SSH target (FSR_SSH_* or a pyfsr appliance profile)")
+        sweep_orphans(appliance, args.sweep_only)
+        return 0
     client = build_client(file_env)
 
     plan = collect_plan(client)
     print_plan(plan)
     if args.check_only:
         return 0
+    # Chapter 3 fills the shipped APPROVED_BACKUP_SYSTEM record; put its placeholder back.
+    from lab_setup import cmd_approved_backup  # same tools/ directory
+    cmd_approved_backup(client, clear=True)
     if plan.is_empty():
         print("nothing to remove")
         return 0

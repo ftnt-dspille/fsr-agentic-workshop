@@ -5,7 +5,7 @@ weight: 10
 description: "Discover what connectors the box has, what their operations expect, and run one."
 ---
 
-Connectors are FortiSOAR's hands: every firewall, sandbox and ticket system is reached through one. An agent that can discover and run them can chain real enrichment and response actions - which is exactly what the capstone needs.
+A connector links FortiSOAR to an outside product, such as a firewall, a sandbox or a ticket system. In this page the agent lists the connectors on the box and runs one.
 
 ## 1. Discover
 
@@ -18,19 +18,19 @@ then name one that is configured and healthy (confirm it is healthy).
 
 <!-- step: fsa09-01-discover-connectors -->
 
-The agent walks `list_connectors` (configured connectors show a config count) and `healthcheck_connector` (green is `Available`). The count it reports is read live from the box, so it is the real total - not a guess.
-
 <!-- capture: fsa09-01-discover-connectors -->
 ![fsa09-01-discover-connectors](fsa09-01-discover-connectors.png?height=600px)
 
-**Verify the count in the UI:** open **Connectors** in the left navigation (it opens Content Hub on the Connectors filter). The total shown there matches the number the agent reported.
+The agent lists the connectors. A configured connector shows a config count. It then runs a health check on the one it picks. `Available` means healthy.
+
+**Verify the count in the UI:** open **Connectors** in the left navigation. The total shown there matches the number the agent reported.
 
 <!-- capture: fsa09-01-discover-connectors-ui-count -->
 ![fsa09-01-discover-connectors-ui-count](fsa09-01-discover-connectors-ui-count.png?height=600px)
 
 ## 2. Run an operation
 
-Give your agent this prompt (adapt the connector to what your box has - the built-in utilities connector is always there):
+Give your agent this prompt. The built-in utilities connector is always on the box, so use it if nothing else fits.
 
 ```text
 Run a harmless read-only operation on that connector and interpret the
@@ -40,15 +40,14 @@ connector to evaluate 2+2 as a demonstration.
 
 <!-- step: fsa09-02-run-operation -->
 
-**You are done when:** the agent names the operation it chose, shows the params it sent, and interprets the `data` payload rather than dumping it. A failed call is also a success for learning: the error dict carries the HTTP method, path and response body, which the agent should quote when explaining what went wrong.
-
 <!-- capture: fsa09-02-run-operation -->
 ![fsa09-02-run-operation](fsa09-02-run-operation.png?height=600px)
+
+**You are done when:** the agent names the operation it chose, shows the parameters it sent, and explains the result in plain words. If a call fails, the error shows the HTTP method, the path and the response body. The agent should quote it.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| healthcheck says no-config | Connector installed but never configured | Pick another, or configure it (the agent can: default_connector_config then upsert_connector_configuration) |
-| Operation fails with a params error | Wrong parameter names | list_connector_operations shows each operation's exact parameter names and types |
-| run_connector_operation returns empty data | Some connectors are fire-and-forget | Not a failure; check the connector's own logs or pick a synchronous operation |
+| Health check says no config | The connector is installed but not configured | Pick a configured connector, or ask the agent to configure this one (next page) |
+| Operation fails with a parameter error | Wrong parameter names | Ask the agent to list the operation's parameters with `list_connector_operations` |

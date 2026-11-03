@@ -7,7 +7,7 @@
 // Live-only (needs the box + the agent). Authored against the pre-docubot specs
 // tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js; verify on
 // a box with `docubot run --chapter 09-connectors`.
-import { connectorResultsCount, expect, openConnector, test } from 'docubot';
+import { connectorResultsCount, expect, openConnector, removeConnectorConfiguration, selectConfig, test } from 'docubot';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
@@ -157,13 +157,12 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
   });
 
   if (shouldRunStep('fsa09-08-configure-safely')) await test.step('fsa09-08-configure-safely', async () => {
-    // The page's premise is a real key in the server's env, referenced by name.
-    // Supply it with DOCUBOT_VT_API_KEY; without one the step logs and skips.
-    const key = process.env.DOCUBOT_VT_API_KEY;
-    if (!key) {
-      console.log('[ch09] fsa09-08 skipped: set DOCUBOT_VT_API_KEY to a VirusTotal key');
-      return;
-    }
+    // The page's premise is a real key in the server's env, referenced by name. With
+    // DOCUBOT_VT_API_KEY set the run is a full pass (healthcheck Available). Without
+    // it a dummy key still exercises the reference path and the masked key field;
+    // the healthcheck expectation then does not apply (the dummy is rejected).
+    const realKey = process.env.DOCUBOT_VT_API_KEY;
+    const key = realKey || 'lab-dummy-key-not-a-secret';
     const agent = await startAgent(local, 'laptop', {
       cols: 100,
       rows: 40,
@@ -176,7 +175,27 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     expect(screen.includes(key), 'the API key appeared on the agent screen').toBe(false);
     await capture.screen('fsa09-08-configure-safely', screen, agentScreen());
     expect(screen).toMatch(/FSR_SECRET_VIRUSTOTAL__API_KEY/);
-    const health = toolkit('healthcheck_connector', { connector: 'virustotal', config: 'Lab' });
-    expect(JSON.stringify(health)).toContain('Available');
+    if (realKey) {
+      const health = toolkit('healthcheck_connector', { connector: 'virustotal', config: 'Lab' });
+      expect(JSON.stringify(health)).toContain('Available');
+    }
+    // UI proof: the saved Lab configuration shows its API key as a masked password.
+    const soar = await gui('soar');
+    const origin = new URL(soar.url()).origin;
+    await openConnector(soar, origin, 'VirusTotal');
+    await soar.getByText('Configurations', { exact: true }).first().click();
+    expect(await selectConfig(soar, 'Lab'), 'the Lab configuration did not load').toBe(true);
+    // The API key is write-only: the form shows a "Set API Key" link, never the value.
+    const keyField = soar.getByRole('link', { name: 'Set API Key' }).first();
+    await expect(keyField).toBeVisible({ timeout: 20_000 });
+    await capture.shot(soar, 'fsa09-08-configure-safely-masked-key', {
+      highlight: keyField,
+      scrubSkip: ['date-or-time'],
+    });
+    // A dummy-key run leaves no configuration behind: remove the Lab config it wrote.
+    if (!realKey) {
+      await removeConnectorConfiguration(soar);
+      console.log('[ch09] fsa09-08: removed the dummy-key Lab configuration');
+    }
   });
 });

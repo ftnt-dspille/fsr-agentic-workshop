@@ -2,95 +2,80 @@
 title: Invoke an Agent from a Playbook
 linkTitle: Invoke from a Playbook
 weight: 30
-description: "Call your agent from a playbook through a supported route, choose the route by the kind of agent, and branch on its answer."
+description: "Install the connector that calls agents, call your agent from a playbook, and branch on its answer."
 ---
 
-A playbook is where an agent's answer turns into action. This page covers the three routes, which one to use, and how to branch on the result. The rule: call an agent through a route that authenticates as a user, and put any write after a manual-input step.
+A playbook is where an agent's answer turns into action. On this page you build a playbook that calls the hello agent and branches on the answer. Put any change after a manual-input step.
 
-## 1. Know the options
+The playbook calls the agent with the Remote FortiSOAR connector's **Invoke AI Agent** step. It triggers the agent, waits for the answer and returns it in one step, signed in as a user. The chat assistant cannot run a named agent on demand: typing the agent's name into the chat does not call it.
 
-| Route | How it calls the agent | Works for | Notes |
-|---|---|---|---|
-| A. Remote FortiSOAR connector, **Invoke AI Agent** operation | The connector's `invoke_agent` operation calls the agent with two parameters, `agent_name` and a JSON `body` (the agent's input), and returns its answer synchronously. It authenticates as the connector's configured login. | Reasoning agents and tool-using agents, with that login's rights | This is the supported route on 8.0.1. The shipped **Invoke Agent** sample playbook (tagged `#Remote FortiSOAR`) is a ready template. Configure the connection with a real user login, not an API key. |
-| B. Utility API call with HMAC | The "Make FortiSOAR API Call" step calls the agent's trigger route, authenticated with HMAC | Reasoning-only agents, with no MCP tools | The trigger route is asynchronous: a single call returns a `task_id`, not the answer, so you poll for the result. An agent that needs MCP tools gets an authorization failure from the built-in servers. |
-| C. Starting a full alert investigation through the HMAC route | The same HMAC call, but it starts an investigation | Nothing reliable | The investigation runs without FortiSOAR tools, and the verdict is never written back. Do not use this route for investigations. |
+## 1. Install the Remote FortiSOAR connector with Invoke AI Agent
 
-{{% notice warning %}}
-Do not modify a connector package to call an agent. The stock Remote FortiSOAR connector already ships the **Invoke AI Agent** (`invoke_agent`) operation, and a modified package is unsupported and can break on upgrade.
-{{% /notice %}}
+The Remote FortiSOAR connector in the Content Hub does not have the **Invoke AI Agent** operation yet. This lab ships a build that does: version 2.1.0, by Mahdi Naili and Priyank Mankad.
 
-{{% notice note %}}
-**What about the chat assistant?** The FortiAI chat answers by calling its own tools; it has no "run agent X" control, so typing your agent's name into the chat does not invoke it. The chat reaches agents only indirectly: in plan mode it hands the request to the orchestrator, which plans and runs installed agents and pauses for approval on writes; and an alert investigation routes questions to `Triage`-tagged agents through the tool table (previous page). To invoke *your specific* agent on demand, use a playbook (this page) or the trigger API, not the chat box.
-{{% /notice %}}
+1. Download [`remote-fortisoar-2.1.0.tgz`](/examples/connectors/remote-fortisoar-2.1.0.tgz).
+2. Open **Content Hub**, then select **Manage**. Click **Upload**, then choose **Upload Connector**, and pick the file.
+3. Open the installed **FortiSOAR** connector (Remote FortiSOAR) and add a configuration:
+   - **FortiSOAR Endpoint URL**: your box's URL, the same one you open in the browser, for example `https://fortisoar.example.com`. The connector calls your own box.
+   - **Authentication Type**: **Basic**. Enter your FortiSOAR login and password. An API key does not work: the AI service rejects it.
+   - **Verify SSL**: off.
+   - Tick **Mark As Default Configuration**, so playbook steps use it without naming it.
 
-## 2. Follow the teaching path
+   <!-- step: fsa04-01-remote-fortisoar-config -->
+   <!-- capture: fsa04-01-remote-fortisoar-config -->
+   ![fsa04-01-remote-fortisoar-config](fsa04-01-remote-fortisoar-config.png?height=600px)
 
-Work through the routes in this order:
+4. Save the configuration. The health check shows **Available**.
 
-1. Build the call through **route A**, the Remote FortiSOAR connector's **Invoke AI Agent** operation. It returns the agent's answer in one step, so you can branch on it directly. This is the route most agents should use.
-2. For a **reasoning-only** agent that has no connector configured, try **route B**, the raw trigger API. Note its shape first: the trigger route is asynchronous, so a single call returns a `task_id`, not the answer, and you poll for the result. Route B also cannot reach an agent that needs MCP tools.
-3. Only after that, try an agent that uses a read-only tool, through route A.
+**You are done when** the connector's configuration is **Available** and its operations list includes **Invoke AI Agent**.
 
-## 3. Build the playbook and branch on the answer
+## 2. Build the playbook
 
-Build a playbook in the playbook designer. The trigger is up to you. A common shape is:
-
-1. A trigger that starts on a record event, or a manual trigger while you test.
-2. A call to your agent through route A, the **Invoke AI Agent** operation. It takes two parameters:
-   - `agent_name`: the agent's `name`, for example `workshop_hello_agent`.
-   - `body`: a JSON string of the agent's input, matching its `inputformat`, for example `{"entity": "host-01.example.com"}`. The shipped **Invoke Agent** sample calls `ioc-enrichment` with `{"question": "...", "ioc": [{"value": "203.0.113.42", "type": "IP Address"}]}`, so shape `body` to the agent you are calling.
-3. A **Decision** step that branches on the returned value. The operation returns the answer synchronously under `data`, so branch on `{{ vars.steps.<step name>.data.confidence }}` or `data.answer`.
-4. A manual-input step before any change, so a person approves it.
-5. The change itself, only on the approved branch.
+Build the playbook in the playbook designer. Put it in the **Agent Lab** collection, and name it **Agent Lab - Invoke Hello Agent**.
 
 <!-- step: fsa04-04-playbook-branch -->
 
-The playbook below calls the hello agent, then a Decision step routes on its `confidence`. Because the hello agent always returns `low`, the run takes the Low confidence branch (Needs Review) and skips Auto Close.
+1. Add the trigger **On Alert Created**, with the condition **Name** starts with `Agent Lab hello`. The playbook then runs only for your test alerts.
+2. Add an **Invoke AI Agent** step from the Remote FortiSOAR connector. Pick the connector's configuration in the step, and make sure that configuration logs in as a user (Basic authentication). An API key does not work: the AI service rejects it.
+3. In the step's **Inputs**, set:
+   - **Agent Name** (the `agent_name` input): `workshop_hello_agent`
+   - **Agent Payload** (the `body` input): `{"entity": "host-01.example.com"}`
+
+   <!-- step: fsa04-04-invoke-step-config -->
+   <!-- capture: fsa04-04-invoke-step-config -->
+   ![fsa04-04-invoke-step-config](fsa04-04-invoke-step-config.png?height=600px)
+
+4. Add a **Decision** step named **Confidence Check**. Use the `confidence` value from the Invoke AI Agent output as its input. That value sits under `data` in the step output. Add two branches: **High confidence** and **Low confidence**.
+5. Add a step to each branch. The example uses **Auto Close** on the High confidence branch and **Needs Review** on the Low confidence branch, so the run log shows which branch it took.
+6. Save the playbook. Its status shows **Active**.
+
+If you get stuck, the finished playbook is in [`invoke_hello_agent.yaml`](/examples/playbooks/invoke_hello_agent.yaml).
 
 <!-- capture: fsa04-04-playbook-branch-decision -->
 ![fsa04-04-playbook-branch-decision](fsa04-04-playbook-branch-decision.png?height=600px)
 
-**You are done when**
+**Run it.** Create an alert named `Agent Lab hello test` in the Alerts module. The playbook starts on its own. The hello agent always returns `low`, so the run takes the **Low confidence** branch and skips **Auto Close**.
 
-- The Invoke AI Agent step returns the agent's answer under `data`, with `status` `Success`.
-- The Decision step takes the branch that matches the `confidence` value the agent returned.
-- The connection is configured with a user login, not an API key.
+Open the alert's **Executed Playbook Logs**, and select the run of **Agent Lab - Invoke Hello Agent**. The log shows the branch the run took.
 
-## 4. Route B: the raw trigger API
+<!-- capture: fsa04-04-playbook-branch-run -->
+![fsa04-04-playbook-branch-run](fsa04-04-playbook-branch-run.png?height=600px)
 
-<!-- step: fsa04-05-playbook-route-b -->
+Click the **Invoke AI Agent** step to see its output. The agent's answer and its `confidence` are under `data`. The step's `status` shows `Success`.
 
-Route B calls the agent's trigger route directly from a **Make FortiSOAR API Call** step, authenticated with HMAC. Use it only for a reasoning-only agent that has no connector configured, and that needs no MCP tools.
-
-The trigger route is **asynchronous**. One call to `POST /ai/agents/{agent_name}/trigger` returns `202` with a `task_id`, not the answer. Add two more steps: poll `GET /ai/agents/{task_id}/status` until it reads `completed`, then read `GET /ai/agents/{task_id}/result`. An agent that needs MCP tools fails authorization against the built-in servers on this route, so route A is the better default.
+<!-- capture: fsa04-04-playbook-branch-step-output -->
+![fsa04-04-playbook-branch-step-output](fsa04-04-playbook-branch-step-output.png?height=600px)
 
 **You are done when**
 
-- The trigger step returns a `task_id`.
-- A later step reads the result once the status is `completed`.
-- An agent that needs tools fails here, which is the limit route B is meant to show.
-
-## 5. Check the upgrade path
-
-<!-- step: fsa04-06-replace-check -->
-
-An upgrade can keep an agent's configuration but overwrite its code. Test that before you rely on a replaced agent.
-
-Re-import the agent with replace. Note its ID before and after. Check that its allowlist and agent configuration are still in place. Run the playbook again.
-
-**You are done when**
-
-- The playbook still calls the agent and gets an answer.
-- You recorded whether the agent ID changed.
+- The Invoke AI Agent step returns the agent's answer under `data`, with a `status` of `Success`.
+- The Decision step takes the branch that matches the `confidence` value.
+- The connection uses a user login.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Route B returns an authorization error for an agent | The agent needs MCP tools, and route B cannot authenticate to them | Use route A, or choose a reasoning-only agent for route B |
-| Route A rejects the connector | The connector uses an API key, not a user login | Reconfigure it with a user login |
-| No `invoke_agent` operation in the connector | The Remote FortiSOAR connector is missing or is an older version | Install or update the Remote FortiSOAR connector (the operation ships in 2.1.0); until then use route B |
-| Branch always takes the default path | The branch reads a field that is not in the output | Read the actual output of the step and branch on that field |
-| Investigation started from a playbook has no verdict | Started through the HMAC route | Start investigations through a user-authenticated route, and check the write-back |
-| Agent gone after replace | The agent was replaced and its ID changed | Re-link the playbook step to the new ID |
-
+| The Invoke AI Agent step fails to authenticate | The connector uses an API key, not a user login | Reconfigure it with a user login |
+| The connector has no `invoke_agent` operation | The Content Hub version of the connector is installed | Upload the 2.1.0 package from section 1 |
+| The branch always takes the same path | The Decision reads a field that is not in the step output | Open the step output and choose the field that is there |

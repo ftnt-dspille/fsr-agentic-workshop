@@ -14,7 +14,15 @@
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
 import { expect, goToState, test, type AgentShotRun } from 'docubot';
-import { agentScreen, agentTurn, promptFor, shouldRunStep, startAgent } from '../lib/agentlab';
+import {
+  agentScreen, agentTurn, alertsNamed, boxHost, boxIdentity, codexScreen, codexShell, promptFor, shellShot, shouldRunStep,
+  startAgent, startCodex, writeClaudeMcpJson,
+} from '../lib/agentlab';
+import { labSeed } from '../lib/agentlab';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { pyfsrEnv } from '../lib/agentlab';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -54,24 +62,16 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
     return;
   }
 
-  // claude + codex each capture the write-approval card and, from the SAME session,
-  // the declined state after Esc (declineWaitFor/declineId). opencode's MCP tools
-  // did not surface reliably headlessly, so it gets a SETUP shot (a benign no-tool
-  // question), not a write-approval.
+  // claude captures the write-approval card and, from the SAME session, the declined
+  // state after Esc (declineWaitFor/declineId). Codex is captured below, through its
+  // own driver. opencode's MCP tools did not surface reliably headlessly, so it gets
+  // a SETUP shot (a benign no-tool question), not a write-approval.
   const DECLINED = /Interrupted|What should Claude do instead|not completed|was not created|declin|not approve/i;
 
   if (shouldRunStep('fsa06-05-claude-approval')) await test.step('fsa06-05-claude-approval', async () => {
     await capture.agentShot('fsa06-05-claude-approval', {
       ...approvalRun('claude', /requests your input|Do you want to proceed/i),
       declineWaitFor: DECLINED, declineId: 'fsa06-09-claude-declined',
-    });
-  });
-
-  if (shouldRunStep('fsa06-06-codex-approval')) await test.step('fsa06-06-codex-approval', async () => {
-    await capture.agentShot('fsa06-06-codex-approval', {
-      ...approvalRun('codex', /Approve this change|Do you want to proceed/i),
-      stableMs: 30_000, timeoutMs: 90_000,
-      declineWaitFor: DECLINED, declineId: 'fsa06-10-codex-declined',
     });
   });
 
@@ -91,11 +91,180 @@ test('chapter 6 - map the box', async ({ local, capture }) => {
   test.skip(process.env.SPEND_AI !== '1', 'agent turn: set SPEND_AI=1');
   if (shouldRunStep('fsa06-11-map-the-box')) await test.step('fsa06-11-map-the-box', async () => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    const screen = await agentTurn(agent, promptFor('06-setup-agent', '04-map-the-box'), { timeoutMs: 10 * 60 * 1000 });
-    await capture.screen('fsa06-11-map-the-box', screen, agentScreen());
+    const screen = await agentTurn(agent, promptFor('06-setup-agent', '04-map-the-box'), { timeoutMs: 5 * 60 * 1000 });
+    // Check BEFORE capturing, so a failed run never lands a PNG in content/.
     expect(screen).toMatch(/8\.\d+\.\d+/);
     expect(screen).toMatch(/MCP/);
     // Read-only: the agent must not have asked to change anything.
     expect(screen).not.toMatch(/Do you want to proceed|approve this/i);
+    await capture.screen('fsa06-11-map-the-box', screen, agentScreen());
   });
 });
+
+// Page 02 s5: first contact in Claude Code, the same prompt the Codex step uses.
+test('chapter 6 - claude whoami', async ({ local, capture }) => {
+  test.setTimeout(8 * 60 * 1000);
+  test.skip(process.env.SPEND_AI !== '1', 'agent turn: set SPEND_AI=1');
+  if (shouldRunStep('fsa06-04-whoami-claude')) await test.step('fsa06-04-whoami-claude', async () => {
+    const who = boxIdentity();
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const screen = await agentTurn(agent, promptFor('06-setup-agent', '02-wire-the-agent'), { timeoutMs: 5 * 60 * 1000 });
+    const plain = screen.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ');
+    // Effect: the agent really called whoami and names the box's own login and version.
+    expect(plain).toMatch(/whoami/i);
+    expect(plain).toContain(who.loginid);
+    expect(plain).toMatch(/8\.\d+\.\d+/);
+    expect(plain).not.toMatch(/Do you want to proceed|approve this/i);
+    await capture.screen('fsa06-04-whoami-claude', screen, agentScreen());
+  });
+});
+
+// Page 02 s3: the MCP check. Start the agent against the box (no prompt, so no
+// model turn), type /mcp, and capture the server list with fortisoar connected.
+test('chapter 6 - agent init', async ({ local, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (shouldRunStep('fsa06-03-agent-init')) await test.step('fsa06-03-agent-init', async () => {
+    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    agent.type('/mcp');
+    agent.enter();
+    await agent.waitFor(/fortisoar/i, { timeoutMs: 120_000 });
+    await agent.waitIdle({ quietMs: 2_500, timeoutMs: 60_000 });
+    await capture.screen('fsa06-03-agent-init', agent.screen(), agentScreen());
+  });
+});
+
+// Page 02 s2 and s3, Claude Code tab: the toolkit's init output and the MCP check
+// in a shell. Both are plain commands in a pty, so no model turn and no tokens.
+// The init command reads the password from FSR_PASSWORD (never argv), and the
+// shot masks it to the page's placeholder. The mcp list runs in a throwaway folder
+// with an isolated CLAUDE_CONFIG_DIR, so a user-level fortisoar server cannot
+// shadow the project file the page tells the student to save.
+test('chapter 6 - install and check', async ({ capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  const login = pyfsrEnv().FSR_USERNAME ?? '';
+  if (shouldRunStep('fsa06-02-init-output')) await test.step('fsa06-02-init-output', async () => {
+    await shellShot(capture, 'fsa06-02-init-output', {
+      command: `fsr-agentic-toolkit init --url ${boxHost()} --username '${login}' --no-verify-ssl --readonly`,
+      secrets: [['FSR_PASSWORD', '<your-password>']],
+      // The connected line, then the Claude Code snippet up to its closing brace.
+      from: /^connected: /,
+      to: /^\}\s*$/,
+      // Checked on the masked output: the login connected and the password is the placeholder.
+      expect: [/^connected: agentlab </m, /"FSR_PASSWORD": "<your-password>"/],
+    });
+  });
+
+  if (shouldRunStep('fsa06-03-claude-mcp-list')) await test.step('fsa06-03-claude-mcp-list', async () => {
+    const folder = process.env.FSA_MCP_FOLDER || path.join(os.tmpdir(), 'fsa-workshop', 'mcp-folder');
+    const isolated = path.join(folder, 'claude-config');
+    // A clean folder each run: the saved .mcp.json and an empty Claude config dir.
+    fs.rmSync(folder, { recursive: true, force: true });
+    fs.mkdirSync(isolated, { recursive: true });
+    writeClaudeMcpJson(folder);
+    await shellShot(capture, 'fsa06-03-claude-mcp-list', {
+      command: 'claude mcp list',
+      cwd: folder,
+      env: { CLAUDE_CONFIG_DIR: isolated },
+      timeoutMs: 3 * 60 * 1000,
+      // The line the page says a good file shows.
+      expect: [/fortisoar[^\n]*Pending approval/],
+    });
+  });
+});
+
+// --- Codex (page 02 Codex tab, page 03 Codex tab) -------------------------------
+// Driven through docubot's Codex driver on the student's own config.toml (an
+// isolated CODEX_HOME, see lib/agentlab.ts startCodex). Each turn spends tokens, so
+// the group rides SPEND_AI. A capture is written only after its effect check passes.
+const APPROVAL_NAME = 'Approval test';
+const APPROVAL_STAGE = /Allow the \S+ MCP server to run tool|Approve this change/;
+
+test.describe('chapter 6 - codex', () => {
+  test.skip(process.env.SPEND_AI !== '1', 'codex turns: set SPEND_AI=1');
+  test.setTimeout(20 * 60 * 1000);
+
+  test('chapter 6 - codex first contact', async ({ capture }) => {
+    if (shouldRunStep('fsa06-12-codex-mcp-list')) await test.step('fsa06-12-codex-mcp-list', async () => {
+      // Page 02 Codex tab, step 2: a SHELL check, not inside codex.
+      // Wide enough that the table does not wrap its row.
+      const sh = await codexShell('codex-mcp-list', { cols: 170, rows: 30 });
+      try {
+        await sh.waitFor(/student@laptop:~\/agent-lab\$ /, { timeoutMs: 30_000 });
+        // Clear the shell's login notice so the shot starts at the command.
+        sh.send('clear');
+        await sh.waitFor(/^student@laptop:~\/agent-lab\$ \s*$/m, { timeoutMs: 15_000 });
+        sh.type('codex mcp list');
+        await sh.waitFor(/codex mcp list/, { timeoutMs: 15_000 });
+        sh.enter();
+        await sh.waitFor(/fortisoar/, { timeoutMs: 60_000 });
+        await sh.waitIdle({ quietMs: 2_000, timeoutMs: 60_000 });
+        // Effect: the fortisoar row reads enabled (the Status column).
+        expect(sh.plainScreen()).toMatch(/fortisoar[\s\S]{0,400}?\benabled\b/);
+        await capture.screen('fsa06-12-codex-mcp-list', sh.screen(), codexScreen());
+      } finally {
+        sh.kill();
+      }
+    });
+
+    if (shouldRunStep('fsa06-13-codex-whoami')) await test.step('fsa06-13-codex-whoami', async () => {
+      const who = boxIdentity();
+      const session = await startCodex('codex-whoami');
+      try {
+        const screen = await session.turn(promptFor('06-setup-agent', '02-wire-the-agent'), { timeoutMs: 10 * 60 * 1000 });
+        const plain = session.plainScreen();
+        // Effect: the answer names the login the box reports and the box version.
+        expect(plain).toContain(who.loginid);
+        expect(plain).toMatch(/8\.\d+\.\d+/);
+        // Read-only: nothing was asked to be approved.
+        expect(plain).not.toMatch(APPROVAL_STAGE);
+        await capture.screen('fsa06-13-codex-whoami', screen, codexScreen());
+      } finally {
+        session.kill();
+      }
+    });
+  });
+
+  test('chapter 6 - codex approval', async ({ capture }) => {
+    test.setTimeout(20 * 60 * 1000);
+    const prompt = promptFor('06-setup-agent', '03-approve-every-write');
+
+    if (shouldRunStep('fsa06-06-codex-approval')) await test.step('fsa06-06-codex-approval', async () => {
+      labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
+      const session = await startCodex('codex-approve');
+      try {
+        // Stage 1 is codex's own MCP prompt; allowing it reveals the toolkit's form.
+        await session.promptUntil(prompt, APPROVAL_STAGE, { timeoutMs: 4 * 60 * 1000 });
+        await session.answer('approve');
+        await session.waitFor(/Approve this change/, { timeoutMs: 2 * 60 * 1000 });
+        // Shot: the paused approval form (box, tool, arguments, True/False).
+        const paused = session.screen();
+        expect(session.plainScreen()).toMatch(/1\. True/);
+        await session.answer('approve');
+        await session.waitFor(/Worked for \d+s/, { timeoutMs: 4 * 60 * 1000 });
+        // Effect: the approved write landed.
+        expect(alertsNamed(APPROVAL_NAME).length).toBe(1);
+        await capture.screen('fsa06-06-codex-approval', paused, codexScreen());
+      } finally {
+        session.kill();
+        labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
+      }
+    });
+
+    if (shouldRunStep('fsa06-10-codex-declined')) await test.step('fsa06-10-codex-declined', async () => {
+      labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
+      const session = await startCodex('codex-decline');
+      try {
+        await session.promptUntil(prompt, APPROVAL_STAGE, { timeoutMs: 4 * 60 * 1000 });
+        await session.answer('decline');
+        await session.waitFor(/Worked for \d+s/, { timeoutMs: 4 * 60 * 1000 });
+        // Effect: the declined write created nothing, and the agent says so.
+        expect(alertsNamed(APPROVAL_NAME).length).toBe(0);
+        expect(session.plainScreen()).toMatch(/not created|wasn.t created|cancel/i);
+        await capture.screen('fsa06-10-codex-declined', session.screen(), codexScreen());
+      } finally {
+        session.kill();
+      }
+    });
+  });
+});
+

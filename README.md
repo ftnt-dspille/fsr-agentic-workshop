@@ -9,7 +9,7 @@ investigations that work into playbooks that run on their own.
 - Two tracks, native and DIY, share one safety model. Chapter 1 explains both.
 - Part 1 (chapters 2-5): agentic foundations, investigation insights, building your
   own agent, registering MCP servers.
-- Part 2 (chapters 6-11): setting up the agent, users, modules and records,
+- Part 2 (chapters 6-11): setting up the agent, alerts, modules and records,
   playbooks, connectors, a capstone investigation, and reference.
 
 This repo is a standalone Hugo site built from the TEC builder template
@@ -60,9 +60,11 @@ is meant to be run by the lab owner, never by CI.
 
 ## Credits
 
-Part 1 topics draw on the FortiSOAR AgenticAI Demo workshop (Fortinet internal),
-which is prior art for the agentic foundations, investigation and DIY agent
-material.
+Part 1 topics draw on the FortiSOAR Agentic AI Demo workshop by Mahdi Naili, the
+original agentic workshop for FortiSOAR and prior art for the agentic
+foundations, investigation and DIY agent material. The Remote FortiSOAR
+connector build with **Invoke AI Agent** (chapter 4) is by Mahdi Naili and
+Priyank Mankad.
 
 ## Layout
 

@@ -5,17 +5,15 @@ weight: 17
 description: "Give the agent a reference to an API key instead of the key itself, so the secret never enters the chat."
 ---
 
-Most connectors need a credential: an API key, a password, a token. The obvious way to configure one from a chat is to paste the key into the prompt. Don't. Anything you type to the agent goes to the model provider, lands in your session history and transcripts, and can be repeated back in a later answer. A key pasted once is a key you should treat as leaked.
-
-`setup_connector` removes the need. You tell the agent *where* the key lives, never *what* it is. The toolkit reads the value inside its own process and sends it straight to FortiSOAR.
+Most connectors need a credential, such as an API key. Do not paste the key into the chat. Anything you type to the agent goes to the model provider and stays in your session history. Instead, give the agent the name of an environment variable that holds the key. The tool reads the value itself and sends it straight to FortiSOAR.
 
 {{% notice warning %}}
-If you ever paste a real key into a prompt, rotate it. Removing it from the chat does not remove it from logs.
+If you paste a real key into a prompt by mistake, rotate it. Deleting the message does not remove the key from logs.
 {{% /notice %}}
 
 ## 1. Put the secret where the server can read it
 
-Secrets are passed by reference. The simplest reference is an environment variable on the machine that runs the MCP server. Add it to the `env` block of the server entry you created in chapter 6, using the name `FSR_SECRET_<CONNECTOR>__<FIELD>`, for example `FSR_SECRET_VIRUSTOTAL__API_KEY` for the `virustotal` connector:
+Add the key to the `env` block of the MCP server entry you made in chapter 6. The name has this form: `FSR_SECRET_`, then the connector name, two underscores, and the field name. For VirusTotal the name is `FSR_SECRET_VIRUSTOTAL__API_KEY`:
 
 ```json
 "env": {
@@ -25,13 +23,12 @@ Secrets are passed by reference. The simplest reference is an environment variab
 
 Restart the agent so the server picks it up.
 
-Four rules are enforced by the tool, not by good manners:
+The tool enforces these rules:
 
-- **Only `FSR_SECRET_*` names resolve.** The agent cannot ask for `AWS_SECRET_ACCESS_KEY` or any other variable of your machine to be copied into a connector.
-- **A key works only for its own connector.** The variable name must carry the connector name followed by two underscores, so a key you set up for virustotal cannot be pointed at a different connector. Files follow the same rule: put them under a folder named for the connector, such as `virustotal/api_key`.
-- **Files must live in one folder.** `{"file": "virustotal/api_key"}` reads a file inside the folder named by `FSR_SECRETS_DIR` and nothing outside it. Leave the variable unset and file references are simply off.
-- **You can pin where keys may be sent.** Set `FSR_SECRET_ALLOWED_HOSTS` (comma-separated host names, subdomains included) in the same `env` block and every field that looks like a URL or host name must name one of those hosts, or the call is refused. Values the tool cannot read with certainty (for example a link with `user@` in it) are refused too. Leave it unset and the destination host is still reported in the result and shown in the approval prompt, so check it before you approve.
-- **Installing needs a second yes.** If the connector is missing, `install: true` is refused until the call also carries `confirm_install: true`, because an install puts third-party code on the box. The agent should tell you what it will install first.
+- **Only `FSR_SECRET_*` names resolve.** The agent cannot copy any other variable from your machine.
+- **A key works only for its own connector.** `FSR_SECRET_VIRUSTOTAL__API_KEY` cannot be used for another connector.
+- **You can limit where keys go.** Optionally, add `FSR_SECRET_ALLOWED_HOSTS` (comma-separated host names) to the same `env` block. A field that names a host must then use one of those hosts, or the call is refused. Without it, the tool shows the destination host in the approval prompt. Check that host before you approve.
+- **Installing needs a second yes.** If the connector is missing, `install: true` is refused until the call also carries `confirm_install: true`. An install puts third-party code on the box, so the agent must tell you what it will install first.
 
 ## 2. Ask the agent
 
@@ -44,7 +41,7 @@ environment variable FSR_SECRET_VIRUSTOTAL__API_KEY: pass it as a reference, do 
 the value. Check it first with check_only, then write it and run the healthcheck.
 ```
 
-The call the agent makes looks like this. Notice there is no key in it:
+The call the agent makes looks like this. There is no key in it:
 
 ```json
 {
@@ -57,8 +54,8 @@ The call the agent makes looks like this. Notice there is no key in it:
 
 **You are done when:**
 
-- The `check_only` call answers that it is ready to create the configuration and that one secret resolved, naming `env FSR_SECRET_VIRUSTOTAL__API_KEY` as its source and never its value.
-- The write reports the configuration was created and the healthcheck says `Available`.
+- The `check_only` call says the configuration is ready to create, and one secret resolved. It names the environment variable as the source, never the value.
+- The write reports that the configuration was created, and the healthcheck says `Available`.
 - Nothing in the reply, the findings or the transcript contains the key.
 
 <!-- step: fsa09-08-configure-safely -->
@@ -66,39 +63,36 @@ The call the agent makes looks like this. Notice there is no key in it:
 <!-- capture: fsa09-08-configure-safely -->
 ![fsa09-08-configure-safely](fsa09-08-configure-safely.png?height=600px)
 
-**Verify in the UI:** open the connector's **Configurations** and find "Lab". The API key field shows as a masked password.
+**Verify in the UI:** open the connector's **Configurations** and find "Lab". The API key shows as a write-only **Set API Key** link. The value is never displayed, not even masked.
 
-## 3. Try to break it
+<!-- capture: fsa09-08-configure-safely-masked-key -->
+![fsa09-08-configure-safely-masked-key](fsa09-08-configure-safely-masked-key.png?height=600px)
 
-These are worth running once so you trust the guard:
+## 3. Optional: try to break it
+
+Run these once to see the guards work:
 
 | You ask the agent to | What happens |
 |---|---|
-| Put the key in `fields` as a plain value | Refused. The reply says it is a secret field and how to pass a reference. The value you typed is not repeated. |
-| Use `{"env": "HOME"}` or any name without the `FSR_SECRET_` prefix | Refused, with the prefix rule. |
-| Use another connector's key, such as `FSR_SECRET_JIRA__TOKEN` for virustotal | Refused: the key is not bound to that connector. |
-| Point the connector at a host you did not list in `FSR_SECRET_ALLOWED_HOSTS` | Refused before any secret is read. |
-| Use a variable that is not set | Blocked, telling you to add it to the server's `env` block and restart. |
-| Use `{"file": "../../etc/passwd"}` | Refused. A file reference cannot leave `FSR_SECRETS_DIR`. |
+| Put the key in `fields` as a plain value | Refused. The reply says it is a secret field and shows how to pass a reference. The value is not repeated. |
+| Use `{"env": "HOME"}`, or any name without the `FSR_SECRET_` prefix | Refused, with the prefix rule. |
+| Use another connector's key, such as `FSR_SECRET_JIRA__TOKEN` for virustotal | Refused. The key is not bound to that connector. |
 | Configure with a wrong key | The configuration is saved, the healthcheck reports `Disconnected` with the service's message, and the status is `partial`. The wrong key is not shown. |
-| Reuse a configuration name that exists | It is overwritten, and the result says so in plain words. |
 
 ## 4. Standing rules for your agent
 
-1. **Never ask a user for a key.** Ask which environment variable holds it.
-2. **Run `check_only` first.** It resolves the references and validates the field names without writing anything.
-3. **Do not use `create_connector_configuration`, `update_connector_configuration` or `upsert_connector_configuration` for credentials.** Their descriptions say so, but they accept raw values; `setup_connector` is the safe path.
-4. **Treat `partial` as not done.** A saved configuration that fails its healthcheck is not working.
+1. Never ask a user for a key. Ask which environment variable holds it.
+2. Run `check_only` first. It checks the references without writing anything.
+3. Do not use `create_connector_configuration`, `update_connector_configuration` or `upsert_connector_configuration` for credentials. They accept raw values. Use `setup_connector`.
+4. Treat `partial` as not done. A saved configuration that fails its healthcheck is not working.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| "is not set in the environment of the server process" | The variable is not in the MCP server's `env` block, or the agent was not restarted | Add it, restart the agent |
-| "must name a variable starting with FSR_SECRET_" | The variable has another name | Rename it, or set a second one with the prefix |
-| "is not bound to 'virustotal'" | The variable or file is named for a different connector | Rename it `FSR_SECRET_VIRUSTOTAL__<FIELD>`, or move the file under `virustotal/` |
-| "needs confirm_install=true" | The connector is not installed and the call did not confirm the install | Agree to the install, then have the agent repeat the call with `confirm_install: true` |
-| "file references are off" | `FSR_SECRETS_DIR` is not set | Set it, or use an environment variable |
-| "could not read the configuration schema" | The appliance was busy, or that connector version is not installed | Retry in a moment; add `install: true` if it is missing |
-| "has no field 'X' - did you mean 'Y'?" | A field name typo | Use the suggested name |
-| Healthcheck `Disconnected` | Wrong URL, wrong key, or no network path to the service | Fix the value at its source, then re-run; the key never has to be retyped into the chat |
+| "is not set in the environment of the server process" | The variable is not in the MCP server's `env` block, or the agent was not restarted | Add it to the `env` block, then restart the agent |
+| "must name a variable starting with FSR_SECRET_" | The variable has another name | Rename it to start with `FSR_SECRET_` |
+| "is not bound to 'virustotal'" | The variable is named for a different connector | Rename it to `FSR_SECRET_VIRUSTOTAL__<FIELD>` |
+| "needs confirm_install=true" | The connector is not installed, and the call did not confirm the install | Agree to the install, then have the agent repeat the call with `confirm_install: true` |
+| "could not read the configuration schema" | The appliance was busy, or that connector version is not installed | Retry in a moment. Add `install: true` if the connector is missing |
+| Healthcheck `Disconnected` | Wrong URL, wrong key, or no network path to the service | Fix the value at its source, then run the healthcheck again. The key never has to be retyped into the chat |

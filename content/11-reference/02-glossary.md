@@ -22,8 +22,8 @@ two other meanings under *Overloaded words* below).
 
 **MCP (Model Context Protocol).** The plug standard between agents and tools. A
 *server* advertises its tools with typed schemas; a *client* lists them, picks
-one, sends inputs, and reads the result. The agent product (Claude Code, OpenCode,
-Copilot) does not need to know anything about FortiSOAR: it just sees tools like
+one, sends inputs, and reads the result. The agent product (Claude Code, Codex or
+OpenCode) does not need to know anything about FortiSOAR: it just sees tools like
 `search_records` and reads their descriptions.
 
 **MCP server.** A small program that exposes a set of tools over MCP. Which side
@@ -85,8 +85,9 @@ it.
 Higher-tier (mutating) tools pause for a human to approve. This is Part 1's
 native equivalent of the confirm gate.
 
-**Staging.** Proposing an action and holding it for approval rather than running
-it immediately.
+**Staging.** Two meanings in this course. A new module's schema waits in staging
+until one appliance-wide publish makes it live (chapter 7). Chapter 10 also uses
+"staging" as the name of a lab box, next to "production".
 
 ## Part 2: the agent toolkit
 
@@ -94,19 +95,19 @@ it immediately.
 instance handling. No agent code of its own.
 
 **fsr-agentic-toolkit.** The package you install in Part 2. It builds on pyfsr and
-adds the agent layer: the verbs plus seven ready-made **workflows**, served as an
+adds the agent layer: the verbs plus ten ready-made **workflows**, served as an
 MCP server, a CLI, and a Python API. Its MCP server runs on your laptop, your
 coding agent starts it, and it translates the agent's tool calls into FortiSOAR
 REST calls (it needs the box URL and a user login). It is what makes a
 general coding agent competent on FortiSOAR, and it is the heart of Part 2. This
 is the one name the chapters use; you do not install a separate MCP server.
 
-**Workflow (toolkit).** One of the seven higher-level operations the toolkit
-ships: `orient`, `debug_run`, `repair_playbook`, `build_playbook`,
-`verify_effect`, `investigate_alert`, `provision_module`. Each returns a
-**WorkflowResult** (findings with evidence ids, unknowns, and next steps with
-their tier), and you compose them: provision a module, build a playbook on it,
-verify the effect.
+**Workflow (toolkit).** A higher-level operation the toolkit runs in one call.
+Examples: `survey_box`, `provision_module`, `build_playbook`,
+`debug_playbook_run`, `repair_playbook`, `run_playbook_yaml`, `verify_write` and
+`investigate_alert`. Each returns a **WorkflowResult**: findings with evidence,
+unknowns, and next steps with their tier. You chain them: provision a module,
+build a playbook on it, then verify the result.
 
 **Skill (Part 2).** A Claude Code concept: a packaged set of instructions for a
 kind of task. Unrelated to a Part 1 "skill". When an agent run shows
@@ -130,7 +131,7 @@ field live), **playbook publish** (activating a playbook), and **Content Hub
 publish** (making installed content available).
 
 **"Agent"** in Part 1 is a code bundle that runs on the appliance (a FortiAI
-agent); in Part 2 it is your coding agent (Claude Code, OpenCode, Copilot) on your
+agent); in Part 2 it is your coding agent (Claude Code, Codex or OpenCode) on your
 laptop.
 
 ## Acronyms
@@ -138,7 +139,7 @@ laptop.
 - **IOC** - Indicator of Compromise: an observable (an IP, a hash, a domain) that
   suggests malicious activity.
 - **IRI** - the stable id the FortiSOAR API uses for a record or picklist value
-  (it looks like a path, for example `/api/3/picklists/...`).
+  (it looks like a path, for example `/api/3/picklists/<id>`).
 - **HMAC** - a signed service-to-service call with no interactive user login.
   Investigations should not be started this way.
 - **Idempotent** - safe to run more than once: running it again does not create a

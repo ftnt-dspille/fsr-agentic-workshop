@@ -2,124 +2,67 @@
 title: MCP and Server Registration
 linkTitle: MCP and Registration
 weight: 10
-description: "What an MCP server is, how FortiSOAR uses one, and how to register an external server safely: validate, persist, then check its status."
+description: "Register an external MCP server with FortiSOAR: fill in the form, test the connection, save, then check its status."
 ---
 
-The Model Context Protocol (MCP) is how an agent reaches tools that live outside it. A server exposes named tools. A client calls them over JSON-RPC, and the server describes each tool's input schema so the model knows how to call it. FortiSOAR gives agents access to MCP servers in three ways, and this page covers how you register one of them.
+The Model Context Protocol (MCP) is how an agent calls tools that live outside it. A server lists its tools, and the agent calls them by name. FortiSOAR agents can use three kinds of MCP server. This chapter registers an external one: a server that another product or person runs, which you add to FortiSOAR by its URL.
 
 ## 1. Know the three kinds of server
 
-Agents reach tools through one open standard, and only the servers you assign. The three kinds differ in where the server lives and who builds it.
-
 ![Three kinds of MCP server: native FortiSOAR MCP (built in, no setup, records, modules, SOC framework and playbooks), external MCP servers (register any server with an auth type, for example FortiSIEM incidents, assigned per agent) and connector-based MCP (turn any installed connector into a server where each action becomes a tool)](diagram-mcp-three-types.png)
 
+The three kinds are the built-in FortiSOAR servers, external servers that you register, and connector-based servers built from installed connectors. This chapter registers an external server.
 
-| Kind | What it is | Who makes it |
-|---|---|---|
-| Built-in | Four families that ship with FortiSOAR: module management (records), utility tools, SOC framework (alert and indicator tools), and playbook management (run and status) | FortiSOAR |
-| External | A remote MCP server that another product hosts, registered with FortiSOAR by its URL. The flagship case: FortiSIEM hosts an MCP endpoint, you register it once, and FortiSOAR agents can query SIEM incidents, reputation and inventory as tools. Any server you run yourself registers the same way - including one running on the FortiSOAR CLI itself on a local port. | The other product, or you |
-| Connector-based | A server built from installed connector operations. Each selected operation becomes one tool, and its inputs are nested under one `params` object. | FortiSOAR, from your choices |
+## 2. Choose the transport and authentication
 
-If you have a FortiSIEM in your lab, register its MCP endpoint as this chapter's external server: it is the realistic production shape (a vendor-hosted remote server with `oauth2` authentication, where the token refreshes itself). The next page's lab server exists for classes without one.
+- **Transport Type:** `http`. It is the only option on this build.
+- **Authentication Type:** `None` for DeepWiki, a public server with no credentials. Other types are for servers that need a token or an OAuth login. Pick the type your server documents.
 
-Five system connectors can never become MCP tools. An MCP tool has no built-in notion of read-only or destructive, so the approval for any write belongs in a playbook with a manual-input step, not in the tool.
+If a server needs a token, paste it into the form only. Never put a token in a file you commit.
 
-## 2. Pick a transport and an authentication type
-
-Use HTTP, meaning streamable HTTP, for every server in this workshop. The `sse` transport is older, and `stdio` runs only a short list of allowlisted commands, so it is not a good fit for a lab server.
-
-| Authentication type | What the call sends | Use it for |
-|---|---|---|
-| `none` | No header | A trusted lab server only |
-| `bearer` | `Authorization: Bearer` with your token | A static token that your server issues |
-| `api_key` | A named header with your key | Servers that use an `X-API-Key` style header |
-| `basic` | Basic authentication | Legacy servers |
-| `custom` | An arbitrary header map | When nothing else fits |
-| `fsr` | The caller's own FortiSOAR token | Servers that check FortiSOAR tokens themselves |
-| `oauth2` | An OAuth flow | Vendor services that require it |
-
-On the build this page was checked against, the **Connect New MCP Server** form offers only the `http` transport. Once you choose it, a required **Auth Type** select appears, and the form will not validate until you pick a value. Choose **None** for a public server such as DeepWiki. The table above and the rule in section 3 describe the stored record, so check the list of types against your build.
-
-The `fsr` type passes the caller's own FortiSOAR token through, as the built-in servers do. A static token gives every call the same identity, so one shared token means one shared identity. Choose the type with that trade-off in mind.
-
-## 3. Read the JSON-string rule first
-
-{{% notice warning %}}
-The `authentication` field must be sent as a JSON string, not as a JSON object. If you send an object, the platform stores the text `Array` in its place. Then the status route fails for every registered MCP server, not just the one you got wrong. Serialize the authentication value to a string before you send the record.
-{{% /notice %}}
-
-The pattern looks like this. The inner keys shown are illustrative. Match the shape your build expects.
-
-```json
-{
-  "name": "weather-lab",
-  "type": "external",
-  "transport": "http",
-  "url": "https://mcp.example.com/mcp/",
-  "active": true,
-  "authentication": "<the same JSON, sent as a string>"
-}
-```
-
-Wrong, because the value is an object:
-
-```json
-"authentication": {"type": "bearer", "token": "<your-bearer-token>"}
-```
-
-Right, because the value is the same JSON, serialized as a string:
-
-```json
-"authentication": "{\"type\": \"bearer\", \"token\": \"<your-bearer-token>\"}"
-```
-
-Never put a real token in a file you commit. Use the placeholder in the workshop and set the real value through the UI or the API, then rotate it after the class.
-
-## 4. Register: validate, persist, then check status
-
-The registration has four steps. Do not skip the first one.
-
-1. **Validate.** Send the server definition to the validation route. The platform connects to the server, lists its tools and returns their names. If validation fails, do not persist.
-2. **Persist.** Save the definition through the MCP configurations route. Note the UUID the platform returns. You need it for every allowlist.
-3. **Check status.** Read the status for the server. A healthy server shows as active with its tools.
-4. **Grant.** Add the server's UUID and the tool names it may use to each agent that should call it. Chapter 5, page 2, covers the grant.
+## 3. Register the server
 
 <!-- step: fsa05-01-validate-register -->
 
-Open **AI Configurations** > **MCP Servers**. Click **Connect MCP Server**. The panel asks for a server name, an optional description, a transport type (HTTP is the only option on this build), and the URL. After you choose HTTP, a required **Auth Type** select appears; pick **None** for DeepWiki. The filled form looks like this:
+Open **AI Configurations** > **MCP Servers**, then click **Connect MCP Server**. The form is titled **Connect New MCP Server**. Fill in:
+
+- **Server Name:** `agentlab-deepwiki`
+- **Description:** `Lab: DeepWiki remote server (public, no credentials)`
+- **Transport Type:** `http`
+- **URL:** `https://mcp.deepwiki.com/mcp`
+- **Authentication > Type:** `None`
+
+Leave **Verify SSL** unchecked, as in the picture.
 
 <!-- capture: fsa05-01-validate-register-connect-form -->
 ![fsa05-01-validate-register-connect-form](fsa05-01-validate-register-connect-form.png?height=600px)
 
-Click **Test Connection** first, and read the tool names it returns. Only then click **Save**. The **Create MCP Server** button opens a different dialog with a configuration selector; do not use it for this step.
+1. Click **Test Connection**. It connects to the server and lists the server's tool names.
+2. When **Save** turns on, click **Save**. Save stays off until the test passes.
+
+Do not use **Create MCP Server**. It opens a different dialog, with a configuration selector.
 
 **You are done when**
 
-- Validation returns the server's tool names, and the save returns a UUID.
-- The server appears in the MCP list.
+- The test lists the server's tool names.
+- After you save, `agentlab-deepwiki` appears in the MCP Servers list.
+
+## 4. Check the status
 
 <!-- step: fsa05-02-status-check -->
 
-Check the status of the server you just saved. Then check the status of one built-in server, to confirm the status route still works for everyone.
+In the MCP Servers list, find `agentlab-deepwiki`. The **Active** column shows a green check when a server is healthy. Check that a built-in server, such as **Utility Tools**, also shows a green check.
 
 <!-- capture: fsa05-02-status-check-servers-page -->
 ![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png?height=600px)
 
 **You are done when**
 
-- Your server reports active, with its tools.
-- A built-in server still reports its status normally.
-
-If the status route fails for every server after you save, see the first row of the troubleshooting table.
+- `agentlab-deepwiki` shows a green check in the Active column.
+- The built-in servers still show a green check.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Status route fails for every server | One row has `authentication` stored as an object, or as the text `Array` | Rewrite that row's `authentication` as a JSON string, then check status again |
-| Validation says it cannot connect | Wrong URL, the server is down, or the certificate is not trusted | Check the URL, check that the server is up, and ask the administrator about the trust store for self-signed certificates |
-| Validation returns no tools | The server does not list tools, or the request is missing headers | Check the server's handshake, covered in chapter 5, page 2 |
-| Server is saved but agents cannot use it | No allowlist entry in any agent | Grant the server to the agent with the tool names it may use |
-| Authentication error on every call | Wrong token, or the wrong authentication type | Check the type and the token. Do not put the token in a shared file. |
-| Edited the database directly, now unreadable | The authentication column is encrypted by the platform's layer | Always write the record through the API or the UI |
-
+| Test Connection says it cannot connect | The URL is wrong, or the box cannot reach the server | Check the URL. The box, not your laptop, makes this call. Check the appliance's proxy settings. |

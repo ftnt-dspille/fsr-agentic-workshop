@@ -2,13 +2,13 @@
 title: Create a Custom Module
 linkTitle: Custom Module
 weight: 20
-description: "Have the agent design and publish a custom module with fields, picklists and permissions."
+description: "Have the agent design and publish a custom module with fields, a picklist and permissions."
 ---
 
-Now a schema change: a custom module for lab assets. This is also your first meeting with the confirm gate. The bulk triage in the last lab was a tier-2 write, which the agent does once the read-only guard is off. Creating a module is tier-3: it changes schema appliance-wide, so the agent must stop and ask you before it commits. This is the step where verification discipline starts to matter, because module creation is a two-phase operation (staging, then an appliance-wide publish) and a module without role permissions looks created but rejects every record write.
+Now the agent changes the schema. It creates a custom module called `agentlab_assets`. This changes the schema for the whole box, so the agent must ask you before it publishes. A new module without role permissions looks created, but it rejects every record write. So the agent also grants permissions and checks the result.
 
 {{% notice note %}}
-When the agent's first `provision_module` call comes back with `confirmation_required`, it should relay what will change and wait for your yes before retrying with `confirm: true`. If it silently confirmed on its own, tell it to always check with you before a gated call: the gate stops a one-shot accident, but your instructions set the standard for what the agent asks about.
+If the agent confirms the publish without asking you, stop it. Tell it to check with you before any confirmed action.
 {{% /notice %}}
 
 ## 1. Ask the agent
@@ -28,27 +28,27 @@ criticality High, and show me that record.
 <!-- capture: fsa07-02-create-module -->
 ![fsa07-02-create-module](fsa07-02-create-module.png?height=600px)
 
-Expect one workflow call, `provision_module`, that runs the phases below in order. It is confirm-gated because it commits schema changes appliance-wide, so the agent must ask you before confirming.
+The agent makes one workflow call, `provision_module`. The first call returns `confirmation_required`. The agent then shows you what will change and waits for your yes. After that it runs again with `confirm: true`. The workflow then does these steps in order:
 
-1. **Create** the module with the field list - it lands in **staging**.
-2. **Check staging** - the workflow publishes only when nothing but your change is staged. If other changes are staged, or a publish is already running, it stops or waits and says so instead of shipping someone else's work.
-3. **Publish** and wait for the migration to finish. Right after a publish the box can reject record writes for a few seconds; the workflow retries through that window, so the agent does not need to sleep or poll.
+1. **Create** the module with its fields. The module lands in staging.
+2. **Check staging.** The workflow publishes only when your change is the only one staged. If other changes are staged, it stops and tells you.
+3. **Publish** and wait for the migration to finish. For a few seconds after a publish, the box can reject record writes. The workflow retries, so you do not need to wait.
 4. **Grant** the **Full App Permissions** role read, create, update and delete on `agentlab_assets`.
-5. **Verify** that the caller can read the module and create a record in it. The probe record comes back in the result.
+5. **Verify** that the login can read the module and create a record. The test record comes back in the result.
 
-The agent can follow up with `describe_module` to show the five fields.
+The agent can then call `describe_module` to show the five fields.
 
 {{% notice warning %}}
-The workflow's publish ships ALL staged schema changes on the appliance, not just yours. On a shared lab box, check with your neighbors (or your instructor) before letting the agent confirm it.
+The publish ships all staged schema changes on the box, not only yours. On a shared box, check with the other users before you say yes.
 {{% /notice %}}
 
 ## 2. You are done when
 
-- The workflow reports the publish finished and each phase it verified; no manual waiting.
-- `describe_module` lists your five fields with the right types, and the test record comes back with `hostname: build-server-01` and criticality resolved to the High picklist IRI.
-- The key can read `agentlab_assets` after the role grant (the workflow and the spec both check this).
+- The workflow reports that the publish finished, and lists each step it checked.
+- `describe_module` lists the five fields with the right types. The test record has `hostname` `build-server-01` and `criticality` `High`.
+- The login can read `agentlab_assets` after the role grant.
 
-**Verify in the UI:** the new module appears in the left navigation (you may need to reload the browser). Open it; the test record is there.
+**Verify in the UI:** the new module appears in the left navigation. Open it. The test record is there.
 
 <!-- capture: fsa07-02-create-module-ui -->
 ![fsa07-02-create-module-ui](fsa07-02-create-module-ui.png?height=600px)
@@ -57,8 +57,7 @@ The workflow's publish ships ALL staged schema changes on the appliance, not jus
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Record create returns 403 after publish | The role grant did not apply | Ask the agent to rerun the workflow with the role named, or grant it in the UI: Identity & Access Management > Roles > Full App Permissions, read, create, update and delete on the module |
-| Module is not visible to the login after publish | The workflow stopped before publishing because other changes were staged | Read its report, clear or agree on the other staged changes, then rerun it |
-| Publish times out | Busy box; publishes poll a job | Ask the agent to rerun the workflow; check System Configuration > Publish status in the UI |
-| criticality arrives as plain text | Field was created as text, not a picklist binding | Name the Severity picklist in the field spec so it binds; fix an already-created field in the UI (Settings > Application Editor > Modules) |
+| Record create returns 403 after publish | The role grant did not apply | Ask the agent to rerun the workflow and name the role. Or grant it in the UI: **Identity & Access Management** > **Roles** > **Full App Permissions**, with read, create, update and delete on the module. |
+| Module is not visible after publish | The workflow stopped because other changes were staged | Read its report. Agree with the other users on the staged changes, then rerun it. |
+| `criticality` arrives as plain text | The field was created as text, not as a picklist | Name the Severity picklist in the field spec. For a field that already exists, fix it in the UI under **Settings** > **Application Editor** > **Modules**. |
 | Module not in the left nav | Browser cache | Hard-reload the FortiSOAR UI |
