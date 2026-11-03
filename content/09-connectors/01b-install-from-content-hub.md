@@ -65,7 +65,6 @@ This is the call sequence from a recorded run of the prompts above. Your agent's
 > list_connectors {}
 ```
 
-![09-connectors/01b-install-from-content-hub#1](agent-run-01b-install-from-content-hub-1.png)
 
 **Configure and health-check.** It read the expected configuration, which is empty because the connector takes no credentials. It saved an empty `default` configuration and ran the health check, which reported the connector as available.
 
@@ -75,7 +74,6 @@ This is the call sequence from a recorded run of the prompts above. Your agent's
 > healthcheck_connector {"connector": "whois-rdap"}
 ```
 
-![09-connectors/01b-install-from-content-hub#2](agent-run-01b-install-from-content-hub-2.png)
 
 ## Troubleshooting
 

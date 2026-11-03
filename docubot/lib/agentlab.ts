@@ -61,7 +61,7 @@ export function toolkit(name: string, args: Record<string, unknown> = {}): any {
   try {
     stdout = execFileSync(exe, [...pre, 'call', '--json', name, JSON.stringify(args)], {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
       timeout: 12 * 60 * 1000,
     });
@@ -72,6 +72,18 @@ export function toolkit(name: string, args: Record<string, unknown> = {}): any {
           'put the CLI on PATH, or install uv for the uvx fallback. An env setup problem, not a content failure.',
       );
     }
+    // A tool error exits non-zero with {"error": ...} on stdout: raise that
+    // message (e.g. "module 'x' not found"), the same as the exit-0 path below.
+    try {
+      const parsed = JSON.parse(String(err?.stdout ?? ''));
+      if (parsed && parsed.error) throw new Error(`${name}: ${JSON.stringify(parsed.error).slice(0, 500)}`);
+    } catch (e: any) {
+      if (e instanceof Error && e.message.startsWith(`${name}: `)) throw e;
+    }
+    // Say why: the last lines of the toolkit's stderr (a network error, an auth
+    // failure) instead of only "Command failed".
+    const tail = String(err?.stderr ?? '').trim().split('\n').slice(-3).join(' | ');
+    if (tail && err && typeof err.message === 'string') err.message = `${err.message.split('\n')[0]}\n  toolkit stderr: ${tail}`;
     throw err;
   }
   const result = JSON.parse(stdout);
@@ -361,7 +373,7 @@ function toolkitCli(): string {
 export function writeClaudeMcpJson(folder: string): string {
   const env = pyfsrEnv();
   const out = execFileSync(toolkitCli(), [
-    'init', '--url', boxHost(), '--username', env.FSR_USERNAME ?? '', '--no-verify-ssl', '--readonly', '--claude-code',
+    'init', '--url', boxHost(), '--username', env.FSR_USERNAME ?? '', '--no-verify-ssl', '--claude-code',
   ], { encoding: 'utf8', env: { ...env, FSR_SUPPRESS_INSECURE_WARNINGS: 'true' } as NodeJS.ProcessEnv, timeout: 2 * 60 * 1000 });
   const m = /^# \.mcp\.json[^\n]*\n([\s\S]*?\n\})/m.exec(out);
   if (!m) throw new Error('writeClaudeMcpJson: init printed no .mcp.json snippet');

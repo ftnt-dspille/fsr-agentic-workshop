@@ -22,13 +22,10 @@ pip install "fsr-agentic-toolkit==0.2.3"
 Run this command. Leave out `--password`. The toolkit then prompts for the password, so it stays out of your shell history.
 
 ```bash
-fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --readonly
+fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl
 ```
 
-Replace the URL and the login id with yours. The two flags matter here:
-
-- `--no-verify-ssl` trusts the self-signed certificate of a lab box.
-- `--readonly` starts the agent with read-only tools. Chapter 7 tells you how to turn this off.
+Replace the URL and the login id with yours. `--no-verify-ssl` trusts the self-signed certificate of a lab box.
 
 `init` checks the connection, then prints the config snippet for your agent:
 
@@ -48,8 +45,7 @@ connected: agentlab <admin@example.com> @ fortisoar.example.com
         "FSR_USERNAME": "agentlab",
         "FSR_PASSWORD": "<your-password>",
         "FSR_VERIFY_SSL": "false",
-        "FSR_SUPPRESS_INSECURE_WARNINGS": "true",
-        "FSR_MCP_READONLY": "1"
+        "FSR_SUPPRESS_INSECURE_WARNINGS": "true"
       }
     }
   }
@@ -77,7 +73,7 @@ Claude Code reads its MCP servers from `.mcp.json` in the folder where you start
 
    <!-- step: fsa06-03-claude-mcp-list -->
    <!-- capture: fsa06-03-claude-mcp-list -->
-   ![fsa06-03-claude-mcp-list](fsa06-03-claude-mcp-list.png?height=600px)
+   ![fsa06-03-claude-mcp-list](fsa06-03-claude-mcp-list.png)
 
 3. Start `claude` in that folder. Approve the `fortisoar` server when asked.
 4. Type `/mcp`. The `fortisoar` server should show as connected, with its tools listed.
@@ -93,7 +89,7 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
 1. In your shell, run the section 2 command again with `--codex` added. Use your own URL and login id; it prompts for the password.
 
    ```bash
-   fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --readonly --codex
+   fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --codex
    ```
 
    It prompts for your password, checks the login, then prints the Codex config. Your password is written into the `env` table, which is how Codex's copy of the toolkit signs in:
@@ -110,7 +106,6 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
    FSR_PASSWORD = "<your-password>"
    FSR_VERIFY_SSL = "false"
    FSR_SUPPRESS_INSECURE_WARNINGS = "true"
-   FSR_MCP_READONLY = "1"
    ```
 
    Copy both tables into `~/.codex/config.toml`, creating the file if it does not exist. `startup_timeout_sec = 60` is there because a first start can take longer than Codex's 10-second default. The file holds your password, so do not share it or commit it.
@@ -118,7 +113,7 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
 
 <!-- step: fsa06-12-codex-mcp-list -->
 <!-- capture: fsa06-12-codex-mcp-list -->
-![fsa06-12-codex-mcp-list](fsa06-12-codex-mcp-list.png?height=600px)
+![fsa06-12-codex-mcp-list](fsa06-12-codex-mcp-list.png)
 
 3. In the lab folder, start `codex`. If it shows an update prompt, press **Esc** to skip it. Do not press Enter there. Its first choice is "Update now".
 4. In Codex, type `/mcp`. Wait for `fortisoar: connected (N tools)`. Then type `/new` to start a fresh chat. Codex gives a chat the server's tools only when that chat starts.

@@ -18,7 +18,7 @@
 //
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
-import { expect, openPlaybook, openPlaybookLogs, openRecord, test } from 'docubot';
+import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test } from 'docubot';
 import {
   agentScreen, agentTurn, labSeed, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, queryRows, shouldRunStep, startAgent, toolkit,
 } from '../lib/agentlab';
@@ -70,6 +70,9 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     'fsa08-03-trigger-and-verify',
     'fsa08-04-diagnose-run',
     'fsa08-05-run-in-one-call',
+    'fsa08-06-escalate-critical',
+    'fsa08-07-ioc-extract',
+    'fsa08-08-sweep',
   ].some(shouldRunStep)) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
@@ -239,11 +242,10 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     labSeed('delete-prefix', 'alerts', 'name', prefix);
     labSeed('delete-records', 'workflows', 'name', playbook);
   };
+  // Each call site wraps this in a literal test.step(id) so lint can see the step.
   const gallery = async (id: string, n: number, prefix: string, playbook: string, check: () => void) => {
-    if (!shouldRunStep(id)) return;
-    await test.step(id, async () => {
       if (!AGENT) {
-        console.log(`[ch08] ${id} skipped: the agent designs this playbook; set SPEND_AI=1`);
+        skipStep(id, 'the agent designs this playbook; set SPEND_AI=1');
         return;
       }
       fresh(prefix, playbook);
@@ -263,10 +265,9 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
         }
       }
       check();
-    });
   };
 
-  await gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', () => {
+  if (shouldRunStep('fsa08-06-escalate-critical')) await test.step('fsa08-06-escalate-critical', () => gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', () => {
     const rows = alertsLike('Agent Lab crit');
     const crit = rows.filter((r) => /critical/i.test(String(val(r.severity))));
     const low = rows.filter((r) => /low/i.test(String(val(r.severity))));
@@ -274,17 +275,17 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     // A first failed attempt may leave an earlier Critical Open; the agent reports that on screen.
     expect(crit.some((r) => val(r.status) === 'Investigating'), JSON.stringify(rows)).toBe(true);
     expect(low.every((r) => val(r.status) === 'Open')).toBe(true);
-  });
+  }));
 
-  await gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', () => {
+  if (shouldRunStep('fsa08-07-ioc-extract')) await test.step('fsa08-07-ioc-extract', () => gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', () => {
     const rows = alertsLike('Agent Lab ioc');
     expect(rows.some((r) => r.hostIPAddress === '198.51.100.23'), JSON.stringify(rows)).toBe(true);
-  });
+  }));
 
-  await gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', () => {
+  if (shouldRunStep('fsa08-08-sweep')) await test.step('fsa08-08-sweep', () => gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', () => {
     const rows = alertsLike('Agent Lab sweep');
     expect(rows.length).toBe(3);
     expect(rows.every((r) => val(r.status) === 'Closed'), JSON.stringify(rows)).toBe(true);
     expect(playbookRows('Agent Lab Sweep'), 'run_playbook_yaml left the sweep playbook behind').toHaveLength(0);
-  });
+  }));
 });

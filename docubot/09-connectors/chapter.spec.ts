@@ -108,7 +108,12 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
 
     // UI proof the agent's code is a real installed, healthy connector.
     const soar = await gui('soar');
-    await openConnector(soar, new URL(soar.url()).origin, 'AgentLab Dad Joke');
+    // The tile shows the label the agent chose in info.json ("Dad Joke",
+    // "AgentLab Dad Joke", ...), so read it from the box instead of guessing.
+    const listed = JSON.stringify(toolkit('list_connectors', {}));
+    const label = new RegExp(`${DADJOKE} -- (.+?) v\\d`).exec(listed)?.[1];
+    expect(label, `${DADJOKE} is not installed`).toBeTruthy();
+    await openConnector(soar, new URL(soar.url()).origin, label!);
     await capture.shot(soar, 'fsa09-05-run-own-connector');
   });
 

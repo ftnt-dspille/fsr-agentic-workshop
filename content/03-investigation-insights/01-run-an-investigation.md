@@ -31,7 +31,7 @@ The jailbreak check can end a run with a blocked summary, and the run still show
 
 ## 2. Start an investigation
 
-Open the lab alert **Agent Lab - beaconing from web-server-01**. You created it in [Prepare Your Box](../../01-intro/02-prepare-your-box/). If the list shows more than one alert with that name, use the oldest one.
+Open the lab alert **Agent Lab - beaconing from web-server-01**. You created it in [Prepare Your Box](../01-intro/02-prepare-your-box.html). If the list shows more than one alert with that name, use the oldest one.
 
 <!-- step: fsa03-01-investigation-tab -->
 

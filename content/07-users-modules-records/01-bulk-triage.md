@@ -7,17 +7,9 @@ description: "Have the agent find alerts that match a condition and update all o
 
 In the UI, changing a set of records means opening each one. Here the agent finds the matching records with a query, then updates each one. You describe the result, and the agent does the loop.
 
-## Before you start: turn off read-only mode
-
-This is the first chapter that writes to the box. Chapter 6 started the agent in read-only mode, so turn that off first:
-
-1. Open the `fortisoar` entry in your agent's MCP config. For Claude Code, that is `.mcp.json` in your lab folder.
-2. Remove `FSR_MCP_READONLY` from the `env` block, or set it to `0`.
-3. Restart the agent.
-
 ## 1. Ask the agent
 
-The Agent Lab alerts from the earlier chapters are a ready-made batch. Give your agent this prompt:
+The batch is the **Agent Lab** alerts that `lab_setup.py prepare` put on your box ([Prepare Your Box](../01-intro/02-prepare-your-box.html)): six demo alerts and three chapter 3 alerts, all Open unless you changed one. If none show in **Incidents** > **Alerts** with a search for `Agent Lab`, run `prepare` again first. Give your agent this prompt:
 
 ```text
 Find every alert whose name starts with "Agent Lab" and whose status is
@@ -33,7 +25,7 @@ list their names.
 
 The agent makes one `query_records` call to find the batch, then one `update_record` call for each match. It reports the count and the names. Check the count against the grid.
 
-The agent updates records without asking first. Creating a module does ask first, on the next page.
+Each update is a write, so your agent asks you to approve it, as on the approval page in chapter 6. Approve each one.
 
 ## 2. You are done when
 
@@ -47,5 +39,5 @@ The agent updates records without asking first. Creating a module does ask first
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `ToolDisabled: read-only mode` | The read-only guard is still on | Do the steps in "Before you start", then restart the agent |
+| `ToolDisabled: read-only mode` | `FSR_MCP_READONLY=1` is set in the agent's MCP config | Remove it from the `env` block, then restart the agent |
 | The agent updated zero alerts | No Open alert starts with "Agent Lab" | Seed the lab alerts from the earlier chapters, or check that they are Open |

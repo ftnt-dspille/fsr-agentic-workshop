@@ -89,7 +89,6 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 > Bash {"command": "cat operations.py connector.py info.json requirements.txt; git log --oneline -3 -- . ; git ls-files . | head"}
 ```
 
-![09-connectors/02-build-a-connector#1](agent-run-02-build-a-connector-1.png)
 
 **Package, install and configure.** It packaged the connector, installed the `.tgz` with `confirm` set to true, saved a `default` configuration with the server URL, and ran the health check. The health check reported `Available`.
 
@@ -100,7 +99,6 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 > healthcheck_connector {"connector": "agentlab-dadjoke", "config": "<config id>"}
 ```
 
-![09-connectors/02-build-a-connector#2](agent-run-02-build-a-connector-2.png)
 
 **Run it.** It called `get_joke`, and the operation returned a joke with status `Success`.
 
@@ -108,7 +106,6 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 > run_connector_operation {"connector": "agentlab-dadjoke", "operation": "get_joke"}
 ```
 
-![09-connectors/02-build-a-connector#3](agent-run-02-build-a-connector-3.png)
 
 ## Troubleshooting
 

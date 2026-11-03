@@ -301,7 +301,7 @@ test('chapter 5 - curl handshake', async ({ capture }) => {
       ].join('\n\n').split('<protocol-version-your-sdk-supports>').join(version);
       fs.writeFileSync(path.join(dir, 'handshake.sh'), script + '\n', { mode: 0o600 });
 
-      await shellShot(capture, 'fsa05-06-curl-handshake', {
+      await shellShot(capture, 'fsa05-06-handshake-curl', {
         command: 'bash -v handshake.sh',
         cwd: dir,
         from: /^# 1\. initialize/,

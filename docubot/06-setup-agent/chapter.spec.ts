@@ -78,7 +78,10 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
   // OpenCode's write-approval prompt, one try: its MCP tools did not reliably surface
   // headless before, so a miss here is reported, not worked around.
   if (shouldRunStep('fsa06-07-opencode-approval')) await test.step('fsa06-07-opencode-approval', async () => {
-    await capture.agentShot('fsa06-07-opencode-approval', approvalRun('opencode', /is requesting input/i));
+    // Same pinned model as fsa06-08: the user's default tier thinks longer and varies.
+    await capture.agentShot('fsa06-07-opencode-approval', {
+      ...approvalRun('opencode', /is requesting input/i), model: 'frank/coding-b200/eco', timeoutMs: 180_000,
+    });
   });
 
   if (shouldRunStep('fsa06-08-opencode-setup')) await test.step('fsa06-08-opencode-setup', async () => {
@@ -150,7 +153,7 @@ test('chapter 6 - install and check', async ({ capture }) => {
   const login = pyfsrEnv().FSR_USERNAME ?? '';
   if (shouldRunStep('fsa06-02-init-output')) await test.step('fsa06-02-init-output', async () => {
     await shellShot(capture, 'fsa06-02-init-output', {
-      command: `fsr-agentic-toolkit init --url ${boxHost()} --username '${login}' --no-verify-ssl --readonly`,
+      command: `fsr-agentic-toolkit init --url ${boxHost()} --username '${login}' --no-verify-ssl`,
       secrets: [['FSR_PASSWORD', '<your-password>']],
       // The connected line, then the Claude Code snippet up to its closing brace.
       from: /^connected: /,
@@ -176,6 +179,22 @@ test('chapter 6 - install and check', async ({ capture }) => {
       expect: [/fortisoar[^\n]*Pending approval/],
     });
   });
+});
+
+// Page 01a: each agent's version check, the "it installed" proof the page asks
+// for. Local commands only; nothing touches the box and no tokens are spent.
+test('chapter 6 - install a coding agent', async ({ capture }) => {
+  test.setTimeout(5 * 60 * 1000);
+  const checks: Array<[string, string, RegExp]> = [
+    ['fsa06-01a-claude-version', 'claude --version', /\d+\.\d+\.\d+.*Claude Code/i],
+    ['fsa06-01a-codex-version', 'codex --version', /codex-cli \d+\.\d+/i],
+    ['fsa06-01a-opencode-version', 'opencode --version', /opencode v?\d+\.\d+\.\d+/i],
+  ];
+  for (const [id, command, version] of checks) {
+    if (shouldRunStep(id)) await test.step(id, async () => {
+      await shellShot(capture, id, { command, cols: 100, timeoutMs: 60_000, expect: [version] });
+    });
+  }
 });
 
 // Page 01 s1-2, the user form's roles: the workshop login's existing record, opened

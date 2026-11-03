@@ -97,8 +97,8 @@ curl -s -X POST http://localhost:8000/mcp \
 - The tools list includes `get_forecast` with its input schema.
 - The `tools/call` response returns the envelope with the Sunnyvale forecast.
 
-<!-- capture: fsa05-06-curl-handshake -->
-![fsa05-06-curl-handshake](fsa05-06-curl-handshake.png?height=600px)
+<!-- capture: fsa05-06-handshake-curl -->
+![fsa05-06-handshake-curl](fsa05-06-handshake-curl.png)
 
 ## 3. Register it and grant it
 

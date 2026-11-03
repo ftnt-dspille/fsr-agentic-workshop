@@ -72,9 +72,9 @@ an MCP tool list, despite the name.
 
 ## Safety
 
-**Read-only mode.** `FSR_MCP_READONLY=1` in the Part 2 server's environment hides
-every mutating tool. Start every new box this way; chapter 7 tells you when and
-how to turn it off.
+**Read-only mode.** An optional setting: `FSR_MCP_READONLY=1` in the Part 2
+server's environment hides every mutating tool. The labs do not use it; turn it
+on when an agent should only ever read a box, such as production.
 
 **Confirm gate.** A rule on mutating tools (deletes, publishes, user creation,
 connector installs): the call refuses to run unless it carries `confirm: true`.

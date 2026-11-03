@@ -7,7 +7,7 @@ description: "Four more agent jobs with proof: call a FortiSOAR-registered MCP s
 
 These labs give the agent larger jobs. Each job ends with evidence you can check. Each lab uses the same agent and `.mcp.json` you set up earlier.
 
-Turn the read-only guard off (`FSR_MCP_READONLY` unset) for labs 1, 2, 4 and 5. Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapter 9. Lab 6 needs the capstone alert from page 1.
+Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapter 9. Lab 6 needs the capstone alert from page 1.
 
 ## 1. Call a tool on an MCP server registered in FortiSOAR
 
@@ -37,7 +37,7 @@ The agent lists the registrations, lists the server's tools, and then calls the 
 
 ## 2. Let the agent repair a playbook on its own
 
-In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. The record reference is `/api/3/alerts/` plus the record's `@id`. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with a 404.
+In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. It saves the alert's `@id` in a variable, then builds the record reference as `/api/3/alerts/` plus that variable. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with `No route found`. The publish check catches this mistake when `@id` is written in the reference itself. Through a variable it cannot see it, so the error only shows when the playbook runs.
 
 Give your agent this prompt:
 
@@ -64,11 +64,16 @@ playbooks:
             - field: name
               op: like
               value: "Agent Lab repair%"
+        next: Remember Alert
+      - name: Remember Alert
+        type: set_variable
+        vars:
+          alert_iri: "{{ vars.input.records[0]['@id'] }}"
         next: Tag Alert
       - name: Tag Alert
         type: update_record
         module: alerts
-        record: "/api/3/alerts/{{ vars.input.records[0]['@id'] }}"
+        record: "/api/3/alerts/{{ vars.alert_iri }}"
         fields:
           description: "Repaired by the Agent Lab repair practice playbook"
         next: Done
@@ -139,8 +144,8 @@ playbooks:
         type: end
 ```
 
-<!-- capture: fsa10-07-schedule-create -->
-![fsa10-07-schedule-create](fsa10-07-schedule-create.png?height=600px)
+<!-- capture: fsa10-07-schedule-and-prove-create -->
+![fsa10-07-schedule-and-prove-create](fsa10-07-schedule-and-prove-create.png?height=600px)
 
 Now wait about three minutes. The scheduler fires the playbook on the minute, but it records the fire a little later. If the next prompt says the schedule has not fired yet, wait a few more minutes and run it again.
 
@@ -182,8 +187,8 @@ reported 2026-03-14, and show me the alert it raised.
 
 The module in FortiSOAR, with the test record the agent created:
 
-<!-- capture: fsa10-08-module-in-soar -->
-![fsa10-08-module-in-soar](fsa10-08-module-in-soar.png?height=600px)
+<!-- capture: fsa10-08-plan-and-build-module -->
+![fsa10-08-plan-and-build-module](fsa10-08-plan-and-build-module.png?height=600px)
 
 Publishing a module takes a few minutes. Let the agent finish.
 

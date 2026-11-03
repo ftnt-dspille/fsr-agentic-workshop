@@ -67,7 +67,7 @@ The hello agent returns a fixed answer built from its input. It makes no LLM cal
 <!-- capture: fsa04-01-hello-agent-detail -->
 ![fsa04-01-hello-agent-detail](fsa04-01-hello-agent-detail.png?height=600px)
 
-You call the agent from a playbook on the [next page](../03-invoke-from-a-playbook/). A playbook step handles the login and waits for the answer for you.
+You call the agent from a playbook on the [next page](03-invoke-from-a-playbook.html). A playbook step handles the login and waits for the answer for you.
 
 **You are done when**
 

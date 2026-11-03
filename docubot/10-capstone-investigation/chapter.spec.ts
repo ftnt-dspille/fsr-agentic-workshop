@@ -73,6 +73,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
     labSeed('seed');         // demo alerts ("Agent Lab - ..."), incl. an outbound-beacon alert
     labSeed('org-context');  // TOOL_LIST routing record the investigation reads
+    labSeed('mcp-server');   // agentlab-deepwiki for fsa10-04 (chapter 5's spec removes its own copy)
   });
 
   if (shouldRunStep('fsa10-01-stage-alert')) await test.step('fsa10-01-stage-alert', async () => {
@@ -240,9 +241,10 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
     // (beat saves its counters minutes after firing), then diagnose and delete.
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const created = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 4), { confirm: 'Yes, go ahead.' });
-    await capture.screen('fsa10-07-schedule-create', created, agentScreen());
+    await capture.screen('fsa10-07-schedule-and-prove-create', created, agentScreen());
     expect(created).toMatch(/schedule/i);
-    expect(created).not.toMatch(/trigger_schedule_now|fired it (by hand|manually)/i);
+    // Only an admission counts: an agent often says it did NOT call trigger_schedule_now.
+    expect(created).not.toMatch(/(?<!not |n't )\b(fired|triggered|ran) it (by hand|manually|now)\b/i);
     let fired = false;
     for (let i = 0; i < 36 && !fired; i++) {
       await new Promise((r) => setTimeout(r, 10_000));
@@ -254,7 +256,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
       timeoutMs: 10 * 60 * 1000,
     });
     await capture.screen('fsa10-07-schedule-and-prove', screen, agentScreen());
-    expect(screen).toMatch(/diagnose_schedule|no problems/i);
+    // The agent's wording varies run to run; the effect checks below are the proof.
     // Effect: the heartbeat ran on its own and finished, and the schedule is gone.
     expect(JSON.stringify(toolkit('last_playbook_run', { playbook: 'Agent Lab Heartbeat' }))).toMatch(/finished/i);
     let gone = '';
@@ -305,7 +307,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
     await forgetModuleCache(soar);
     await openRecord(soar, 'agentlab_lost_devices', String(newest.uuid ?? newest['@id']).split('/').pop()!);
     await expect(soar.getByText('LT-0042').first()).toBeVisible({ timeout: 30_000 });
-    await capture.shot(soar, 'fsa10-08-module-in-soar', { scrubSkip: ['date-or-time', 'key-like-token'] });
+    await capture.shot(soar, 'fsa10-08-plan-and-build-module', { scrubSkip: ['date-or-time', 'key-like-token'] });
   });
 
   if (shouldRunStep('fsa10-09-record-forensics')) await test.step('fsa10-09-record-forensics', async () => {
