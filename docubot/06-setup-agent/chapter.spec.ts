@@ -185,16 +185,14 @@ test('chapter 6 - install and check', async ({ capture }) => {
 // for. Local commands only; nothing touches the box and no tokens are spent.
 test('chapter 6 - install a coding agent', async ({ capture }) => {
   test.setTimeout(5 * 60 * 1000);
-  const checks: Array<[string, string, RegExp]> = [
-    ['fsa06-01a-claude-version', 'claude --version', /\d+\.\d+\.\d+.*Claude Code/i],
-    ['fsa06-01a-codex-version', 'codex --version', /codex-cli \d+\.\d+/i],
-    ['fsa06-01a-opencode-version', 'opencode --version', /opencode v?\d+\.\d+\.\d+/i],
-  ];
-  for (const [id, command, version] of checks) {
-    if (shouldRunStep(id)) await test.step(id, async () => {
-      await shellShot(capture, id, { command, cols: 100, timeoutMs: 60_000, expect: [version] });
-    });
-  }
+  const version = async (id: string, command: string, expected: RegExp) =>
+    shellShot(capture, id, { command, cols: 100, timeoutMs: 60_000, expect: [expected] });
+  if (shouldRunStep('fsa06-01a-claude-version')) await test.step('fsa06-01a-claude-version', () =>
+    version('fsa06-01a-claude-version', 'claude --version', /\d+\.\d+\.\d+.*Claude Code/i));
+  if (shouldRunStep('fsa06-01a-codex-version')) await test.step('fsa06-01a-codex-version', () =>
+    version('fsa06-01a-codex-version', 'codex --version', /codex-cli \d+\.\d+/i));
+  if (shouldRunStep('fsa06-01a-opencode-version')) await test.step('fsa06-01a-opencode-version', () =>
+    version('fsa06-01a-opencode-version', 'opencode --version', /opencode v?\d+\.\d+\.\d+/i));
 });
 
 // Page 01 s1-2, the user form's roles: the workshop login's existing record, opened
