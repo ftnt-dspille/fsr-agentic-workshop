@@ -61,6 +61,21 @@ Read the result before you decide anything. For each hypothesis, note:
 <!-- capture: fsa03-02-hypotheses -->
 ![fsa03-02-hypotheses](fsa03-02-hypotheses.png?height=600px)
 
+Now read the verdict panel on the right. It has three tabs:
+
+- **Highlights**: the verdict and the main reason for it, in a few sentences.
+- **Key Findings**: the facts the run found, one per line.
+- **Next Steps**: what an analyst should do next, as a list of actions on this alert's host and addresses.
+
+<!-- step: fsa03-02b-next-steps -->
+
+Select **Next Steps**.
+
+<!-- capture: fsa03-02b-next-steps -->
+![fsa03-02b-next-steps](fsa03-02b-next-steps.png?height=600px)
+
+Next Steps is advice. Nothing on the list runs by itself. Many items ask for the data the run did not have, such as change records or endpoint telemetry. Read it next to the questions that came back with no data. An action you would take on every alert like this one is a good candidate for a playbook, which you build in chapter 8.
+
 Next, look at one question in detail.
 
 <!-- step: fsa03-12-hypothesis-question -->
@@ -85,6 +100,7 @@ A question answered with "No information available" is not a failure. It tells y
 **You are done when**
 
 - You can explain why the verdict came out the way it did, using the evidence.
+- You can name one Next Steps item and the missing data it asks for.
 - You can name at least one question that had no data, and say what that means for the verdict.
 
 ## 4. Check the write-back

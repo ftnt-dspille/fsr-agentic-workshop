@@ -9,7 +9,7 @@ import { execFileSync } from 'child_process';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Capture, LocalSession, TuiSession, claudeAdapter, prepareCodexHome } from 'docubot';
+import { Capture, LocalSession, TuiSession, claudeAdapter, prepareCodexHome, timedSync } from 'docubot';
 
 /** The connector the ch09 build lab produces (one source of truth). */
 export const DADJOKE = 'agentlab-dadjoke';
@@ -158,12 +158,12 @@ export function labSeed(cmd: string, ...args: string[]): string {
   const script = path.join(__dirname, '..', '..', 'tools', 'lab_setup.py');
   let out: string;
   try {
-    out = execFileSync(py, [script, cmd, ...args], {
+    out = timedSync(`labSeed ${[cmd, ...args].join(' ')}`, () => execFileSync(py, [script, cmd, ...args], {
       encoding: 'utf8',
       timeout: 5 * 60 * 1000,
       env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
       cwd: path.join(__dirname, '..', '..'),
-    });
+    }));
   } catch (e: any) {
     throw new Error(`lab_setup ${cmd} ${args.join(' ')} failed:\n${String(e.stdout || '')}${String(e.stderr || '')}`);
   }

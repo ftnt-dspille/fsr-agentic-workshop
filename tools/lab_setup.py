@@ -152,10 +152,14 @@ INVESTIGATION_ALERTS: list[dict[str, Any]] = [
     },
     {
         # Same type as the next alert, with source JSON: gets the MALWARE SOP.
+        # Its own source label on purpose: fsr-ai caches source-data fields PER SOURCE
+        # (classify.py fingerprint + format registry, persisted). Sharing "Firewall" with
+        # the backup alert lets the backup's cached fields trim process_name and
+        # destination_ip out of this alert before the model sees them.
         "name": "C2 callback from dev-laptop-12",
         "type": "Malware",
         "severity": "High",
-        "source": "Firewall",
+        "source": "Agent Lab EDR",
         "description": "Repeated outbound HTTPS connections to an address in a "
                        "feed-flagged range, from a developer laptop.",
         "sourceIp": "203.0.113.120",
@@ -173,7 +177,7 @@ INVESTIGATION_ALERTS: list[dict[str, Any]] = [
         "name": "C2 callback from dev-laptop-13",
         "type": "Malware",
         "severity": "High",
-        "source": "Firewall",
+        "source": "Agent Lab EDR",
         "description": "Repeated outbound HTTPS connections to an address in a "
                        "feed-flagged range, from a developer laptop. No raw event attached.",
         "sourceIp": "203.0.113.122",

@@ -18,6 +18,7 @@ import {
   fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
 } from 'docubot';
 import { labSeed, shouldRunStep } from '../lib/agentlab';
+import { timed, timing } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -39,7 +40,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
   // web-server-01", this chapter's subject) when asked. Idempotent.
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('seed'); });
   // Skip the whole test (and its paid run) when --only selects none of its steps.
-  if (!['fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-03-alert-ai-fields', 'fsa03-04-trace-steps'].some(shouldRunStep)) return;
+  if (!['fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-02b-next-steps', 'fsa03-03-alert-ai-fields', 'fsa03-04-trace-steps'].some(shouldRunStep)) return;
   const soar = await gui('soar');
 
   // Reruns (and chapter 10) leave same-named copies; the seeded one is the oldest.
@@ -68,6 +69,22 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
     await soar.waitForTimeout(2000);
     await capture.shot(soar, 'fsa03-01-investigation-tab', {
       highlight: soar.locator('#view-panel-content li.uib-tab', { hasText: 'AI Investigation' }),
+      ...SKIP,
+    });
+  });
+
+  // Section 3: the verdict panel beside the map. Next Steps is the run's advice to
+  // the analyst; the page tells students to read all three tabs, Next Steps last.
+  if (shouldRunStep('fsa03-02b-next-steps')) await test.step('fsa03-02b-next-steps', async () => {
+    for (const tab of ['Highlights', 'Key Findings']) {
+      const items = await readVerdictTab(soar, tab);
+      console.log(`[ch03] ${tab}: ${items.length} item(s): ${items.slice(0, 3).join(' | ').slice(0, 300)}`);
+    }
+    const steps = await readVerdictTab(soar, 'Next Steps');
+    console.log(`[ch03] Next Steps: ${steps.length} item(s): ${steps.join(' | ').slice(0, 600)}`);
+    expect(steps.length, 'Next Steps lists at least one action').toBeGreaterThan(0);
+    await capture.shot(soar, 'fsa03-02b-next-steps', {
+      highlight: soar.locator('#view-panel-content .investigationSections li.uib-tab', { hasText: 'Next Steps' }),
       ...SKIP,
     });
   });
@@ -204,28 +221,53 @@ async function finishedRun(soar: Page, re: RegExp, search: string, label: string
   await waitForRecordSettled(soar, { timeoutMs: 90_000 });
   await selectDetailTab(soar, 'AI Investigation');
   const inv = await readInvestigation(soar);
-  if (inv.state === 'done') return;
+  if (inv.state === 'done') { timing(`investigation ${label}`, 0, 'reused'); return; }
   if (!SPEND) {
     console.log(`[ch03] ${label}: investigation is "${inv.state}"; set SPEND_AI=1 to run one`);
     test.skip(true, 'no finished investigation and SPEND_AI is not set');
   }
+  const t0 = Date.now();
   const run = inv.state === 'not-run'
     ? await runInvestigation(soar, { wait: true })
     : await waitForInvestigation(soar);
+  timing(`investigation ${label}`, Date.now() - t0, inv.state === 'not-run' ? 'spent' : 'ok', `was ${inv.state}`, t0);
   expect(run.state, `${label}: the investigation must reach a verdict`).toBe('done');
 }
 
+/** An after-result cites the approved backup the record describes; a before-result cannot. */
+const AFTER_RESULT = /CHG-2041|approved (scheduled )?backup/i;
+
+// Page 01 s5.1, in page order: the verdict BEFORE the approved-backup record exists
+// (08), the record filled (08a), the verdict AFTER (08b), then the record restored.
+// Finished runs are reused whenever they show the right state; an investigation
+// is started only when the state on the box cannot produce the shot.
 test('chapter 3 - benign verdict', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
-  if (!['fsa03-08a-approved-backup-record', 'fsa03-08-benign-rerun', 'fsa03-08b-approved-rerun'].some(shouldRunStep)) return;
+  if (!['fsa03-08-benign-rerun', 'fsa03-08a-approved-backup-record', 'fsa03-08b-approved-rerun'].some(shouldRunStep)) return;
   const soar = await gui('soar');
+  const origin = new URL(soar.url()).origin;
+  const alert = await findAlert(soar, BENIGN_RE, { search: 'nightly backup push', oldest: true });
+  expect(alert, 'stage the chapter 3 alerts first: tools/lab_setup.py prepare').toBeTruthy();
 
-  // Page 01 s5.1 steps 1-3: fill the approved-backup record (lab_setup approved-backup,
-  // the same content the page tells the reader to paste) and show it. Not cleared.
+  // 08: the "before" shot. Reuses the alert's finished run unless that run is an
+  // after-result (it cites the approved backup); then it skips instead of spending.
+  if (shouldRunStep('fsa03-08-benign-rerun')) await test.step('fsa03-08-benign-rerun', async () => {
+    // A first run here must not see the approved record; 08a fills it next.
+    labSeed('approved-backup', '--clear');
+    await finishedRun(soar, BENIGN_RE, 'nightly backup push', 'benign alert');
+    if (AFTER_RESULT.test(await verdictText(soar))) {
+      skipStep('fsa03-08-benign-rerun', 'the alert holds the after-result; clear the record (lab_setup approved-backup --clear) and re-investigate to retake it');
+      return;
+    }
+    await readVerdictTab(soar, 'Highlights');
+    await soar.waitForTimeout(2000);
+    await capture.shot(soar, 'fsa03-08-benign-rerun', SKIP);
+  });
+
+  // 08a: fill the record (the text the page tells the reader to paste) and show it.
   if (shouldRunStep('fsa03-08a-approved-backup-record')) await test.step('fsa03-08a-approved-backup-record', async () => {
     labSeed('approved-backup');
-    const origin = new URL(soar.url()).origin;
     const id = await openOrgContextRecord(soar, origin, 'Approved Backup System', 'Organization Context - Approved Backup System');
     expect(id, 'the Approved Backup System record opens').toBeTruthy();
     // Checked before the capture: the record holds the filled text, not the placeholder.
@@ -237,32 +279,32 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
     await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa03-08a-approved-backup-record', SKIP);
   });
-  if (!['fsa03-08-benign-rerun', 'fsa03-08b-approved-rerun'].some(shouldRunStep)) return;
 
-  // Open the finished run either way; the 08b re-run starts from it.
-  await test.step('configure: open the benign alert', async () => {
-    await finishedRun(soar, BENIGN_RE, 'nightly backup push', 'benign alert');
-    await soar.waitForTimeout(2000);
-  });
-  if (shouldRunStep('fsa03-08-benign-rerun')) {
-    await test.step('fsa03-08-benign-rerun', async () => {
-      await capture.shot(soar, 'fsa03-08-benign-rerun', SKIP);
-    });
-  }
-
-  // The same alert again, after the approved-backup record is filled in. The
-  // before verdict is read first so the comparison is in the log either way.
-  if (!shouldRunStep('fsa03-08b-approved-rerun')) return;
-  await test.step('fsa03-08b-approved-rerun', async () => {
-    const before = (await readInvestigation(soar)).verdict;
+  // 08b: the "after" shot. Reuse the alert's result when it was written after the
+  // record was filled; otherwise Re-investigate once.
+  if (shouldRunStep('fsa03-08b-approved-rerun')) await test.step('fsa03-08b-approved-rerun', async () => {
     labSeed('approved-backup');
-    if (!SPEND) test.skip(true, 'SPEND_AI is not set');
-    const after = await reinvestigate(soar);
-    expect(after.state, 'the re-run must reach a verdict').toBe('done');
-    console.log(`[ch03] benign alert: before=${before} after=${after.verdict}`);
+    await finishedRun(soar, BENIGN_RE, 'nightly backup push', 'benign alert');
+    const current = await readInvestigation(soar);
+    if (current.state === 'done' && AFTER_RESULT.test(await verdictText(soar))) {
+      console.log(`[ch03] benign alert: reusing the after-result (${current.verdict}); no new investigation`);
+      timing('investigation benign alert (after)', 0, 'reused');
+    } else {
+      if (!SPEND) test.skip(true, 'the alert has no after-result and SPEND_AI is not set');
+      const t0 = Date.now();
+      const after = await reinvestigate(soar);
+      timing('investigation benign alert (re-run)', Date.now() - t0, 'spent', undefined, t0);
+      expect(after.state, 'the re-run must reach a verdict').toBe('done');
+      console.log(`[ch03] benign alert: before=${current.verdict} after=${after.verdict}`);
+    }
+    await readVerdictTab(soar, 'Highlights');
     await soar.waitForTimeout(2000);
     await capture.shot(soar, 'fsa03-08b-approved-rerun', SKIP);
   });
+
+  // The page tells students to restore the record when done. Every investigation on
+  // the box reads it, so leaving it filled leaks backup context into later runs.
+  if (shouldRunStep('fsa03-08b-approved-rerun')) labSeed('approved-backup', '--clear');
 });
 
 /**
@@ -273,6 +315,16 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
 async function keyFindings(soar: Page): Promise<string> {
   return (await readVerdictTab(soar, 'Key Findings')).join('\n');
 }
+
+/** Highlights + Key Findings + Next Steps as one text: where a source-data IOC can surface. */
+async function verdictText(soar: Page): Promise<string> {
+  const parts: string[] = [];
+  for (const tab of ['Highlights', 'Key Findings', 'Next Steps']) parts.push(...(await readVerdictTab(soar, tab)));
+  return parts.join('\n');
+}
+
+/** The source-data IOCs (process and destination) that only the with-source alert carries. */
+const SOURCE_IOC = /updater\.exe|203\.0\.113\.121/;
 
 test('chapter 3 - source data check', async ({ gui, capture }) => {
   test.setTimeout(45 * 60 * 1000);
@@ -285,14 +337,16 @@ test('chapter 3 - source data check', async ({ gui, capture }) => {
   // The expectations run before each capture, so a failed check writes no PNG.
   await test.step('fsa03-09-sourcedata-check', async () => {
     await finishedRun(soar, SOURCE_RE, 'dev-laptop-12', 'alert with source data');
-    const withSource = await keyFindings(soar);
-    expect(withSource, 'with source data, the findings name the source-data IOC updater.exe').toMatch(/updater\.exe/);
+    const withSource = await verdictText(soar);
+    expect(withSource, 'with source data, the verdict names updater.exe or 203.0.113.121').toMatch(SOURCE_IOC);
+    await readVerdictTab(soar, 'Key Findings');
     await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa03-09-sourcedata-check', SKIP);
 
     await finishedRun(soar, NO_SOURCE_RE, 'dev-laptop-13', 'alert without source data');
-    const bare = await keyFindings(soar);
-    expect(bare, 'without source data, the findings do not name updater.exe').not.toMatch(/updater\.exe/);
+    const bare = await verdictText(soar);
+    expect(bare, 'without source data, the verdict names neither updater.exe nor 203.0.113.121').not.toMatch(SOURCE_IOC);
+    await readVerdictTab(soar, 'Key Findings');
     await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa03-09-sourcedata-check-b', SKIP);
   });
@@ -419,6 +473,10 @@ function picklist(x: unknown): string {
 
 /** A widget's reading, once it has rendered its rows or cards (or the timeout passes). */
 async function settledReading(page: Page, title: string, timeoutMs = 60_000): Promise<WidgetReading> {
+  return timed(`widget "${title}"`, () => settledReadingInner(page, title, timeoutMs));
+}
+
+async function settledReadingInner(page: Page, title: string, timeoutMs: number): Promise<WidgetReading> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     try {
@@ -428,7 +486,7 @@ async function settledReading(page: Page, title: string, timeoutMs = 60_000): Pr
     } catch (err) {
       if (Date.now() > deadline) throw err;
     }
-    await page.waitForTimeout(1000);
+    await new Promise((r) => setTimeout(r, 1000)); // poll, not a fixed sleep
   }
 }
 
@@ -500,9 +558,9 @@ test('chapter 3 - verify counts', async ({ gui, capture }) => {
 
   await test.step('fsa03-11-verify-counts', async () => {
     // Open the dashboard that fsa03-07 built; a missing one fails here, it is not rebuilt.
-    await gotoDashboards(soar);
-    await selectDashboard(soar, DASHBOARD);
-    const alerts = await labAlerts(soar);
+    await timed('open dashboards', () => gotoDashboards(soar));
+    await timed(`select dashboard "${DASHBOARD}"`, () => selectDashboard(soar, DASHBOARD));
+    const alerts = await timed('read lab alerts', () => labAlerts(soar));
     expect(alerts.length, 'the lab alerts are seeded (tools/lab_setup.py seed)').toBeGreaterThan(0);
     const verdictOf = (a: Record<string, unknown>) => picklist(a.aIVerdict);
     const severityOf = (a: Record<string, unknown>) => picklist(a.severity);
@@ -562,13 +620,13 @@ test('chapter 3 - verify counts', async ({ gui, capture }) => {
 
     // Only now capture. The highlights are the counts that were just checked.
     const cellCount = (t: string, n: number) => widgetRoot(soar, t).locator('td').filter({ hasText: new RegExp(`^${n}$`) });
-    const highCount = alerts.filter((a) => severityOf(a) === 'High').length;
     await soar.setViewportSize({ width: 1500, height: 1500 });
     await soar.waitForTimeout(1500);
     try {
       await capture.shot(soar, 'fsa03-11-verify-counts', {
         highlight: [
-          cellCount(SEVERITY, highCount).first(),
+          // The table splits each severity by verdict, so mark the High row label, not a total.
+          widgetRoot(soar, SEVERITY).locator('td, th').filter({ hasText: /^High$/ }).first(),
           cellCount(VERDICT_TYPES, expectedTypes[apiVerdicts[0]] ?? 0).first(),
           widgetRoot(soar, FUNNEL[0]).getByText(String(newTotal), { exact: true }).first(),
         ],
