@@ -71,6 +71,7 @@ OpenCode shows the same approval in its own prompt. Approve it to run the write,
 <!-- step: fsa06-07-opencode-approval -->
 <!-- capture: fsa06-07-opencode-approval -->
 ![fsa06-07-opencode-approval](fsa06-07-opencode-approval.png?height=600px)
+
 {{% /tab %}}
 {{% /tabs %}}
 

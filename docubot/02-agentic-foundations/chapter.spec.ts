@@ -28,6 +28,18 @@ const SKIP = { scrubSkip: ['date-or-time'] };
 
 test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
+  // Skip the whole test (and its setup) when --only selects none of its steps.
+  if (![
+    'fsa02-00-create-alert',
+    'fsa02-01-ai-enabled',
+    'fsa02-02-agent-catalog',
+    'fsa02-02-agent-settings',
+    'fsa02-03-mcp-server-detail',
+    'fsa02-03-mcp-servers',
+    'fsa02-04-sop-compare',
+    'fsa02-04-sop-detail',
+    'fsa02-05-assistant-readonly',
+  ].some(shouldRunStep)) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
 

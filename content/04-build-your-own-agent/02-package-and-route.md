@@ -31,14 +31,16 @@ The upload control stays hidden until an administrator turns on the **Import/Upl
 1. Open **System** > **System Configuration**.
 2. Select the **Advanced Development Features** tab.
 3. Find the **Import/Upload Custom AI Agent** section. Open its **Important Notice** and **Risk** panels and read them.
+
+   <!-- step: fsa04-00-advanced-toggle -->
+   <!-- capture: fsa04-00-advanced-toggle -->
+   ![fsa04-00-advanced-toggle](fsa04-00-advanced-toggle.png?height=600px)
+
 4. Click **Edit**. The accept checkbox in that section shows whether the toggle is on. If it is not ticked, tick it, then click **Submit**. If it is already ticked, click **Cancel**: nothing needs to change.
 
    <!-- step: fsa04-00-advanced-toggle-edit -->
    <!-- capture: fsa04-00-advanced-toggle-edit -->
    ![fsa04-00-advanced-toggle-edit](fsa04-00-advanced-toggle-edit.png?height=600px)
-
-<!-- capture: fsa04-00-advanced-toggle -->
-![fsa04-00-advanced-toggle](fsa04-00-advanced-toggle.png?height=600px)
 
 ## 3. Upload the bundle
 

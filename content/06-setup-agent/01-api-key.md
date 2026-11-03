@@ -17,6 +17,8 @@ The agent signs in to FortiSOAR with its own user login. Its actions then show i
 4. Assign the **Full App Permissions** role and the three roles in section 2. Click **Save**. Write down the login id and password.
 
    <!-- step: fsa06-01b-user-roles -->
+   <!-- capture: fsa06-01b-user-roles -->
+   ![fsa06-01b-user-roles](fsa06-01b-user-roles.png?height=600px)
 
 <!-- capture: fsa06-01-create-user -->
 ![fsa06-01-create-user](fsa06-01-create-user.png?height=600px)

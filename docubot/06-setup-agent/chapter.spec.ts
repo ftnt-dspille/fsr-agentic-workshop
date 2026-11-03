@@ -191,7 +191,9 @@ test('chapter 6 - user roles', async ({ gui, capture }) => {
     await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
     // The page's login is "agentlab" (the masked name the shots show). The box's own login
     // is not the workshop user, so only the page's name is looked for.
-    const row = soar.getByText(SHOWN_LOGIN, { exact: true }).filter({ visible: true }).first();
+    // The list shows names and emails, not login ids: match the login itself or an
+    // email that starts with it (agentlab_user@...).
+    const row = soar.getByText(new RegExp(`^${SHOWN_LOGIN}(\\b|_)`, 'i')).filter({ visible: true }).first();
     if (!(await row.waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false))) {
       // Not created here: a missing login is reported, so the capture is skipped, not faked.
       skipStep('fsa06-01b-user-roles', `no ${SHOWN_LOGIN} login on this box: page 01 creates it by hand`);

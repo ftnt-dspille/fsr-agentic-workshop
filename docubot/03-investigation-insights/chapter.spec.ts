@@ -12,7 +12,7 @@ import type { Locator, Page } from '@playwright/test';
 import {
   executeInsight, expect, findAlert, goToModuleList, openInsightBuilder, openRecord, openTracePanel,
   openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, runInvestigation, selectDetailTab, test, waitForInvestigation, waitForRecordSettled,
-  skipStep,
+  skipStep, waitForAngular,
   addCardCountWidget, addChartWidget, addRow, apiViaApp, enterEditMode, gotoDashboards,
   openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
   fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
@@ -28,6 +28,19 @@ const ALERT_RE = /Agent Lab - beaconing/i;
 // On-screen dates are legitimate content, so the scan skips date-or-time; it still
 // refuses a real lab IP, hostname, key or sensitive term.
 const SKIP = { scrubSkip: ['date-or-time'] };
+
+// Speed: start every chapter 3 investigation that has none at once (the box runs
+// up to three in parallel), so each test below finds its run done or nearly done
+// instead of starting it and waiting in turn. Only with SPEND_AI=1, and only when
+// a selected step needs an investigation.
+const NEEDS_RUN = [
+  'fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-02b-next-steps', 'fsa03-03-alert-ai-fields',
+  'fsa03-04-trace-steps', 'fsa03-08-benign-rerun', 'fsa03-08b-approved-rerun', 'fsa03-09-sourcedata-check',
+  'fsa03-12-hypothesis-question', 'fsa03-13-question-trace',
+];
+test.beforeAll(() => {
+  if (SPEND && NEEDS_RUN.some(shouldRunStep)) labSeed('start-investigations');
+});
 // The alert record page shows record/correlation UUIDs, which the backstop reads as
 // key-like tokens. They are not secrets and the user wants them left visible, and an
 // alert record never renders a real API key, so this one shot also skips that
@@ -129,6 +142,12 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
 // never saved, so nothing is left on the box.
 test('chapter 3 - ai insights', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
+  // Skip the whole test (and its setup) when --only selects none of its steps.
+  if (![
+    'fsa03-05-insight-plan',
+    'fsa03-06-insight-card',
+    'fsa03-10-read-plan',
+  ].some(shouldRunStep)) return;
   const soar = await gui('soar');
 
   await goToModuleList(soar, 'alerts');
@@ -185,14 +204,14 @@ async function executeGenerated(page: Page, modal: Locator): Promise<void> {
   await page.waitForTimeout(2000);
   await waitEnabled(page, modal.locator('#executeButton'), 5 * 60 * 1000, 'Execute (after run)');
   await modal.getByText(/Summary/).first().waitFor({ timeout: 2 * 60 * 1000 });
-  await page.waitForTimeout(3000);
+  await waitForAngular(page);
 }
 
 async function waitEnabled(page: Page, loc: Locator, ms: number, what: string): Promise<void> {
   const deadline = Date.now() + ms;
   while (!(await loc.isEnabled().catch(() => false))) {
     if (Date.now() > deadline) throw new Error(`AI Insight: ${what} never enabled`);
-    await page.waitForTimeout(1000);
+    await new Promise((r) => setTimeout(r, 1000)); // poll, not a fixed sleep
   }
 }
 
@@ -217,7 +236,6 @@ async function finishedRun(soar: Page, re: RegExp, search: string, label: string
   // leave this one unsettled. The alert page is read from the same origin as the GUI.
   const origin = new URL(soar.url() || (await gui_base(soar))).origin;
   await soar.goto(`${origin}/modules/view-panel/alerts/${alert!.id}`, { waitUntil: 'domcontentloaded' });
-  await soar.waitForTimeout(6000);
   await waitForRecordSettled(soar, { timeoutMs: 90_000 });
   await selectDetailTab(soar, 'AI Investigation');
   const inv = await readInvestigation(soar);

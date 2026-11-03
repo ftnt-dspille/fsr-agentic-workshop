@@ -63,6 +63,14 @@ function ensureTagPlaybook(): void {
 
 test('chapter 8 - playbook', async ({ gui, local, capture }) => {
   test.setTimeout(45 * 60 * 1000);
+  // Skip the whole test (and its setup) when --only selects none of its steps.
+  if (![
+    'fsa08-01-compile-yaml',
+    'fsa08-02-publish-playbook',
+    'fsa08-03-trigger-and-verify',
+    'fsa08-04-diagnose-run',
+    'fsa08-05-run-in-one-call',
+  ].some(shouldRunStep)) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
 

@@ -434,6 +434,47 @@ def cmd_approved_backup(client, clear: bool = False) -> int:
 
 
 # ---------------------------------------------------------------------------
+# start-investigations (speed: chapter 3's runs in parallel, not one by one)
+
+# The chapter 3 subjects. The box runs up to three investigations at once, so
+# starting them together before the specs walk the pages cuts the chapter's wait
+# to roughly the slowest single run.
+CH3_SUBJECTS = ["beaconing from web-server-01"] + [s["name"] for s in INVESTIGATION_ALERTS]
+BENIGN_SUBJECT = INVESTIGATION_ALERTS[0]["name"]
+
+
+def oldest_alert(client, full_name: str) -> dict | None:
+    """The seeded copy of an alert (reruns leave newer same-named copies)."""
+    rows = [r for r in client.records("alerts").iterate(raw=True) if r.get("name") == full_name]
+    return min(rows, key=lambda r: r.get("createDate") or 0) if rows else None
+
+
+def cmd_start_investigations(client) -> int:
+    """Start an AI investigation on every chapter 3 alert that has none (no waiting)."""
+    started = 0
+    for name in CH3_SUBJECTS:
+        full = ALERT_NAME_PREFIX + name
+        alert = oldest_alert(client, full)
+        if alert is None:
+            print(f"missing: {full} (run prepare first)")
+            continue
+        if alert.get("triagetaskid"):
+            status = client.ai.get_alert_investigation_status(alert)
+            state = getattr(status, "status", None) if status else None
+            if state != "failed":
+                print(f"skip ({state or 'has a run'}): {full}")
+                continue
+        if name == BENIGN_SUBJECT:
+            # Its first run is the "before" shot: the approved-backup record must be empty.
+            cmd_approved_backup(client, clear=True)
+        handle = client.ai.start_alert_investigation(alert)
+        print(f"started: {full} task={handle.task_id}")
+        started += 1
+    print(f"start-investigations: {started} started")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # install-agent (chapter 4 custom AI agent bundle)
 
 def agent_installed(client, name: str) -> bool:
@@ -794,6 +835,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("reset-alerts", help="return the Agent Lab alerts to the demo set, all Open")
     ab = sub.add_parser("approved-backup", help="fill the APPROVED_BACKUP_SYSTEM org-context record for the chapter 3 re-run (idempotent)")
     ab.add_argument("--clear", action="store_true", help="put the shipped placeholder back")
+    sub.add_parser("start-investigations", help="start AI investigations on the chapter 3 alerts that have none, without waiting (spends AI tokens)")
     sub.add_parser("investigation-alerts", help="create the chapter 3 alerts: benign backup, source-data and no-source-data pair (idempotent)")
     dr = sub.add_parser("delete-records", help="delete records whose field equals a value")
     dr.add_argument("module"); dr.add_argument("field"); dr.add_argument("value")
@@ -830,6 +872,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_reset_alerts(client)
     if args.cmd == "approved-backup":
         return cmd_approved_backup(client, args.clear)
+    if args.cmd == "start-investigations":
+        return cmd_start_investigations(client)
     if args.cmd == "investigation-alerts":
         return cmd_seed(client, INVESTIGATION_ALERTS)
     if args.cmd == "code-snippet":

@@ -68,6 +68,15 @@ async function uploadHello(soar: Page, origin: string, zip: string): Promise<voi
 
 test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
+  // Skip the whole test (and its setup) when --only selects none of its steps.
+  if (![
+    'fsa04-00-advanced-toggle',
+    'fsa04-00-upload-agent',
+    'fsa04-01-hello-agent',
+    'fsa04-02-tool-list-row',
+    'fsa04-03-route-check',
+    'fsa04-04-playbook-branch',
+  ].some(shouldRunStep)) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentlab-ch04-'));

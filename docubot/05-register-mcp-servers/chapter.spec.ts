@@ -65,6 +65,15 @@ const QUESTION = `What is the reputation of the IP ${REPUTATION_IP}? Use your to
 
 test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
+  // Skip the whole test (and its setup) when --only selects none of its steps.
+  if (![
+    'fsa05-01-validate-register',
+    'fsa05-02-status-check',
+    'fsa05-03-register-remote',
+    'fsa05-03-register-remote-tools',
+    'fsa05-04-grant-allowlist',
+    'fsa05-05-chat-runs-tool',
+  ].some(shouldRunStep)) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
   const ownsLab = shouldRunStep('fsa05-01-validate-register');
