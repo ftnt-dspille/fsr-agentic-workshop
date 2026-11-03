@@ -25,3 +25,4 @@ tools/agent-shots/__pycache__/
 
 # docubot agent SPEND runs: holds .mcp.json with box creds
 .agent-lab/
+.docubot/step-results.json
