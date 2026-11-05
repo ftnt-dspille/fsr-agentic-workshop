@@ -54,7 +54,7 @@ healthy.
 <!-- capture: fsa09-04-deploy-connector -->
 ![fsa09-04-deploy-connector](fsa09-04-deploy-connector.png?height=600px)
 
-Installing a connector is confirm-gated, because it puts executable code on the appliance. The agent tells you what it will install and waits for your go-ahead. The health check after the install shows whether the connector works.
+Installing a connector puts executable code on the appliance, so the call needs `confirm: true` and your coding agent's approval prompt asks you before it runs. Read the path in the prompt, then approve. The prompt appears again for each configuration the agent saves. The health check after the install shows whether the connector works.
 
 ## 3. Run it
 

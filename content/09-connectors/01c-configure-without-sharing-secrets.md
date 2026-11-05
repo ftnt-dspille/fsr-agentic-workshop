@@ -27,8 +27,8 @@ The tool enforces these rules:
 
 - **Only `FSR_SECRET_*` names resolve.** The agent cannot copy any other variable from your machine.
 - **A key works only for its own connector.** `FSR_SECRET_VIRUSTOTAL__API_KEY` cannot be used for another connector.
-- **You can limit where keys go.** Optionally, add `FSR_SECRET_ALLOWED_HOSTS` (comma-separated host names) to the same `env` block. A field that names a host must then use one of those hosts, or the call is refused. Without it, the tool shows the destination host in the approval prompt. Check that host before you approve.
-- **Installing needs a second yes.** If the connector is missing, `install: true` is refused until the call also carries `confirm_install: true`. An install puts third-party code on the box, so the agent must tell you what it will install first.
+- **You can limit where keys go.** Optionally, add `FSR_SECRET_ALLOWED_HOSTS` (comma-separated host names) to the same `env` block. A field that names a host must then use one of those hosts, or the call is refused. Without it, the tool shows the destination host in your coding agent's approval prompt. Check that host before you approve.
+- **Installing needs a second yes.** If the connector is missing, `install: true` is refused until the call also carries `confirm_install: true`. An install puts third-party code on the box, so your coding agent's approval prompt asks you before it runs. Check the connector name in the prompt first.
 
 ## 2. Ask the agent
 

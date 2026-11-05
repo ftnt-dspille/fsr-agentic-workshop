@@ -25,6 +25,7 @@
 // fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
 import { clearGridFilter, expect, filterGridRow, goToModuleList, test, SCRUB } from 'docubot';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
+import { approvedTurn, snapFrom, startClaude } from '../lib/approve';
 import { labSeed, queryRows, toolkit } from 'docubot';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
@@ -60,7 +61,7 @@ const SEEDS = [
   { hostname: 'jump-host-01', ip_address: '203.0.113.30', owner: 'secops', criticality: 'High' },
 ];
 
-test('chapter 7 - users, modules and records', async ({ gui, local, capture }) => {
+test('chapter 7 - users, modules and records', async ({ gui, local, capture, page }) => {
   test.setTimeout(30 * 60 * 1000);
 
   // CONFIGURE: gated so a plain capture run never mutates the box. Seeds the
@@ -104,18 +105,26 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
   });
 
   if (shouldRunStep('fsa07-02-create-module')) await test.step('fsa07-02-create-module', async () => {
+    // The real-terminal picture, held until the effect checks below pass.
+    let held: Awaited<ReturnType<typeof snapFrom>> | undefined;
     if (RUN_AGENT) {
-      // provision_module is tier-3 and confirm-gated: agentTurn answers the gate.
+      // provision_module publishes the module: Claude's own prompt asks the student before it runs (the toolkit adds no
+      // form of its own). The step declares that one call; ClaudeApproval's hook denies every other write and the step approves it.
       // Skipped when the module already exists (the agent would only re-verify).
       // The page has the agent create build-server-01 as its test record; remove
       // earlier runs' copies so a rerun does not add a duplicate.
       if (moduleExists()) labSeed('delete-records', MODULE, 'hostname', 'build-server-01');
-      const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-      const screen = await agentTurn(agent, promptFor(CHAPTER, '02-create-a-module', 1), {
-        confirm: 'Yes, go ahead and publish it.',
-        timeoutMs: 600_000,
-      });
-      await capture.screen('fsa07-02-create-module', screen, agentScreen());
+      const prompt = promptFor(CHAPTER, '02-create-a-module', 1);
+      const run = await startClaude(page);
+      try {
+        await approvedTurn(run, prompt, [{ tool: 'provision_module', args: { module: MODULE, confirm: true }, required: true }], {
+          nudge: 'Yes, go ahead and publish it.',
+          timeoutMs: 600_000,
+        });
+        held = await snapFrom(run, prompt);
+      } finally {
+        run.session.kill();
+      }
     } else if (!moduleExists()) {
       toolkit('provision_module', {
         module: MODULE,
@@ -138,6 +147,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture }) =
     const probe = query(MODULE, [{ field: 'hostname', operator: 'eq', value: 'build-server-01' }], { fields: ['hostname', 'criticality'] });
     expect(probe.length, 'build-server-01 probe record missing').toBeGreaterThan(0);
     expect(text(probe[0].criticality)).toContain('High');
+    if (held) await capture.agent('fsa07-02-create-module', held);
 
     // UI: the new module in the left navigation / list. goToModuleList reloads
     // the app state, so the module appears without a manual browser reload.

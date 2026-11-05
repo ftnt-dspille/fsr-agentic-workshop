@@ -47,7 +47,7 @@ its severity if your verdict warrants it. Do not close the alert.
 
 <!-- step: fsa10-02-investigate -->
 
-Let the agent run. A good transcript shows each claim with the tool result behind it. It also states gaps, for example "no reputation connector is configured, so the destination is unverified."
+Let the agent run. The write-back is an update to the alert, so your coding agent's approval prompt asks you before it runs. A good transcript shows each claim with the tool result behind it. It also states gaps, for example "no reputation connector is configured, so the destination is unverified."
 
 <!-- capture: fsa10-02-investigate -->
 ![fsa10-02-investigate](fsa10-02-investigate.png?height=600px)
@@ -72,6 +72,8 @@ Trigger a native FortiSOAR AI investigation of the "Agent Lab - beaconing
 from web-server-01" alert, wait for the verdict, and compare it with yours:
 where do you agree, where do you differ, and why?
 ```
+
+Starting the native investigation is a write, so your coding agent's approval prompt asks you first.
 
 <!-- step: fsa10-03-native-compare -->
 

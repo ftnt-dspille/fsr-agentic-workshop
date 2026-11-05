@@ -18,8 +18,10 @@
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, findAlert, forgetModuleCache, openRecord, test, SCRUB } from 'docubot';
 import { execFileSync } from 'child_process';
+import type { Page } from '@playwright/test';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
+import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
 import { labSeed, rows, toolkit } from 'docubot';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
@@ -67,7 +69,27 @@ function hasFindings(a: StagedAlert): boolean {
   return !/^Triaged automatically/.test(text) && /verdict/i.test(text) && /confidence/i.test(text);
 }
 
-test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
+/**
+ * One Claude turn whose page lets the agent make the writes in `allowed`: each is asked by Claude's own prompt, decided by the
+ * step's policy, and approved here. Returns the screen text and the held picture; the caller saves it once its effect checks pass.
+ */
+async function claudeTurn(page: Page, prompt: string, allowed: Allowed[], o: { nudge?: string; timeoutMs?: number; builtins?: string[] } = {}) {
+  const run = await startClaude(page, { builtins: o.builtins });
+  try {
+    await approvedTurn(run, prompt, allowed, { nudge: o.nudge ?? 'Yes, go ahead.', timeoutMs: o.timeoutMs });
+    return { held: await snapFrom(run, prompt), plain: run.real.term.plainScreen() };
+  } finally {
+    run.session.kill();
+  }
+}
+
+/** The staged capstone alert's uuids, for a check that a call acts on the capstone alert and nothing else. */
+const capstoneRefCheck = (what: string): NonNullable<Allowed['check']> => {
+  const uuids = stagedAlerts().map((a) => a.uuid).filter((u): u is string => !!u);
+  return (a) => (uuids.some((u) => String(a.ref ?? '').includes(u)) ? undefined : `${what} must act on the capstone alert (${uuids.length} staged)`);
+};
+
+test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }) => {
   test.setTimeout(45 * 60 * 1000);
 
   // CONFIGURE: repeatable seed (idempotent, create-if-absent) of the box state
@@ -125,14 +147,14 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
   });
 
   if (shouldRunStep('fsa10-02-investigate')) await test.step('fsa10-02-investigate', async () => {
+    let held: Awaited<ReturnType<typeof snapFrom>> | undefined;
     if (SPEND) {
-      const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-      const screen = await agentTurn(agent, promptFor(CHAPTER, PAGE, 2), {
-        confirm: 'Yes, go ahead.',
-        timeoutMs: 20 * 60 * 1000,
-        quietMs: 8_000,
-      });
-      await capture.screen('fsa10-02-investigate', screen, agentScreen());
+      // The write-back is one update_record on the capstone alert; Claude's own prompt asks before it. Any other write is denied.
+      const refCheck = capstoneRefCheck('the write-back');
+      ({ held } = await claudeTurn(page, promptFor(CHAPTER, PAGE, 2), [{
+        tool: 'update_record', args: { module: 'alerts' }, required: true,
+        check: (a) => refCheck(a) ?? (/closed/i.test(JSON.stringify(a.data?.status ?? '')) ? 'the page says never close the alert' : undefined),
+      }], { timeoutMs: 20 * 60 * 1000 }));
     } else {
       console.log('[ch10] fsa10-02-investigate: agent run skipped (spends credits); set SPEND_AI=1');
     }
@@ -144,6 +166,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
     expect(written.length, 'no capstone alert carries the agent findings; run with SPEND_AI=1').toBeGreaterThan(0);
     // The prompt says never close the alert: severity must still be a real value.
     expect(written.some((a) => a.severity != null)).toBe(true);
+    if (held) await capture.agent('fsa10-02-investigate', held);
 
     // UI view of the write-back: the description on the alert detail panel.
     // The title is not unique across reruns, so open the exact alert the toolkit
@@ -174,17 +197,15 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
       console.log('[ch10] fsa10-03-native-compare skipped (spends credits); set SPEND_AI=1');
       return;
     }
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    const screen = await agentTurn(agent, promptFor(CHAPTER, PAGE, 3), {
-      confirm: 'Yes, go ahead.',
-      timeoutMs: 25 * 60 * 1000,
-      quietMs: 8_000,
-    });
-    await capture.screen('fsa10-03-native-compare', screen, agentScreen());
+    // Starting the native investigation is one write (run_fortiai_investigation on the capstone alert); Claude's own prompt asks.
+    const { held, plain: screen } = await claudeTurn(page, promptFor(CHAPTER, PAGE, 3), [
+      { tool: 'run_fortiai_investigation', anyTarget: true, required: true, check: capstoneRefCheck('the investigation') },
+    ], { timeoutMs: 25 * 60 * 1000 });
     // The comparison must rest on a native run the agent actually started.
     expect(screen).toMatch(/agree|differ/i);
     // A comparison against a verdict that never arrived is not the page's result.
     expect(screen).not.toMatch(/provisional|returned early|Tooling problems|keep polling|404/i);
+    await capture.agent('fsa10-03-native-compare', held);
   });
 });
 
@@ -192,36 +213,51 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture }) => {
 // captured in the TUI and backed by an effect check on the box (or, for the
 // connector review, on the folder ch09 left in the agent's working dir).
 // Every lab is an agent turn, so the whole block is behind SPEND_AI=1.
-test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
+test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   test.setTimeout(90 * 60 * 1000);
   test.skip(!SPEND, 'advanced labs are agent turns: set SPEND_AI=1');
   const PAGE = '03-advanced-labs';
-  const run = async (n: number, confirm?: string) => {
+  // The read-only labs (3, 6, 7): nothing to approve, so the plain agent turn.
+  const run = async (n: number) => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { confirm, timeoutMs: 10 * 60 * 1000 });
+    return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { timeoutMs: 10 * 60 * 1000 });
   };
+  // The labs that write: the calls the page lets the agent make, each asked by Claude's own prompt.
+  const yamlOf = (playbook: string): NonNullable<Allowed['check']> => (a) => (String(a.yaml_text ?? '').includes(playbook) ? undefined : `the YAML is not the "${playbook}" playbook`);
+  const alertNamed = (prefix: string): Allowed => ({
+    tool: 'create_record', args: { module: 'alerts' },
+    check: (a) => (String(a.data?.name ?? '').startsWith(prefix) ? undefined : `a test alert must be named starting with "${prefix}"`),
+  });
 
   if (shouldRunStep('fsa10-04-registered-mcp-tool')) await test.step('fsa10-04-registered-mcp-tool', async () => {
     // Precondition: chapter 5's registration. Fail as setup, not content.
     const listed = toolkit('list_registered_mcp_tools', { server: 'agentlab-deepwiki' });
     expect(listed.tools?.length, 'agentlab-deepwiki is not registered: run chapter 5 page 2 first').toBeGreaterThan(0);
-    const screen = await run(1, 'Yes, go ahead and call it.');
-    await capture.screen('fsa10-04-registered-mcp-tool', screen, agentScreen());
+    // The page: calling a registered tool needs the student's go-ahead. Claude's own prompt asks before call_registered_mcp_tool,
+    // for this server and its question tool only.
+    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 1), [
+      { tool: 'call_registered_mcp_tool', args: { server: 'agentlab-deepwiki', tool: 'ask_wiki_question', confirm: true }, required: true },
+    ], { nudge: 'Yes, go ahead and call it.', timeoutMs: 10 * 60 * 1000 });
     // The answer must come from the registered server's own tool, not memory.
     expect(screen).toMatch(/ask_wiki_question/);
     expect(screen).toMatch(/SSE|Server-Sent/i);
     expect(screen).not.toMatch(/couldn't finish|failed|RuntimeError/i);
+    await capture.agent('fsa10-04-registered-mcp-tool', held);
   });
 
   if (shouldRunStep('fsa10-05-repair-playbook')) await test.step('fsa10-05-repair-playbook', async () => {
-    const screen = await run(2, 'Yes, go ahead.');
-    await capture.screen('fsa10-05-repair-playbook', screen, agentScreen());
+    // Save the YAML, publish it, trigger it with a test alert, repair it, publish the repair, trigger again.
+    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 2), [
+      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Repair Practice') },
+      alertNamed('Agent Lab repair'),
+    ], { builtins: ['Write', 'Edit'], timeoutMs: 10 * 60 * 1000 });
     // The fix must be repair_playbook's, not a hand edit the agent fell back to.
     expect(screen).toMatch(/repair_playbook/);
     expect(screen).not.toMatch(/by hand|manually|myself|no change made/i);
     // Effect: the practice playbook's newest run finished (the repair held).
     const last = toolkit('last_playbook_run', { playbook: 'Agent Lab Repair Practice' });
     expect(JSON.stringify(last)).toMatch(/finished/i);
+    await capture.agent('fsa10-05-repair-playbook', held);
   });
 
   if (shouldRunStep('fsa10-06-review-connector')) await test.step('fsa10-06-review-connector', async () => {
@@ -241,25 +277,38 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
       // absent already: the state this step wants
     }
     // Two turns, as on the page: schedule it, let beat fire it and record the fire
-    // (beat saves its counters minutes after firing), then diagnose and delete.
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    const created = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 4), { confirm: 'Yes, go ahead.' });
-    await capture.screen('fsa10-07-schedule-and-prove-create', created, agentScreen());
-    expect(created).toMatch(/schedule/i);
-    // Only an admission counts: an agent often says it did NOT call trigger_schedule_now.
-    expect(created).not.toMatch(/(?<!not |n't )\b(fired|triggered|ran) it (by hand|manually|now)\b/i);
-    let fired = false;
-    for (let i = 0; i < 36 && !fired; i++) {
-      await new Promise((r) => setTimeout(r, 10_000));
-      fired = Boolean(toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }).ever_fired);
+    // (beat saves its counters minutes after firing), then diagnose and delete. One session, so the second prompt keeps its context.
+    const run = await startClaude(page, { builtins: ['Write', 'Edit'] });
+    const createPrompt = promptFor('10-capstone-investigation', PAGE, 4);
+    const deletePrompt = promptFor('10-capstone-investigation', PAGE, 5);
+    let createdShot: Awaited<ReturnType<typeof snapFrom>>;
+    let created: string;
+    let deletedShot: Awaited<ReturnType<typeof snapFrom>>;
+    try {
+      // Turn 1: publish the heartbeat playbook and schedule it. trigger_schedule_now is never declared, so a manual fire is denied.
+      await approvedTurn(run, createPrompt, [
+        { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Heartbeat') },
+        { tool: 'schedule_playbook', args: { name: 'Agent Lab heartbeat' }, required: true },
+      ], { nudge: 'Yes, go ahead.' });
+      createdShot = await snapFrom(run, createPrompt);
+      created = run.real.term.plainScreen();
+      expect(created).toMatch(/schedule/i);
+      // Only an admission counts: an agent often says it did NOT call trigger_schedule_now.
+      expect(created).not.toMatch(/(?<!not |n't )\b(fired|triggered|ran) it (by hand|manually|now)\b/i);
+      let fired = false;
+      for (let i = 0; i < 36 && !fired; i++) {
+        await new Promise((r) => setTimeout(r, 10_000));
+        fired = Boolean(toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }).ever_fired);
+      }
+      expect(fired, 'beat never recorded a fire within 6 minutes').toBe(true);
+      // Turn 2: diagnose (a read), then delete the schedule: the one write, asked by Claude's own prompt.
+      await approvedTurn(run, deletePrompt, [
+        { tool: 'delete_schedule', args: { name: 'Agent Lab heartbeat', confirm: true }, required: true },
+      ], { nudge: 'Yes, delete it.', timeoutMs: 10 * 60 * 1000 });
+      deletedShot = await snapFrom(run, deletePrompt);
+    } finally {
+      run.session.kill();
     }
-    expect(fired, 'beat never recorded a fire within 6 minutes').toBe(true);
-    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 5), {
-      confirm: 'Yes, delete it.',
-      timeoutMs: 10 * 60 * 1000,
-    });
-    await capture.screen('fsa10-07-schedule-and-prove', screen, agentScreen());
-    // The agent's wording varies run to run; the effect checks below are the proof.
     // Effect: the heartbeat ran on its own and finished, and the schedule is gone.
     expect(JSON.stringify(toolkit('last_playbook_run', { playbook: 'Agent Lab Heartbeat' }))).toMatch(/finished/i);
     let gone = '';
@@ -269,6 +318,8 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
       gone = String(err?.message ?? err);
     }
     expect(gone).toMatch(/No scheduled task|exit|Command failed/);
+    await capture.agent('fsa10-07-schedule-and-prove-create', createdShot);
+    await capture.agent('fsa10-07-schedule-and-prove', deletedShot);
   });
 
   if (shouldRunStep('fsa10-08-plan-and-build')) await test.step('fsa10-08-plan-and-build', async () => {
@@ -287,12 +338,16 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
     } catch {
       // absent already
     }
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 6), {
-      confirm: 'Yes, go ahead.',
-      timeoutMs: 30 * 60 * 1000,
-    });
-    await capture.screen('fsa10-08-plan-and-build', screen, agentScreen());
+    // The build is a module (provision_module, or create_module and publish_module_changes), the playbook on it and a test record.
+    // Each write is asked by Claude's own prompt; the page's alert is raised by the playbook, so no alert write is declared.
+    const recordIn = (tool: string): Allowed => ({ tool, args: { module: 'agentlab_lost_devices' }, required: 'record' });
+    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 6), [
+      { tool: 'provision_module', args: { module: 'agentlab_lost_devices', confirm: true }, required: 'module' },
+      { tool: 'create_module', args: { module: 'agentlab_lost_devices' }, required: 'module' },
+      { tool: 'publish_module_changes', args: { confirm: true }, anyTarget: true },
+      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Lost Device Alert') },
+      recordIn('create_record'), recordIn('upsert_record'), recordIn('get_or_create_record'),
+    ], { timeoutMs: 30 * 60 * 1000 });
     expect(screen).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
     // Effect: the test record exists, and the playbook raised its alert.
     const devices = rows(toolkit('search_records', { module: 'agentlab_lost_devices', term: 'LT-0042' }));
@@ -311,6 +366,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture }) => {
     await openRecord(soar, 'agentlab_lost_devices', String(newest.uuid ?? newest['@id']).split('/').pop()!);
     await expect(soar.getByText('LT-0042').first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa10-08-plan-and-build-module', { scrubSkip: ['date-or-time', 'key-like-token'] });
+    await capture.agent('fsa10-08-plan-and-build', held);
   });
 
   if (shouldRunStep('fsa10-09-record-forensics')) await test.step('fsa10-09-record-forensics', async () => {

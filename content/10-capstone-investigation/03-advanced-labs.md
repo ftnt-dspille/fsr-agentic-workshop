@@ -31,7 +31,7 @@ replace?" Tell me the server and tool that answered, and the answer.
 <!-- capture: fsa10-04-registered-mcp-tool -->
 ![fsa10-04-registered-mcp-tool](fsa10-04-registered-mcp-tool.png?height=600px)
 
-The agent lists the registrations, lists the server's tools, and then calls the question tool. The call needs your go-ahead, because a registered tool can do anything on its server.
+The agent lists the registrations, lists the server's tools, and then calls the question tool. The call is a write, with `confirm: true`, so your coding agent's approval prompt asks you first. A registered tool can do anything on its server, so read the server and tool in the prompt before you approve.
 
 **You are done when:** the agent reports an answer from `agentlab-deepwiki` and names the tool it called (`ask_wiki_question`).
 

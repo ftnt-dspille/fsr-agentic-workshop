@@ -5,10 +5,10 @@ weight: 20
 description: "Have the agent design and publish a custom module with fields, a picklist and permissions."
 ---
 
-Now the agent changes the schema. It creates a custom module called `agentlab_assets`. This changes the schema for the whole box, so the agent must ask you before it publishes. A new module without role permissions looks created, but it rejects every record write. So the agent also grants permissions and checks the result.
+Now the agent changes the schema. It creates a custom module called `agentlab_assets`. This changes the schema for the whole box, so your coding agent asks you to approve the call that publishes it. A new module without role permissions looks created, but it rejects every record write. So the agent also grants permissions and checks the result.
 
 {{% notice note %}}
-If the agent confirms the publish without asking you, stop it. Tell it to check with you before any confirmed action.
+Read the approval prompt before you approve it. It names the tool, `provision_module`, and the module it will publish. If the publish runs without a prompt, stop the agent and check your approval settings from chapter 6.
 {{% /notice %}}
 
 ## 1. Ask the agent
@@ -28,7 +28,7 @@ criticality High, and show me that record.
 <!-- capture: fsa07-02-create-module -->
 ![fsa07-02-create-module](fsa07-02-create-module.png?height=600px)
 
-The agent makes one workflow call, `provision_module`. The first call returns `confirmation_required`. The agent then shows you what will change and waits for your yes. After that it runs again with `confirm: true`. The workflow then does these steps in order:
+The agent makes one workflow call, `provision_module`. The first call has no `confirm`, returns `confirmation_required` and changes nothing. The agent then shows you what will change. It calls again with `confirm: true`, and that call is the one your coding agent's approval prompt asks you about. Approve it. The workflow then does these steps in order:
 
 1. **Create** the module with its fields. The module lands in staging.
 2. **Check staging.** The workflow publishes only when your change is the only one staged. If other changes are staged, it stops and tells you.

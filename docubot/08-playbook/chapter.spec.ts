@@ -20,6 +20,7 @@
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test, SCRUB } from 'docubot';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
+import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
 import { labSeed, queryRows, toolkit } from 'docubot';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 import { pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf } from 'docubot';
@@ -62,7 +63,7 @@ function ensureTagPlaybook(): void {
   }
 }
 
-test('chapter 8 - playbook', async ({ gui, local, capture }) => {
+test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
   test.setTimeout(45 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
   if (!anyStepSelected([
@@ -242,32 +243,48 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     labSeed('delete-prefix', 'alerts', 'name', prefix);
     labSeed('delete-records', 'workflows', 'name', playbook);
   };
+  // What each gallery page lets the agent write: the playbook it builds and the test alerts it names "Agent Lab ...". Claude's own
+  // prompt asks before each one; the hook denies any other write. publish_playbook and run_playbook_yaml have no target argument
+  // (they act on the box the server is configured for), so their check reads the playbook's name from the YAML.
+  const yamlNames = (playbook: string): Allowed['check'] => (a) => (String(a.yaml_text ?? '').includes(playbook) ? undefined : `the YAML is not the "${playbook}" playbook`);
+  const labAlert: Allowed = {
+    tool: 'create_record', args: { module: 'alerts' },
+    check: (a) => (String(a.data?.name ?? '').startsWith('Agent Lab') ? undefined : 'a test alert must be named starting with "Agent Lab"'),
+  };
   // Each call site wraps this in a literal test.step(id) so lint can see the step.
-  const gallery = async (id: string, n: number, prefix: string, playbook: string, check: () => void) => {
+  const gallery = async (id: string, n: number, prefix: string, playbook: string, allowed: Allowed[], check: () => void) => {
       if (!AGENT) {
         skipStep(id, 'the agent designs this playbook; set SPEND_AI=1');
         return;
       }
       fresh(prefix, playbook);
-      const screen = await agentTurn(await freshAgent(), promptFor(CHAPTER, GALLERY, n), {
-        confirm: 'Yes, go ahead.',
-        timeoutMs: 15 * 60 * 1000,
-      });
-      await capture.screen(id, screen, agentScreen());
-      expect(screen).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
+      const prompt = promptFor(CHAPTER, GALLERY, n);
+      const run = await startClaude(page);
+      let held: Awaited<ReturnType<typeof snapFrom>>;
+      let plain: string;
+      try {
+        await approvedTurn(run, prompt, allowed, { nudge: 'Yes, go ahead.', timeoutMs: 15 * 60 * 1000 });
+        held = await snapFrom(run, prompt);
+        plain = run.real.term.plainScreen();
+      } finally {
+        run.session.kill();
+      }
+      expect(plain).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
       // Triggers run server-side after the agent's last call: give them a moment.
       for (let i = 0; i < 12; i++) {
         try {
           check();
-          return;
+          break;
         } catch {
           await new Promise((r) => setTimeout(r, 5000));
         }
+        if (i === 11) check();
       }
-      check();
+      // Checked before the picture is saved: a failed run never lands a PNG in content/.
+      await capture.agent(id, held);
   };
 
-  if (shouldRunStep('fsa08-06-escalate-critical')) await test.step('fsa08-06-escalate-critical', () => gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', () => {
+  if (shouldRunStep('fsa08-06-escalate-critical')) await test.step('fsa08-06-escalate-critical', () => gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Escalate Critical') }, labAlert], () => {
     const rows = alertsLike('Agent Lab crit');
     const crit = rows.filter((r) => /critical/i.test(String(val(r.severity))));
     const low = rows.filter((r) => /low/i.test(String(val(r.severity))));
@@ -277,12 +294,12 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     expect(low.every((r) => val(r.status) === 'Open')).toBe(true);
   }));
 
-  if (shouldRunStep('fsa08-07-ioc-extract')) await test.step('fsa08-07-ioc-extract', () => gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', () => {
+  if (shouldRunStep('fsa08-07-ioc-extract')) await test.step('fsa08-07-ioc-extract', () => gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab IOC Extract') }, labAlert], () => {
     const rows = alertsLike('Agent Lab ioc');
     expect(rows.some((r) => r.hostIPAddress === '198.51.100.23'), JSON.stringify(rows)).toBe(true);
   }));
 
-  if (shouldRunStep('fsa08-08-sweep')) await test.step('fsa08-08-sweep', () => gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', () => {
+  if (shouldRunStep('fsa08-08-sweep')) await test.step('fsa08-08-sweep', () => gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', [labAlert, { tool: 'run_playbook_yaml', anyTarget: true, required: true, check: yamlNames('Agent Lab Sweep') }], () => {
     const rows = alertsLike('Agent Lab sweep');
     expect(rows.length).toBe(3);
     expect(rows.every((r) => val(r.status) === 'Closed'), JSON.stringify(rows)).toBe(true);

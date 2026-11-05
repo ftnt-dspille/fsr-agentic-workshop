@@ -7,6 +7,8 @@ description: "Three playbooks the agent designs from a plain-language goal: no Y
 
 Here you give the agent a goal, not YAML. Each prompt describes a different kind of playbook: a conditional trigger, Python inside a playbook, and a sweep over many records. The agent picks the steps, compiles and publishes the playbook, and then proves it with a test record.
 
+Every write the agent makes (publishing the playbook, creating a test alert) is a call your coding agent's approval prompt asks you about. Read each one, then approve it.
+
 Each playbook acts only on alerts whose names start with its own prefix, so the three do not affect each other or the tagging playbook from page 1. If the agent creates extra test alerts, they must also start with "Agent Lab". The lab reset removes alerts with that name.
 
 ## 1. Escalate critical alerts
