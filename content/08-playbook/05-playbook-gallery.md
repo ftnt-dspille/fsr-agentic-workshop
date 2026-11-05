@@ -61,9 +61,9 @@ Give your agent this prompt:
 ```text
 Create three Low-severity alerts named "Agent Lab sweep 1" to "Agent Lab sweep 3".
 Then write a playbook "Agent Lab Sweep" that finds every open alert whose name
-starts with "Agent Lab sweep" and closes each one. Test-run it with
-run_playbook_yaml (it cleans the playbook up afterwards), and show me the
-three alerts' statuses before and after.
+starts with "Agent Lab sweep" and closes each one. Give it a test run that
+cleans up after itself: I want no leftover playbook or schedule when it is
+done. Show me the three alerts' statuses before and after.
 ```
 
 <!-- step: fsa08-08-sweep -->

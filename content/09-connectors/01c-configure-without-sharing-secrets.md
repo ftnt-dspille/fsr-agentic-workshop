@@ -35,10 +35,11 @@ The tool enforces these rules:
 Give your agent this prompt:
 
 ```text
-Configure the virustotal connector with a configuration named "Lab". Use
-setup_connector. The server URL is www.virustotal.com. The API key is in the
-environment variable FSR_SECRET_VIRUSTOTAL__API_KEY: pass it as a reference, do not ask me for
-the value. Check it first with check_only, then write it and run the healthcheck.
+Configure the virustotal connector with a configuration named "Lab". The
+server URL is www.virustotal.com. The API key is in the environment variable
+FSR_SECRET_VIRUSTOTAL__API_KEY: pass it as a reference, do not ask me for the
+value. Make sure it is checked before it is written, and run the healthcheck
+after you save it.
 ```
 
 The call the agent makes looks like this. There is no key in it:

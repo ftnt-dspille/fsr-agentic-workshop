@@ -20,10 +20,10 @@ This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If y
 Give your agent this prompt:
 
 ```text
-List the MCP servers registered in FortiSOAR. Then list the tools that
-agentlab-deepwiki advertises, and use its question tool to ask the repository
-modelcontextprotocol/python-sdk: "Which transport does streamable HTTP
-replace?" Tell me the server and tool that answered, and the answer.
+My FortiSOAR has a registered MCP server that answers questions about code
+repositories. Ask it: which transport does streamable HTTP replace in the
+official Python SDK (modelcontextprotocol/python-sdk)? Tell me the server and
+tool that answered, and the answer.
 ```
 
 <!-- step: fsa10-04-registered-mcp-tool -->
@@ -43,12 +43,11 @@ Give your agent this prompt:
 
 ```text
 Save this playbook to ./repair-practice.yaml and publish it. Create an alert
-named "Agent Lab repair test" to trigger it and wait for the run. Run
-debug_playbook_run on that run with the YAML, then pass its result id and
-the YAML to repair_playbook. Do not edit the YAML yourself: save and publish
-exactly what repair_playbook returns, trigger it again with an alert named
-"Agent Lab repair retest", and prove the second run finished. Show me the
-line repair_playbook changed.
+named "Agent Lab repair test" to trigger it and wait for the run. Work out
+why the run failed without editing the YAML yourself, apply the fix the
+toolkit suggests, and publish exactly what it returns. Trigger it again with
+an alert named "Agent Lab repair retest", prove the second run finished, and
+show me the line the toolkit changed.
 
 collection: Agent Lab
 visible: true
@@ -97,10 +96,10 @@ The agent wrote `agentlab-dadjoke` in chapter 9. Before code like that goes on a
 Give your agent this prompt:
 
 ```text
-Run validate_connector and scan_connector_code on ./agentlab-dadjoke and
-report the result. Then add verify=False to its requests.get call, scan it
-again and show me what the scan reports. Finally, revert that change and
-scan once more to confirm it is clean.
+Give ./agentlab-dadjoke a full security scan and report what it finds. Then
+add verify=False to its requests.get call and scan it again: show me what
+the scan flags. Finally revert that change and scan once more to confirm it
+is clean.
 ```
 
 <!-- step: fsa10-06-review-connector -->
@@ -152,9 +151,9 @@ Now wait about three minutes. The scheduler fires the playbook on the minute, bu
 Give your agent this prompt:
 
 ```text
-Run diagnose_schedule on "Agent Lab heartbeat" and tell me whether it has
-fired on its own, whether it has any problems, and what the last run did.
-Then delete the schedule.
+Find out whether the "Agent Lab heartbeat" schedule has fired on its own,
+whether it has any problems, and what its last run did. Then delete the
+schedule.
 ```
 
 <!-- step: fsa10-07-schedule-and-prove -->
@@ -171,13 +170,13 @@ One sentence in, a working use case out: a custom module, a playbook on it, and 
 Give your agent this prompt:
 
 ```text
-I want to track lost or stolen laptops. Plan it with plan_use_case, then
-build it: a custom module "agentlab_lost_devices" (singular "Lost Device")
-with an asset tag, the owner's email, the date it was reported and a status,
-and a playbook "Agent Lab Lost Device Alert" in the "Agent Lab" collection
-that raises a Critical alert named "Agent Lab lost device <asset tag>" when a
-device is reported. Prove it with one test report for asset tag LT-0042,
-reported 2026-03-14, and show me the alert it raised.
+I want to track lost or stolen laptops. Plan it end to end, then build it: a
+custom module "agentlab_lost_devices" (singular "Lost Device") with an asset
+tag, the owner's email, the date it was reported and a status, and a playbook
+"Agent Lab Lost Device Alert" in the "Agent Lab" collection that raises a
+Critical alert named "Agent Lab lost device <asset tag>" when a device is
+reported. Prove it with one test report for asset tag LT-0042, reported
+2026-03-14, and show me the alert it raised.
 ```
 
 <!-- step: fsa10-08-plan-and-build -->
