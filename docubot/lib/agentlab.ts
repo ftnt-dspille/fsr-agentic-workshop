@@ -9,16 +9,6 @@ import { boxMasks as boxMasksFor, createAgentLab, pyfsrEnv, toolkitSkills, toolk
 /** The connector the ch09 build lab produces (one source of truth). */
 export const DADJOKE = 'agentlab-dadjoke';
 
-const ONLY_STEPS = new Set((process.env.DOCUBOT_ONLY_STEPS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-const SKIP_STEPS = new Set((process.env.DOCUBOT_SKIP_STEPS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-
-/** Selective rerun gate shared by chapter specs. Empty means run every step. */
-export function shouldRunStep(id: string): boolean {
-  const run = (ONLY_STEPS.size === 0 || ONLY_STEPS.has(id)) && !SKIP_STEPS.has(id);
-  if (!run && process.env.DOCUBOT_VERBOSE_STEPS === '1') console.log(`[docubot] ${id}: skipped by step selection`);
-  return run;
-}
-
 /** The login the captures show, as the page names it (`connected: agentlab`). The box's real login is masked. */
 export const SHOWN_LOGIN = 'agentlab';
 /** The box URL the captures show. */

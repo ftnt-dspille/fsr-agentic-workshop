@@ -25,8 +25,8 @@ import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { shouldRunStep } from '../lib/agentlab';
 import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit } from 'docubot';
+import { anyStepSelected, shouldRunStep } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. On-screen dates are legitimate content.
@@ -70,14 +70,14 @@ async function uploadHello(soar: Page, origin: string, zip: string): Promise<voi
 test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
-  if (![
+  if (!anyStepSelected([
     'fsa04-00-advanced-toggle',
     'fsa04-00-upload-agent',
     'fsa04-01-hello-agent',
     'fsa04-02-tool-list-row',
     'fsa04-03-route-check',
     'fsa04-04-playbook-branch',
-  ].some(shouldRunStep)) return;
+  ])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentlab-ch04-'));

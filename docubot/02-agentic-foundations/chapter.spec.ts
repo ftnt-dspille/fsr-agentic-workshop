@@ -18,7 +18,7 @@ import {
   waitForRecordSettled,
   skipStep,
 } from 'docubot';
-import { shouldRunStep } from '../lib/agentlab';
+import { anyStepSelected, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -29,7 +29,7 @@ const SKIP = { scrubSkip: ['date-or-time'] };
 test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
-  if (![
+  if (!anyStepSelected([
     'fsa02-00-create-alert',
     'fsa02-01-ai-enabled',
     'fsa02-02-agent-catalog',
@@ -39,7 +39,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
     'fsa02-04-sop-compare',
     'fsa02-04-sop-detail',
     'fsa02-05-assistant-readonly',
-  ].some(shouldRunStep)) return;
+  ])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
 

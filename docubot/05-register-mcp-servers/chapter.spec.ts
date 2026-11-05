@@ -38,12 +38,13 @@ import {
   readAgentConfig, saveAgentConfig, saveMcpServer, test,
   skipStep,
 } from 'docubot';
-import { pageMd, shellShot, shouldRunStep } from '../lib/agentlab';
+import { pageMd, shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { labSeed } from 'docubot';
+import { anyStepSelected, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -67,14 +68,14 @@ const QUESTION = `What is the reputation of the IP ${REPUTATION_IP}? Use your to
 test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
-  if (![
+  if (!anyStepSelected([
     'fsa05-01-validate-register',
     'fsa05-02-status-check',
     'fsa05-03-register-remote',
     'fsa05-03-register-remote-tools',
     'fsa05-04-grant-allowlist',
     'fsa05-05-chat-runs-tool',
-  ].some(shouldRunStep)) return;
+  ])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
   const ownsLab = shouldRunStep('fsa05-01-validate-register');

@@ -19,8 +19,9 @@
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test } from 'docubot';
-import { agentScreen, agentTurn, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, shouldRunStep, startAgent } from '../lib/agentlab';
+import { agentScreen, agentTurn, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, startAgent } from '../lib/agentlab';
 import { labSeed, queryRows, toolkit } from 'docubot';
+import { anyStepSelected, shouldRunStep } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. Designer/run-history pages show dates and
@@ -63,7 +64,7 @@ function ensureTagPlaybook(): void {
 test('chapter 8 - playbook', async ({ gui, local, capture }) => {
   test.setTimeout(45 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
-  if (![
+  if (!anyStepSelected([
     'fsa08-01-compile-yaml',
     'fsa08-02-publish-playbook',
     'fsa08-03-trigger-and-verify',
@@ -72,7 +73,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     'fsa08-06-escalate-critical',
     'fsa08-07-ioc-extract',
     'fsa08-08-sweep',
-  ].some(shouldRunStep)) return;
+  ])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
 

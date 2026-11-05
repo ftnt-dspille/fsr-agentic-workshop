@@ -17,9 +17,9 @@ import {
   openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
   fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
 } from 'docubot';
-import { shouldRunStep } from '../lib/agentlab';
 import { timed, timing } from 'docubot';
 import { labSeed } from 'docubot';
+import { anyStepSelected, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -40,7 +40,7 @@ const NEEDS_RUN = [
   'fsa03-12-hypothesis-question', 'fsa03-13-question-trace',
 ];
 test.beforeAll(() => {
-  if (SPEND && NEEDS_RUN.some(shouldRunStep)) labSeed('start-investigations');
+  if (SPEND && anyStepSelected(NEEDS_RUN)) labSeed('start-investigations');
 });
 // The alert record page shows record/correlation UUIDs, which the backstop reads as
 // key-like tokens. They are not secrets and the user wants them left visible, and an
@@ -54,7 +54,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
   // web-server-01", this chapter's subject) when asked. Idempotent.
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('seed'); });
   // Skip the whole test (and its paid run) when --only selects none of its steps.
-  if (!['fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-02b-next-steps', 'fsa03-03-alert-ai-fields', 'fsa03-04-trace-steps'].some(shouldRunStep)) return;
+  if (!anyStepSelected(['fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-02b-next-steps', 'fsa03-03-alert-ai-fields', 'fsa03-04-trace-steps'])) return;
   const soar = await gui('soar');
 
   // Reruns (and chapter 10) leave same-named copies; the seeded one is the oldest.
@@ -144,11 +144,11 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
 test('chapter 3 - ai insights', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
-  if (![
+  if (!anyStepSelected([
     'fsa03-05-insight-plan',
     'fsa03-06-insight-card',
     'fsa03-10-read-plan',
-  ].some(shouldRunStep)) return;
+  ])) return;
   const soar = await gui('soar');
 
   await goToModuleList(soar, 'alerts');
@@ -263,7 +263,7 @@ const AFTER_RESULT = /CHG-2041|approved (scheduled )?backup/i;
 test('chapter 3 - benign verdict', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
-  if (!['fsa03-08-benign-rerun', 'fsa03-08a-approved-backup-record', 'fsa03-08b-approved-rerun'].some(shouldRunStep)) return;
+  if (!anyStepSelected(['fsa03-08-benign-rerun', 'fsa03-08a-approved-backup-record', 'fsa03-08b-approved-rerun'])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
   const alert = await findAlert(soar, BENIGN_RE, { search: 'nightly backup push', oldest: true });
@@ -376,7 +376,7 @@ test('chapter 3 - source data check', async ({ gui, capture }) => {
 // source-data run, so it spends nothing.
 test('chapter 3 - hypothesis question', async ({ gui, capture }) => {
   test.setTimeout(5 * 60 * 1000);
-  const want = ['fsa03-12-hypothesis-question', 'fsa03-13-question-trace'].filter(shouldRunStep);
+  const want = ['fsa03-12-hypothesis-question', 'fsa03-13-question-trace'].filter((id) => anyStepSelected([id]));
   if (!want.length) return;
   const soar = await gui('soar');
   await finishedRun(soar, SOURCE_RE, 'dev-laptop-12', 'alert with source data');

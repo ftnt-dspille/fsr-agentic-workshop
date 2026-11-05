@@ -24,8 +24,9 @@
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
 // fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
 import { clearGridFilter, expect, filterGridRow, goToModuleList, test } from 'docubot';
-import { agentScreen, agentTurn, promptFor, shouldRunStep, startAgent } from '../lib/agentlab';
+import { agentScreen, agentTurn, promptFor, startAgent } from '../lib/agentlab';
 import { labSeed, queryRows, toolkit } from 'docubot';
+import { shouldRunStep } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. These grids show TEST-NET documentation
