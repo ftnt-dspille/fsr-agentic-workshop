@@ -308,11 +308,19 @@ test.describe('chapter 6 - codex', () => {
     });
   });
 
-  test('chapter 6 - codex approval', async ({ capture }) => {
+  test('chapter 6 - codex approval', async ({ capture, page }) => {
     test.setTimeout(20 * 60 * 1000);
     const prompt = promptFor('06-setup-agent', '03-approve-every-write');
 
     // The page's prompt, sent as the student types it. The model may answer in prose before calling; a go-ahead is sent then.
+    // DOCUBOT_TERMINAL_CAPTURE=1: run Codex in a real terminal (ttyd + Playwright) and save the browser's own screenshot as
+    // <id>-real.png beside the rendered one, for comparison. Only secrets and machine paths are boxed over; the text is untouched.
+    const realTerminal = process.env.DOCUBOT_TERMINAL_CAPTURE === '1';
+    const startApproval = () => startCodexApproval(realTerminal ? { terminal: { page } } : {});
+    const saveReal = (id: string, snap: { png: Buffer; masked: Array<{ why: string; text: string }> }) => {
+      console.log(`[ch06] real-terminal picture ${id}-real: ${snap.masked.length} masked${snap.masked.map((m) => ` (${m.why} @ ${m.text})`).join('')}`);
+      capture.savePng(`${id}-real`, snap.png);
+    };
     const askForCall = async (approval: Awaited<ReturnType<typeof startCodexApproval>>['approval'], session: Awaited<ReturnType<typeof startCodexApproval>>['session'], expected: Expect) => {
       await session.send(prompt);
       let call = await approval.pendingOrEnd(expected, 4 * 60 * 1000);
@@ -328,18 +336,20 @@ test.describe('chapter 6 - codex', () => {
 
     if (shouldRunStep('fsa06-06-codex-approval')) await test.step('fsa06-06-codex-approval', async () => {
       labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
-      const { approval, policy, session } = await startCodexApproval();
+      const { approval, policy, session, real } = await startApproval();
       try {
         const expected = buildExpect(policy, { ...APPROVAL_CALL, decision: 'approve' });
         approval.setExpect(expected);
         const call = await askForCall(approval, session, expected);
         // Shot: Codex's own MCP approval prompt for this call (server, tool, arguments), checked to be this call's dialog.
         const frame = await approval.capture(call);
+        const dialog = real ? await real.snap() : undefined;
         await approval.answer(call, 'approve');   // "1. Allow", the highlighted row; never "always"
         await approval.turnDone(4 * 60 * 1000);
         // Effect: the approved write landed.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(1);
-        await capture.screen('fsa06-06-codex-approval', frame.clean, codexScreen());
+        if (dialog) saveReal('fsa06-06-codex-approval', dialog);
+        else await capture.screen('fsa06-06-codex-approval', frame.clean, codexScreen());
       } finally {
         session.kill();
         labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
@@ -348,7 +358,7 @@ test.describe('chapter 6 - codex', () => {
 
     if (shouldRunStep('fsa06-10-codex-declined')) await test.step('fsa06-10-codex-declined', async () => {
       labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
-      const { approval, policy, session } = await startCodexApproval();
+      const { approval, policy, session, real } = await startApproval();
       try {
         const expected = buildExpect(policy, { ...APPROVAL_CALL, decision: 'decline' });
         approval.setExpect(expected);
@@ -358,7 +368,8 @@ test.describe('chapter 6 - codex', () => {
         // Effect: the declined write created nothing, and the agent says so.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(0);
         const shown = await approval.settled(/not created|wasn.t created|cancel|declin/i);
-        await capture.screen('fsa06-10-codex-declined', shown.clean, codexScreen());
+        if (real) saveReal('fsa06-10-codex-declined', await real.snap());
+        else await capture.screen('fsa06-10-codex-declined', shown.clean, codexScreen());
       } finally {
         session.kill();
         labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
