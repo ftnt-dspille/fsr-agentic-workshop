@@ -118,12 +118,21 @@ export async function approvedTurn(run: ClaudeRun, prompt: string, allowed: Allo
 }
 
 /**
+ * Claude Code's finished-turn status row: "Baked for 57s . done 9:21 AM" (the verb varies, past a minute
+ * "Worked for 4m 0s . done"; docubot's own turn-done detection counts the same shape). The picture ends at the
+ * last row matching it, so the empty rows and the idle input box below a short answer drop out of the clip.
+ * No `g` flag: a global RegExp keeps lastIndex across `test` calls and would skip every other row.
+ */
+const TURN_DONE_ROW = /for (?:\d+h )?(?:\d+m )?\d+s.*\bdone\b/i;
+
+/**
  * The terminal now, held until the step's effect checks pass: hand it to `capture.agent(id, held)`. The picture starts at the
- * student's prompt (the row that starts with the page's first words), so a second turn in the same session shows only itself.
+ * student's prompt (the row that starts with the page's first words), so a second turn in the same session shows only itself,
+ * and ends at the turn's done row, so trailing blank rows and the idle input box are not in the clip.
  */
 export function snapFrom(run: ClaudeRun, prompt: string) {
   const first = prompt.split('\n')[0].trim().slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return run.real.snap({ startAt: new RegExp(`^\\s*[>❯]\\s+${first}`), lastMatch: true, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
+  return run.real.snap({ startAt: new RegExp(`^\\s*[>❯]\\s+${first}`), lastMatch: true, endAt: TURN_DONE_ROW, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
 }
 
 /** The agent's visible text, for a check that something never reached the screen. */
