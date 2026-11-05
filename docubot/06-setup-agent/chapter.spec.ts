@@ -2,7 +2,7 @@
 // the agent authenticates as) plus the coding-agent TUI pages (the write-approval
 // prompt in Claude Code, Codex and OpenCode). Both kinds of shot go through the one
 // `capture` fixture -- `capture.shot(soar, ...)` for a browser page, and
-// `capture.agentShot(id, run)` for a real Terminal screenshot of the agent -- so a
+// `capture.agentShot(id, run)` / `capture.agent(id, real)` for a real Terminal screenshot of the agent -- so a
 // SOAR page and a TUI page read the same way and interleave in one spec.
 //
 // The TUI shots are headless: capture.agentShot streams the real agent (claude, codex)
@@ -313,14 +313,9 @@ test.describe('chapter 6 - codex', () => {
     const prompt = promptFor('06-setup-agent', '03-approve-every-write');
 
     // The page's prompt, sent as the student types it. The model may answer in prose before calling; a go-ahead is sent then.
-    // DOCUBOT_TERMINAL_CAPTURE=1: run Codex in a real terminal (ttyd + Playwright) and save the browser's own screenshot as
-    // <id>-real.png beside the rendered one, for comparison. Only secrets and machine paths are boxed over; the text is untouched.
-    const realTerminal = process.env.DOCUBOT_TERMINAL_CAPTURE === '1';
-    const startApproval = () => startCodexApproval(realTerminal ? { terminal: { page } } : {});
-    const saveReal = (id: string, snap: { png: Buffer; masked: Array<{ why: string; text: string }> }) => {
-      console.log(`[ch06] real-terminal picture ${id}-real: ${snap.masked.length} masked${snap.masked.map((m) => ` (${m.why} @ ${m.text})`).join('')}`);
-      capture.savePng(`${id}-real`, snap.png);
-    };
+    // Codex runs in a real terminal (ttyd + Playwright); the picture is the browser's own screenshot, with only secrets and
+    // machine paths boxed over. Approvals are still decided and answered by CodexApproval's hooks and adapter.
+    const startApproval = () => startCodexApproval(page);
     const askForCall = async (approval: Awaited<ReturnType<typeof startCodexApproval>>['approval'], session: Awaited<ReturnType<typeof startCodexApproval>>['session'], expected: Expect) => {
       await session.send(prompt);
       let call = await approval.pendingOrEnd(expected, 4 * 60 * 1000);
@@ -342,14 +337,13 @@ test.describe('chapter 6 - codex', () => {
         approval.setExpect(expected);
         const call = await askForCall(approval, session, expected);
         // Shot: Codex's own MCP approval prompt for this call (server, tool, arguments), checked to be this call's dialog.
-        const frame = await approval.capture(call);
-        const dialog = real ? await real.snap() : undefined;
+        await approval.capture(call);   // checks the screen is this call's dialog before anything is photographed
+        const dialog = await real.snap();   // the dialog as it is now, held until the effect check passes
         await approval.answer(call, 'approve');   // "1. Allow", the highlighted row; never "always"
         await approval.turnDone(4 * 60 * 1000);
         // Effect: the approved write landed.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(1);
-        if (dialog) saveReal('fsa06-06-codex-approval', dialog);
-        else await capture.screen('fsa06-06-codex-approval', frame.clean, codexScreen());
+        await capture.agent('fsa06-06-codex-approval', dialog);
       } finally {
         session.kill();
         labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
@@ -367,9 +361,8 @@ test.describe('chapter 6 - codex', () => {
         await approval.turnDone(4 * 60 * 1000);
         // Effect: the declined write created nothing, and the agent says so.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(0);
-        const shown = await approval.settled(/not created|wasn.t created|cancel|declin/i);
-        if (real) saveReal('fsa06-10-codex-declined', await real.snap());
-        else await capture.screen('fsa06-10-codex-declined', shown.clean, codexScreen());
+        await approval.settled(/not created|wasn.t created|cancel|declin/i);
+        await capture.agent('fsa06-10-codex-declined', real);
       } finally {
         session.kill();
         labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
