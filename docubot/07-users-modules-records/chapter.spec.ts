@@ -23,16 +23,17 @@
 // Prerequisites: the read-only guard is OFF in DOCUBOT_MCP_CONFIG (no
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
 // fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
-import { clearGridFilter, expect, filterGridRow, goToModuleList, test } from 'docubot';
-import { agentScreen, agentTurn, promptFor, startAgent } from '../lib/agentlab';
+import { clearGridFilter, expect, filterGridRow, goToModuleList, test, SCRUB } from 'docubot';
+import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { labSeed, queryRows, toolkit } from 'docubot';
 import { shouldRunStep } from 'docubot';
+import { promptFor } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. These grids show TEST-NET documentation
 // IPs (203.0.113.x, which pass), dates, and record UUIDs (read as key-like tokens
 // but not secrets, and no real key renders here), so those categories are skipped.
-const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
+const SKIP_RECORD = SCRUB.record;
 
 test.describe.configure({ mode: 'serial' });
 

@@ -16,18 +16,19 @@
 // Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
-import { expect, findAlert, forgetModuleCache, openRecord, test } from 'docubot';
+import { expect, findAlert, forgetModuleCache, openRecord, test, SCRUB } from 'docubot';
 import { execFileSync } from 'child_process';
 import * as path from 'path';
-import { AGENT_CWD, agentScreen, promptFor, startAgent, agentTurn } from '../lib/agentlab';
+import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
 import { labSeed, rows, toolkit } from 'docubot';
 import { shouldRunStep } from 'docubot';
+import { promptFor } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. The alert record shows dates and record
 // UUIDs (read as key-like tokens but not secrets, and no real key renders on an
 // alert record), so those categories are skipped for this shot.
-const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
+const SKIP_RECORD = SCRUB.record;
 
 test.describe.configure({ mode: 'serial' });
 

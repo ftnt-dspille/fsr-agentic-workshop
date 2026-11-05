@@ -18,13 +18,13 @@ import {
   waitForRecordSettled,
   skipStep,
 } from 'docubot';
-import { anyStepSelected, shouldRunStep } from 'docubot';
+import { anyStepSelected, shouldRunStep, SCRUB } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
 // On-screen dates are intended content on these tour pages; the scan still
 // refuses a real lab IP or hostname.
-const SKIP = { scrubSkip: ['date-or-time'] };
+const SKIP = SCRUB.dates;
 
 test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);

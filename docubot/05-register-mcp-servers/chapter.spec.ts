@@ -38,13 +38,14 @@ import {
   readAgentConfig, saveAgentConfig, saveMcpServer, test,
   skipStep,
 } from 'docubot';
-import { pageMd, shellShot } from '../lib/agentlab';
+import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { labSeed } from 'docubot';
+import { labSeed, SCRUB } from 'docubot';
 import { anyStepSelected, openAlertRecord, pollUntil, shouldRunStep } from 'docubot';
+import { pageMd } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -52,7 +53,7 @@ test.describe.configure({ mode: 'serial' });
 // localhost (built-ins) or public (deepwiki), which are not lab secrets, so they
 // stay visible; the scrub backstop still refuses a real lab IP, hostname, key or
 // sensitive term. On-screen dates are legitimate content (scrubSkip date-or-time).
-const SKIP = { scrubSkip: ['date-or-time'] };
+const SKIP = SCRUB.dates;
 
 const NAME = 'agentlab-deepwiki';
 const SERVER_URL = 'https://mcp.deepwiki.com/mcp';

@@ -17,7 +17,7 @@ import {
   openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
   fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
 } from 'docubot';
-import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, originOf, pollUntil, timed, timing } from 'docubot';
+import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, originOf, pollUntil, timed, timing, SCRUB, picklistText, settledReading, widgetRoot } from 'docubot';
 import { labSeed } from 'docubot';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 
@@ -28,7 +28,7 @@ const ALERT_RE = /Agent Lab - beaconing/i;
 // Mask only truly sensitive values (the lab URL is caught by the scrub backstop).
 // On-screen dates are legitimate content, so the scan skips date-or-time; it still
 // refuses a real lab IP, hostname, key or sensitive term.
-const SKIP = { scrubSkip: ['date-or-time'] };
+const SKIP = SCRUB.dates;
 
 // Speed: start every chapter 3 investigation that has none at once (the box runs
 // up to three in parallel), so each test below finds its run done or nearly done
@@ -46,7 +46,7 @@ test.beforeAll(() => {
 // key-like tokens. They are not secrets and the user wants them left visible, and an
 // alert record never renders a real API key, so this one shot also skips that
 // category. The lab-URL guards (ip-address, url-or-hostname, sensitive-term) stay on.
-const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
+const SKIP_RECORD = SCRUB.record;
 
 test('chapter 3 - investigation', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
@@ -424,35 +424,6 @@ const SEVERITY = 'Verdict by severity';
 const VERDICT_TYPES = 'Verdict types';
 const FUNNEL = ['Investigation funnel: new', 'Investigation funnel: investigated', 'Investigation funnel: verdict'];
 
-/** The picklist text of an API field (an object with itemValue, or a plain value). */
-function picklist(x: unknown): string {
-  if (x && typeof x === 'object') return String((x as { itemValue?: unknown; display?: unknown }).itemValue ?? (x as { display?: unknown }).display ?? '');
-  return x == null ? '' : String(x);
-}
-
-/** A widget's reading, once it has rendered its rows or cards (or the timeout passes). */
-async function settledReading(page: Page, title: string, timeoutMs = 60_000): Promise<WidgetReading> {
-  return timed(`widget "${title}"`, () => settledReadingInner(page, title, timeoutMs));
-}
-
-async function settledReadingInner(page: Page, title: string, timeoutMs: number): Promise<WidgetReading> {
-  let last: WidgetReading | undefined;
-  return pollUntil(`widget "${title}" rendered`, async () => {
-    last = await readWidget(page, title);
-    return (last.kind === 'table' ? last.rows.length > 0 : last.cards.length > 0) && last;
-  }, {
-    timeoutMs,
-    // At the deadline an unfilled reading is still returned (the caller asserts on it); a read that kept failing throws.
-    orElse: (err) => { if (err) throw err; return last!; },
-  });
-}
-
-/** The widget's root block on the dashboard (its title sits inside it). */
-function widgetRoot(page: Page, title: string): Locator {
-  // The nearest widget block around the title; an outer block also holds the other widgets.
-  return page.locator('h5', { hasText: title }).first().locator('xpath=ancestor::*[contains(@class,"widget-placement")][1]');
-}
-
 /** The lab alerts as the API returns them. */
 async function labAlerts(page: Page): Promise<Array<Record<string, unknown>>> {
   const body = await apiViaApp<{ 'hydra:member': Array<Record<string, unknown>> }>(page, 'GET', '/api/3/alerts?$limit=1000');
@@ -518,9 +489,9 @@ test('chapter 3 - verify counts', async ({ gui, capture }) => {
     await timed(`select dashboard "${DASHBOARD}"`, () => selectDashboard(soar, DASHBOARD));
     const alerts = await timed('read lab alerts', () => labAlerts(soar));
     expect(alerts.length, 'the lab alerts are seeded (tools/lab_setup.py seed)').toBeGreaterThan(0);
-    const verdictOf = (a: Record<string, unknown>) => picklist(a.aIVerdict);
-    const severityOf = (a: Record<string, unknown>) => picklist(a.severity);
-    const statusOf = (a: Record<string, unknown>) => picklist(a.status);
+    const verdictOf = (a: Record<string, unknown>) => picklistText(a.aIVerdict);
+    const severityOf = (a: Record<string, unknown>) => picklistText(a.severity);
+    const statusOf = (a: Record<string, unknown>) => picklistText(a.status);
     const apiVerdicts = [...new Set(alerts.map(verdictOf))].sort();
 
     // Verdict by severity: columns are the verdicts, rows the severities.

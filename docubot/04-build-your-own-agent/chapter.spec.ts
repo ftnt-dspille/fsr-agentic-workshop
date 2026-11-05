@@ -25,15 +25,15 @@ import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit } from 'docubot';
+import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit, SCRUB } from 'docubot';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. On-screen dates are legitimate content.
 // Record/agent/designer pages show record UUIDs, which read as key-like tokens but
 // are not secrets (and these pages never show a real key), so they skip that too.
-const SKIP = { scrubSkip: ['date-or-time'] };
-const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
+const SKIP = SCRUB.dates;
+const SKIP_RECORD = SCRUB.record;
 
 test.describe.configure({ mode: 'serial' });
 

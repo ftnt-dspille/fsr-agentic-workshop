@@ -18,16 +18,17 @@
 //
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
-import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test } from 'docubot';
-import { agentScreen, agentTurn, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, startAgent } from '../lib/agentlab';
+import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test, SCRUB } from 'docubot';
+import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { labSeed, queryRows, toolkit } from 'docubot';
 import { anyStepSelected, shouldRunStep } from 'docubot';
+import { pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. Designer/run-history pages show dates and
 // record/run UUIDs (read as key-like tokens but not secrets, and no real key
 // renders here), so those categories are skipped for these shots.
-const SKIP_RECORD = { scrubSkip: ['date-or-time', 'key-like-token'] };
+const SKIP_RECORD = SCRUB.record;
 
 test.describe.configure({ mode: 'serial' });
 
