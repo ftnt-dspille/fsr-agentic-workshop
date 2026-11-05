@@ -50,7 +50,7 @@ Part 1 features run on the appliance. They need AI features turned on and an LLM
 
 An agent that can write to a SOC platform needs limits. Part 2's server enforces three of them:
 
-1. **Approve every write.** Before any tool changes data, the server shows you the call and waits for your yes. Chapter 6 shows the prompt in each agent.
+1. **Approve every write.** Before any tool changes data, your coding agent shows you the call and waits for your yes. The server marks each tool as a read or a write, and the agent decides what to ask about. Chapter 6 shows the prompt in each agent.
 2. **Confirm-gated tools.** Deletes, schema publishes, user creation and connector installs refuse to run unless the call includes `confirm: true`. A good agent tells you what will change and asks before it sets that flag.
 3. **Verify the effect.** A 200 response only means the server accepted the request. After every write, read the state back. Fetch the record that was created, watch the playbook run that was triggered, or healthcheck the connector that was installed.
 

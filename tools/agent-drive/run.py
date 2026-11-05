@@ -430,11 +430,6 @@ def preflight(server: dict, expected_host: str) -> None:
 def make_workdir(server: dict) -> Path:
     WORK.mkdir(exist_ok=True)
     cfg = WORK / ".mcp.json"
-    # This driver runs claude -p headless: it cannot answer the toolkit's write-approval
-    # prompt, so under the require default (see verbs/approval.py) every write would be
-    # refused. This is the unattended case the off mode is for; opt out of the prompt here
-    # (writes still pass the confirm gate). The interactive docubot config keeps the default.
-    server = {**server, "env": {**server.get("env", {}), "FSR_MCP_APPROVAL": "off"}}
     cfg.write_text(json.dumps({"mcpServers": {LAB_SERVER: server}}, indent=2))
     cfg.chmod(0o600)
     return WORK

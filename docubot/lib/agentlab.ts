@@ -22,4 +22,4 @@ const lab = createAgentLab({
   skills: toolkitSkills,
   shot: () => ({ baseEnv: pyfsrEnv(), replaceFirst: toolkitVenvMasks(), masks: boxMasks() }),
 });
-export const { AGENT_CWD, CODEX_HOME, agentScreen, codexScreen, startAgent, agentTurn, startCodex, codexShell, shellShot } = lab;
+export const { AGENT_CWD, CODEX_HOME, agentScreen, codexScreen, startAgent, agentTurn, startCodex, startCodexApproval, codexShell, shellShot } = lab;

@@ -13,8 +13,8 @@
 //
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
-import { expect, goToState, skipStep, test, type AgentShotRun } from 'docubot';
-import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex } from '../lib/agentlab';
+import { buildExpect, expect, goToState, skipStep, test, type AgentShotRun, type Expect } from 'docubot';
+import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex, startCodexApproval } from '../lib/agentlab';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -252,8 +252,16 @@ test('chapter 6 - codex mcp connected', async ({ capture }) => {
 // Driven through docubot's Codex driver on the student's own config.toml (an
 // isolated CODEX_HOME, see lib/agentlab.ts startCodex). Each turn spends tokens, so
 // the group rides SPEND_AI. A capture is written only after its effect check passes.
+// The toolkit adds no approval form of its own (0.3.0): the client's prompt is the only
+// gate. The approval steps use docubot's CodexApproval, which classifies the server's
+// tools from its tools/list, lets a step declare the one call it expects (tool and target),
+// applies the decision itself, and takes the picture from Codex's own MCP approval prompt.
 const APPROVAL_NAME = 'Approval test';
-const APPROVAL_STAGE = /Allow the \S+ MCP server to run tool|Approve this change/;
+// Codex's own MCP prompt. Used only to prove a read-only turn never asked.
+const CODEX_PROMPT = /Allow the \S+ MCP server to run tool/;
+// The one change the page's prompt makes: an alert in the alerts module. The record's name is checked on the
+// captured call (not declared), since the model chooses the other fields.
+const APPROVAL_CALL: Omit<Expect, 'decision'> = { tool: 'create_record', args: { module: 'alerts' } };
 
 test.describe('chapter 6 - codex', () => {
   test.skip(process.env.SPEND_AI !== '1', 'codex turns: set SPEND_AI=1');
@@ -292,7 +300,7 @@ test.describe('chapter 6 - codex', () => {
         expect(plain).toContain(who.loginid);
         expect(plain).toMatch(/8\.\d+\.\d+/);
         // Read-only: nothing was asked to be approved.
-        expect(plain).not.toMatch(APPROVAL_STAGE);
+        expect(plain).not.toMatch(CODEX_PROMPT);
         await capture.screen('fsa06-13-codex-whoami', screen, codexScreen());
       } finally {
         session.kill();
@@ -304,22 +312,34 @@ test.describe('chapter 6 - codex', () => {
     test.setTimeout(20 * 60 * 1000);
     const prompt = promptFor('06-setup-agent', '03-approve-every-write');
 
+    // The page's prompt, sent as the student types it. The model may answer in prose before calling; a go-ahead is sent then.
+    const askForCall = async (approval: Awaited<ReturnType<typeof startCodexApproval>>['approval'], session: Awaited<ReturnType<typeof startCodexApproval>>['session'], expected: Expect) => {
+      await session.send(prompt);
+      let call = await approval.pendingOrEnd(expected, 4 * 60 * 1000);
+      for (let i = 0; i < 2 && !call; i++) {
+        await session.send('Yes, go ahead.');
+        call = await approval.pendingOrEnd(expected, 4 * 60 * 1000);
+      }
+      if (!call) throw new Error('Codex never asked to run create_record');
+      // Checked before any picture: this is the call the page describes, for the record the page names.
+      expect((call.args.data as { name?: string } | undefined)?.name, 'the call creates the page\'s alert').toBe(APPROVAL_NAME);
+      return call;
+    };
+
     if (shouldRunStep('fsa06-06-codex-approval')) await test.step('fsa06-06-codex-approval', async () => {
       labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
-      const session = await startCodex('codex-approve');
+      const { approval, policy, session } = await startCodexApproval();
       try {
-        // Stage 1 is codex's own MCP prompt; allowing it reveals the toolkit's form.
-        await session.promptUntil(prompt, APPROVAL_STAGE, { timeoutMs: 4 * 60 * 1000 });
-        await session.answer('approve');
-        await session.waitFor(/Approve this change/, { timeoutMs: 2 * 60 * 1000 });
-        // Shot: the paused approval form (box, tool, arguments, True/False).
-        const paused = session.screen();
-        expect(session.plainScreen()).toMatch(/1\. True/);
-        await session.answer('approve');
-        await session.waitFor(/Worked for \d+s/, { timeoutMs: 4 * 60 * 1000 });
+        const expected = buildExpect(policy, { ...APPROVAL_CALL, decision: 'approve' });
+        approval.setExpect(expected);
+        const call = await askForCall(approval, session, expected);
+        // Shot: Codex's own MCP approval prompt for this call (server, tool, arguments), checked to be this call's dialog.
+        const frame = await approval.capture(call);
+        await approval.answer(call, 'approve');   // "1. Allow", the highlighted row; never "always"
+        await approval.turnDone(4 * 60 * 1000);
         // Effect: the approved write landed.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(1);
-        await capture.screen('fsa06-06-codex-approval', paused, codexScreen());
+        await capture.screen('fsa06-06-codex-approval', frame.clean, codexScreen());
       } finally {
         session.kill();
         labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
@@ -328,17 +348,20 @@ test.describe('chapter 6 - codex', () => {
 
     if (shouldRunStep('fsa06-10-codex-declined')) await test.step('fsa06-10-codex-declined', async () => {
       labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
-      const session = await startCodex('codex-decline');
+      const { approval, policy, session } = await startCodexApproval();
       try {
-        await session.promptUntil(prompt, APPROVAL_STAGE, { timeoutMs: 4 * 60 * 1000 });
-        await session.answer('decline');
-        await session.waitFor(/Worked for \d+s/, { timeoutMs: 4 * 60 * 1000 });
+        const expected = buildExpect(policy, { ...APPROVAL_CALL, decision: 'decline' });
+        approval.setExpect(expected);
+        const call = await askForCall(approval, session, expected);
+        await approval.answer(call, 'decline');   // "4. Cancel" by Esc
+        await approval.turnDone(4 * 60 * 1000);
         // Effect: the declined write created nothing, and the agent says so.
         expect(alertsNamed(APPROVAL_NAME).length).toBe(0);
-        expect(session.plainScreen()).toMatch(/not created|wasn.t created|cancel/i);
-        await capture.screen('fsa06-10-codex-declined', session.screen(), codexScreen());
+        const shown = await approval.settled(/not created|wasn.t created|cancel|declin/i);
+        await capture.screen('fsa06-10-codex-declined', shown.clean, codexScreen());
       } finally {
         session.kill();
+        labSeed('delete-records', 'alerts', 'name', APPROVAL_NAME);
       }
     });
   });

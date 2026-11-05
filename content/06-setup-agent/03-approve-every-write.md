@@ -5,15 +5,15 @@ weight: 30
 description: "Make the agent ask you before it changes anything on the box, in whichever coding agent you use."
 ---
 
-By default, an agent can change FortiSOAR as freely as you can. It can create records, publish playbooks and change connectors. The toolkit adds a check. Before a write runs, the server asks you to approve it in your coding agent's interface. Reads never ask.
+By default, an agent can change FortiSOAR as freely as you can. It can create records, publish playbooks and change connectors. The check is your coding agent's own approval prompt. The toolkit marks each tool as a read or a write, and the agent asks you before it runs a write. Reads never ask. The toolkit shows no approval form of its own.
 
 ## 1. What the prompt shows
 
-When the agent tries to change something, an approval prompt appears in your terminal or editor. It shows:
+When the agent tries to change something, your coding agent's approval prompt appears in your terminal or editor. It shows:
 
-- the **box** that the change hits,
+- the **server** that the change goes to,
 - the **tool** and what it does,
-- the **arguments**. Anything that looks like a password, key or token is masked.
+- the **arguments**, including the module and the values to write.
 
 If you say no, nothing changes. The agent is told you declined. It does not retry, and it asks you what to do instead.
 
@@ -33,7 +33,7 @@ Then:
 - Delete the test alert. Ask the agent to delete the alert named `Approval test`. It asks you to approve the delete too.
 - Ask the agent to list the alerts. No prompt appears, because reads never ask.
 
-Each agent shows the approval in its own style. Codex and OpenCode preselect "no", so choose "yes" yourself.
+Each agent shows the approval in its own style. Read the prompt before you choose.
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
@@ -51,8 +51,7 @@ Decline, and Claude reports that the write was interrupted. It asks what to do i
 
 {{% /tab %}}
 {{% tab title="Codex" %}}
-1. Codex asks whether to let the FortiSOAR server run the tool. **1. Allow** is selected. Press Enter.
-2. The toolkit then shows the change: the box, the tool and the full arguments. It asks **Approve this change** with **1. True** and **2. False**. False is selected by default. Press Up, then Enter, to approve. To decline, press Enter on False, or press Escape at the first prompt.
+Codex asks whether to let the FortiSOAR server run the tool. It shows the server, the tool and the arguments, with a numbered list. **1. Allow** is selected. Press Enter to approve. To decline, choose **4. Cancel**, or press Escape. There is no second prompt.
 
 <!-- step: fsa06-06-codex-approval -->
 <!-- capture: fsa06-06-codex-approval -->
@@ -75,12 +74,10 @@ OpenCode shows the same approval in its own prompt. Approve it to run the write,
 {{% /tab %}}
 {{% /tabs %}}
 
-## 3. The setting
+## 3. Where the check lives
 
-The setting `FSR_MCP_APPROVAL` is in the `env` block of the server config. Its default is `require`. The agent then asks before every write, and if the prompt cannot be shown, the write is refused. If nobody answers within five minutes, the write is also refused.
-
-Keep the default. Then nothing changes on the box without your approval.
+The approval is your coding agent's setting, not the toolkit's. The toolkit only marks every tool as read-only or as a write, and marks the irreversible ones as destructive. The agent uses those marks to decide what to ask about. Keep your agent's default, which asks before every write. Then nothing changes on the box without your approval.
 
 {{% notice note %}}
-If a write runs with no prompt, set `FSR_MCP_APPROVAL=require` in the `env` block, restart the agent, and run the test in section 2 again.
+If a write runs with no prompt, your agent is set to allow it. Remove the "always allow" rule for the FortiSOAR server in your agent's settings, restart the agent, and run the test in section 2 again.
 {{% /notice %}}
