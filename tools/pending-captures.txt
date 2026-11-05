@@ -2,3 +2,9 @@
 # One id per line, then "# reason". lint-steps.py accepts a pending id in place of a
 # file so a page can land before its screenshot exists. Remove the line once the
 # .png is in the page's directory. `lint-steps.py --strict` fails while any remain.
+fsa06-14-fortiagent-ready  # FortiAgent tab added; spec written, not yet run live
+fsa06-15-fortiagent-add-mcp-form  # FortiAgent tab added; spec written, not yet run live
+fsa06-16-fortiagent-mcp-list  # FortiAgent tab added; spec written, not yet run live
+fsa06-17-fortiagent-whoami  # FortiAgent tab added; spec written, not yet run live
+fsa06-18-fortiagent-approval  # FortiAgent tab added; spec written, not yet run live
+fsa06-19-fortiagent-declined  # FortiAgent tab added; spec written, not yet run live

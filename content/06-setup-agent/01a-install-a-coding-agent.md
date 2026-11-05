@@ -2,12 +2,12 @@
 title: Install a Coding Agent
 linkTitle: Install an Agent
 weight: 15
-description: "Install Claude Code, Codex or OpenCode, sign in, and check that it runs before you connect it to FortiSOAR."
+description: "Install Claude Code, Codex, OpenCode or FortiAgent, sign in, and check that it runs before you connect it to FortiSOAR."
 ---
 
-The toolkit works with coding agents that support MCP. This workshop is tested with **Claude Code**, **Codex** and **OpenCode**. Install one of them. You need only one.
+The toolkit works with coding agents that support MCP. This workshop is tested with **Claude Code**, **Codex**, **OpenCode** and **FortiAgent**, Fortinet's desktop agent. Install one of them. You need only one.
 
-You need a terminal, and an account that the agent can sign in with, such as a subscription or an API key from the vendor. The agent uses tokens while it works.
+You need a terminal, and an account that the agent can sign in with, such as a subscription or an API key from the vendor. FortiAgent signs in with your FortiCloud account instead. The agent uses tokens while it works.
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
@@ -100,9 +100,31 @@ In OpenCode 2, the FortiSOAR tools appear as `tools.fortisoar.<tool>` inside `ex
 
 Trouble installing or connecting a provider? See the [OpenCode docs](https://opencode.ai/docs/) and its [troubleshooting page](https://opencode.ai/docs/troubleshooting/).
 {{% /tab %}}
+{{% tab title="FortiAgent" %}}
+FortiAgent is a desktop app for macOS. It chats through **FortiAI**, Fortinet's hosted model, and signs in with your FortiCloud account, so there is no API key to paste.
+
+Install it in **Terminal**:
+
+```bash
+curl -fsSL --proto '=https' --tlsv1.2 https://fortiagent.fortinet.com/downloads/fortiagent/install.sh | bash
+```
+
+The installer checks the release's checksum before it installs anything. You can also download the `.dmg` from the FortiAgent portal's **Install** page and drag **FortiAgent** to **Applications**.
+
+Open **FortiAgent** from **Applications**. The first launch shows a setup screen. Click **Sign in to use FortiAI**, sign in with FortiCloud in the browser that opens, and allow FortiAgent. The app moves to the chat on its own. An account with no FortiAgent Desktop license stops at **FortiAgent needs a FortiAgent Desktop license**. Tell your instructor.
+
+Check it: open **Settings** with the gear at the bottom of the sidebar. The **FortiAI** card reads **ready**.
+
+<!-- step: fsa06-14-fortiagent-ready -->
+<!-- capture: fsa06-14-fortiagent-ready -->
+
+In a terminal, `fortiagent service status` shows the same signed-in state.
+
+For each screen in detail, see the **Install and Sign In** chapter of the FortiAgent workshop.
+{{% /tab %}}
 {{% /tabs %}}
 
-**You are done when:** the version command prints a version number, and the agent starts and answers a plain question such as "what folder are you in?".
+**You are done when:** the version command prints a version number (for FortiAgent, the FortiAI card reads **ready**), and the agent starts and answers a plain question such as "what folder are you in?".
 
 ## Troubleshooting
 

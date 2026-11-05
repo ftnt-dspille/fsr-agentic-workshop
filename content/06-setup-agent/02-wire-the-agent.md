@@ -128,6 +128,44 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
 2. Restart OpenCode in the project.
 3. Ask it to list its tools. The FortiSOAR tools should appear. In OpenCode 2 they appear inside `execute` as `tools.fortisoar.<tool>`.
 {{% /tab %}}
+{{% tab title="FortiAgent" %}}
+FortiAgent keeps its MCP servers in its own settings. You add the toolkit in the app with the same values that the `init` snippet printed.
+
+1. Find the toolkit's full path. FortiAgent searches only the standard folders for a bare name, so a full path always works:
+
+   ```bash
+   which fsr-agentic-toolkit
+   ```
+
+2. Open **Settings > MCP servers** and click **Add an MCP server**. Pick **Local command**.
+3. **Name:** `FortiSOAR`.
+4. **Command:** the full path from step 1, the snippet's `command`.
+5. **Arguments:** `mcp` on the first line.
+6. **Environment variables:** add each `env` entry from the snippet: `FSR_BASE_URL`, `FSR_USERNAME`, `FSR_PASSWORD`, `FSR_VERIFY_SSL` (`false`) and `FSR_SUPPRESS_INSECURE_WARNINGS` (`true`). FortiAgent stores every value encrypted and never shows it again.
+7. Click **Add server**.
+
+<!-- step: fsa06-15-fortiagent-add-mcp-form -->
+<!-- capture: fsa06-15-fortiagent-add-mcp-form -->
+
+From a shell, the same thing is:
+
+```bash
+fortiagent mcp add FortiSOAR \
+  --env FSR_BASE_URL=fortisoar.example.com \
+  --env FSR_USERNAME=agentlab \
+  --env FSR_PASSWORD='<your-password>' \
+  --env FSR_VERIFY_SSL=false \
+  --env FSR_SUPPRESS_INSECURE_WARNINGS=true \
+  -- /your/venv/bin/fsr-agentic-toolkit mcp
+```
+
+8. Open a **New chat**, so the engine starts the server. Back in **Settings > MCP servers**, the `FortiSOAR` row shows a green dot when it is connected. Hover over a dot that is not green for the reason. In a shell, `fortiagent mcp list` shows `connected`.
+
+<!-- step: fsa06-16-fortiagent-mcp-list -->
+<!-- capture: fsa06-16-fortiagent-mcp-list -->
+
+For the status dots and reloading, see the **MCP Servers** chapter of the FortiAgent workshop.
+{{% /tab %}}
 {{% /tabs %}}
 
 ## 4. Install the skills
@@ -148,6 +186,9 @@ fsr-agentic-toolkit skills --install --agents-md AGENTS.md
 ```
 
 This adds a block to `AGENTS.md` that points the agent at each skill.
+{{% /tab %}}
+{{% tab title="FortiAgent" %}}
+Skip this step. FortiAgent does not read `.claude/skills` or `AGENTS.md`, so `fsr-agentic-toolkit skills --install` changes nothing for it. FortiAgent's own **Skills** (in the sidebar) come from its skills marketplace, and none ship for this toolkit. The toolkit's tool descriptions still steer FortiAgent, and its approval card still guards every write.
 {{% /tab %}}
 {{% /tabs %}}
 
@@ -171,6 +212,17 @@ Codex answers the same way. It shows the `whoami` call as it runs, then the answ
 <!-- step: fsa06-13-codex-whoami -->
 <!-- capture: fsa06-13-codex-whoami -->
 ![fsa06-13-codex-whoami](fsa06-13-codex-whoami.png?height=600px)
+
+In FortiAgent, open a **New chat** and ask in plain words:
+
+```text
+Who am I logged in as on FortiSOAR, and what version is the box?
+```
+
+FortiAgent picks the `whoami` tool on its own and answers with your login id and the box version. A tool that only reads runs with no approval card.
+
+<!-- step: fsa06-17-fortiagent-whoami -->
+<!-- capture: fsa06-17-fortiagent-whoami -->
 
 OpenCode works the same way:
 

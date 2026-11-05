@@ -72,6 +72,23 @@ OpenCode shows the same approval in its own prompt. Approve it to run the write,
 ![fsa06-07-opencode-approval](fsa06-07-opencode-approval.png?height=600px)
 
 {{% /tab %}}
+{{% tab title="FortiAgent" %}}
+FortiAgent shows an approval card above the message box. A grey band names the target and its group, for example **FortiSOAR - Change**. Below it are the question, the exact request (the tool and its arguments), and one answer per row: **Yes**, **Allow for this thread**, **Always**, then **No**. Pick a row, then click **Submit**.
+
+Choose **Yes** to approve, or **No** to decline. Never choose **Allow for this thread** or **Always**: they approve every later write too, without asking.
+
+FortiAgent asks only while Auto mode is off or paused, or when the FortiSOAR **Change** rule is set to **Ask** (**Settings > Permissions > Rules**). With Auto mode on, FortiAI may approve a write for you.
+
+<!-- step: fsa06-18-fortiagent-approval -->
+<!-- capture: fsa06-18-fortiagent-approval -->
+
+Choose **No**, and FortiAgent reports that the alert was not created:
+
+<!-- step: fsa06-19-fortiagent-declined -->
+<!-- capture: fsa06-19-fortiagent-declined -->
+
+For more on the card and the rules, see the **Approvals and Rules** chapter of the FortiAgent workshop.
+{{% /tab %}}
 {{% /tabs %}}
 
 ## 3. Where the check lives
