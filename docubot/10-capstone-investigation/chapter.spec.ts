@@ -198,13 +198,31 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
       return;
     }
     // Starting the native investigation is one write (run_fortiai_investigation on the capstone alert); Claude's own prompt asks.
-    const { held, plain: screen } = await claudeTurn(page, promptFor(CHAPTER, PAGE, 3), [
-      { tool: 'run_fortiai_investigation', anyTarget: true, required: true, check: capstoneRefCheck('the investigation') },
-    ], { timeoutMs: 25 * 60 * 1000 });
+    const prompt = promptFor(CHAPTER, PAGE, 3);
+    const run = await startClaude(page, { writeFiles: false });
+    let held: Awaited<ReturnType<typeof snapFrom>>;
+    let screen = '';
+    try {
+      await approvedTurn(run, prompt, [
+        { tool: 'run_fortiai_investigation', anyTarget: true, required: true, check: capstoneRefCheck('the investigation') },
+      ], { nudge: 'Yes, go ahead.', timeoutMs: 25 * 60 * 1000 });
+      // The agent may end its turn while the native run is still going. The condition to wait on is the screen itself: only a turn
+      // that reports a verdict and a comparison is the picture. Until then ask the way a student would; each follow-up is a read.
+      const UNFINISHED = /still (running|in progress|processing)|not (yet )?(finished|complete|ready)|in progress|check back/i;
+      screen = run.real.term.plainScreen();
+      for (let i = 0; i < 6 && (UNFINISHED.test(screen) || !/agree|differ/i.test(screen)); i++) {
+        await approvedTurn(run, 'Is the AI investigation finished now? If it is, compare its verdict with yours.', [], { timeoutMs: 10 * 60 * 1000 });
+        screen = run.real.term.plainScreen();
+      }
+      expect(screen, 'the native investigation never reported a verdict').not.toMatch(UNFINISHED);
+      held = await snapFrom(run, prompt);
+    } finally {
+      run.session.kill();
+    }
     // The comparison must rest on a native run the agent actually started.
     expect(screen).toMatch(/agree|differ/i);
     // A comparison against a verdict that never arrived is not the page's result.
-    expect(screen).not.toMatch(/provisional|returned early|Tooling problems|keep polling|404/i);
+    expect(screen).not.toMatch(/provisional|returned early|Tooling problems|keep polling|still running|404/i);
     await capture.agent('fsa10-03-native-compare', held);
   });
 });

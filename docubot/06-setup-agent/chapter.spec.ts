@@ -136,7 +136,11 @@ test('chapter 6 - agent init', async ({ local, capture }) => {
     agent.enter();
     await agent.waitFor(/fortisoar/i, { timeoutMs: 120_000 });
     await agent.waitIdle({ quietMs: 2_500, timeoutMs: 60_000 });
-    await capture.screen('fsa06-03-agent-init', agent.screen(), agentScreen());
+    // The account's own usage banner ("You've used N% of your weekly limit, resets ...") is the capturing account's, not the lab's.
+    const opts = agentScreen();
+    const GAP = String.raw`(?:\s|\x1b\[[\d;]*[Cm])*`;
+    const usage = new RegExp(`You've${GAP}used${GAP}\\d+%${GAP}of${GAP}your${GAP}(?:weekly|5-hour|session)${GAP}limit[^\\n]*?\\)`, 'g');
+    await capture.screen('fsa06-03-agent-init', agent.screen(), { ...opts, replace: [...opts.replace, [usage, '']] });
   });
 });
 
