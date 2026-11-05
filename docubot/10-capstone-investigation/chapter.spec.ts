@@ -73,8 +73,8 @@ function hasFindings(a: StagedAlert): boolean {
  * One Claude turn whose page lets the agent make the writes in `allowed`: each is asked by Claude's own prompt, decided by the
  * step's policy, and approved here. Returns the screen text and the held picture; the caller saves it once its effect checks pass.
  */
-async function claudeTurn(page: Page, prompt: string, allowed: Allowed[], o: { nudge?: string; timeoutMs?: number; builtins?: string[] } = {}) {
-  const run = await startClaude(page, { builtins: o.builtins });
+async function claudeTurn(page: Page, prompt: string, allowed: Allowed[], o: { nudge?: string; timeoutMs?: number; writeFiles?: boolean } = {}) {
+  const run = await startClaude(page, { writeFiles: o.writeFiles });
   try {
     await approvedTurn(run, prompt, allowed, { nudge: o.nudge ?? 'Yes, go ahead.', timeoutMs: o.timeoutMs });
     return { held: await snapFrom(run, prompt), plain: run.real.term.plainScreen() };
@@ -250,7 +250,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 2), [
       { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Repair Practice') },
       alertNamed('Agent Lab repair'),
-    ], { builtins: ['Write', 'Edit'], timeoutMs: 10 * 60 * 1000 });
+    ], { writeFiles: true, timeoutMs: 10 * 60 * 1000 });
     // The fix must be repair_playbook's, not a hand edit the agent fell back to.
     expect(screen).toMatch(/repair_playbook/);
     expect(screen).not.toMatch(/by hand|manually|myself|no change made/i);
@@ -278,7 +278,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     }
     // Two turns, as on the page: schedule it, let beat fire it and record the fire
     // (beat saves its counters minutes after firing), then diagnose and delete. One session, so the second prompt keeps its context.
-    const run = await startClaude(page, { builtins: ['Write', 'Edit'] });
+    const run = await startClaude(page, { writeFiles: true });
     const createPrompt = promptFor('10-capstone-investigation', PAGE, 4);
     const deletePrompt = promptFor('10-capstone-investigation', PAGE, 5);
     let createdShot: Awaited<ReturnType<typeof snapFrom>>;

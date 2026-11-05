@@ -95,8 +95,8 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     if (!fs.existsSync(path.join(conndir, 'info.json'))) throw new Error(`fsa09-04 deploys the folder fsa09-03 built (${DADJOKE}); run fsa09-03 first`);
     const prompt = promptFor('09-connectors', '02-build-a-connector', 2);
     // Installing puts code on the box, so Claude's own prompt asks before install_connector and before each configuration write.
-    // The packaging is the page's own shell command (`pyfsr connector package`) in the lab folder, so Bash is listed for this step.
-    const run = await startClaude(page, { keepCwd: true, builtins: ['Bash'] });
+    // The packaging is the page's own shell command (`pyfsr connector package`) in the lab folder: Bash is allowed for exactly that command, nothing else.
+    const run = await startClaude(page, { keepCwd: true, bash: [`pyfsr connector package ${DADJOKE}(?: 2>&1)?`] });
     let held: Awaited<ReturnType<typeof snapFrom>>;
     try {
       await approvedTurn(run, prompt, [

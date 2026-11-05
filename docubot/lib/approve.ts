@@ -40,10 +40,10 @@ export type ClaudeRun = Awaited<ReturnType<typeof startClaudeApproval>> & {
 
 /**
  * Start Claude Code in a real terminal under the policy hook, on the operator's own login. The working folder is wiped first
- * unless `keepCwd` (a step that works on what an earlier step built). The page's skills are installed as the page has a student do it.
+ * unless `keepCwd`. `bash` and `writeFiles` open the narrow built-in rules described below (a step that works on what an earlier step built). The page's skills are installed as the page has a student do it.
  * `mcpEnv` adds server env (a page's FSR_SECRET_* reference) to a private copy of the box's .mcp.json.
  */
-export async function startClaude(page: Page, o: { builtins?: string[]; mcpEnv?: Record<string, string>; keepCwd?: boolean; cols?: number; rows?: number } = {}): Promise<ClaudeRun> {
+export async function startClaude(page: Page, o: { bash?: string[]; writeFiles?: boolean; mcpEnv?: Record<string, string>; keepCwd?: boolean; cols?: number; rows?: number } = {}): Promise<ClaudeRun> {
   const mcp = process.env.DOCUBOT_MCP_CONFIG;
   if (!mcp || !fs.existsSync(mcp)) throw new Error('DOCUBOT_MCP_CONFIG must point at a .mcp.json with the box fortisoar server (an env setup problem, not a content failure).');
   // The operator's subscription login only: an API key in the environment would be used instead and bill the wrong account.
@@ -62,9 +62,16 @@ export async function startClaude(page: Page, o: { builtins?: string[]; mcpEnv?:
     config = path.join(fs.mkdtempSync(path.join(path.dirname(cwd), 'mcp-')), '.mcp.json');
     fs.writeFileSync(config, JSON.stringify(conf, null, 2), { mode: 0o600 });
   }
+  // Built-ins that change the machine are allowed only in the shape the step names: a Bash command that fits one of the given
+  // expressions as a whole, and Write/Edit only on a path inside the lab folder (both spellings of a temp path).
+  const dirs = [...new Set([cwd, fs.realpathSync(cwd)])];
+  const builtinRules = [
+    ...(o.bash ?? []).map((matches) => ({ tool: 'Bash', key: 'command', matches })),
+    ...(o.writeFiles ? ['Write', 'Edit'].map((tool) => ({ tool, key: 'file_path', under: dirs })) : []),
+  ];
   const run = await startClaudeApproval(page, {
-    mcpConfig: config, cwd, isolation: 'operator-login', cols: o.cols ?? 100, rows: o.rows ?? 60,
-    policyExtra: { noConfirm: true, targetKeys: TOOLKIT_TARGET_KEYS, builtins: [...READ_BUILTINS, ...(o.builtins ?? [])] },
+    mcpConfig: config, cwd, isolation: 'operator-login', callRunMs: 15 * 60 * 1000, cols: o.cols ?? 100, rows: o.rows ?? 60,
+    policyExtra: { noConfirm: true, targetKeys: TOOLKIT_TARGET_KEYS, builtins: READ_BUILTINS, builtinRules },
   });
   return { ...run, cwd };
 }
