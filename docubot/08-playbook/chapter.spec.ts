@@ -19,9 +19,8 @@
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test } from 'docubot';
-import {
-  agentScreen, agentTurn, labSeed, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, queryRows, shouldRunStep, startAgent, toolkit,
-} from '../lib/agentlab';
+import { agentScreen, agentTurn, pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf, shouldRunStep, startAgent } from '../lib/agentlab';
+import { labSeed, queryRows, toolkit } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. Designer/run-history pages show dates and

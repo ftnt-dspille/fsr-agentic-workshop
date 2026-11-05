@@ -1,15 +1,10 @@
-// Workshop-local helpers layered on docubot's device modules — the agentic
-// workshop's equivalent of the FortiAIGate workshop's docubot/lib/faig-lab.ts.
-// Everything product-generic (login, nav, capture, pty) comes from docubot; this
-// file holds only what is specific to THIS workshop: the fsr-agentic-toolkit CLI
-// (the same tools the agent calls, used here for seeding and effect checks),
-// pulling an agent prompt out of the page it is documented on, and driving the
-// Claude Code TUI for a prompt.
-import { execFileSync } from 'child_process';
-import * as os from 'os';
+// Workshop-local helpers layered on docubot's device modules. Everything product-generic (the toolkit CLI, the
+// lab seeder, the agent launcher, login, nav, capture, pty) comes from docubot; this file holds only what is
+// specific to THIS workshop: the persona the shots show, the connector the ch09 lab builds, pulling an agent
+// prompt out of the page it is documented on, and the terminal shots.
 import * as fs from 'fs';
 import * as path from 'path';
-import { Capture, LocalSession, TuiSession, claudeAdapter, prepareCodexHome, timedSync } from 'docubot';
+import { Capture, LocalSession, boxMasks as boxMasksFor, createAgentLab, pyfsrEnv, toolkitSkills, toolkitVenvMasks } from 'docubot';
 
 /** The connector the ch09 build lab produces (one source of truth). */
 export const DADJOKE = 'agentlab-dadjoke';
@@ -24,164 +19,17 @@ export function shouldRunStep(id: string): boolean {
   return run;
 }
 
-/**
- * The selector every FortiSOAR UI capture paints over by default: visible
- * appliance URLs. Pass to capture.shot's `mask`, extending it only when a
- * specific page has another value the author deliberately wants hidden.
- *
- * The user menu, avatar and settings icon are deliberately NOT masked (house
- * rule: never hide them on SOAR captures). docubot's scrub backstop still
- * refuses a shot on an unmasked private value.
- */
-export function uiMask(page: any): any[] {
-  // Mask the smallest text-bearing nodes. `getByText()` can resolve to a
-  // table row/card that contains a URL, producing the broad dark bars seen in
-  // captures. The leaf-node XPath keeps the URL mask limited to the URL text.
-  return [page.locator('xpath=//*[not(*) and starts-with(normalize-space(.), "http://") or not(*) and starts-with(normalize-space(.), "https://")]')];
-}
+/** The login the captures show, as the page names it (`connected: agentlab`). The box's real login is masked. */
+export const SHOWN_LOGIN = 'agentlab';
+/** The box URL the captures show. */
+export const SHOWN_BOX_URL = 'https://fortisoar.example.com';
 
-/**
- * Call an fsr-agentic-toolkit tool and return its parsed JSON result — the box
- * effect-check path. Resolves the CLI the way the agent's MCP server does:
- * beside FSR_PYTHON, then on PATH, then via uvx. Throws on a tool error so a
- * failed effect fails the step. Mirrors tools/e2e/lib/harness.js pyfsrTool.
- */
-export function toolkit(name: string, args: Record<string, unknown> = {}): any {
-  const py = process.env.FSR_PYTHON;
-  const beside = py && py.includes(path.sep) ? path.join(path.dirname(py), 'fsr-agentic-toolkit') : null;
-  const onPath = (() => {
-    for (const dir of (process.env.PATH || '').split(path.delimiter)) {
-      if (dir && fs.existsSync(path.join(dir, 'fsr-agentic-toolkit'))) return path.join(dir, 'fsr-agentic-toolkit');
-    }
-    return null;
-  })();
-  const resolved = (beside && fs.existsSync(beside) && beside) || onPath;
-  const [exe, pre] = resolved ? [resolved, [] as string[]] : ['uvx', ['--from', 'fsr-agentic-toolkit', 'fsr-agentic-toolkit']];
-  let stdout: string;
-  try {
-    stdout = execFileSync(exe, [...pre, 'call', '--json', name, JSON.stringify(args)], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
-      timeout: 12 * 60 * 1000,
-    });
-  } catch (err: any) {
-    if (err && err.code === 'ENOENT') {
-      throw new Error(
-        'fsr-agentic-toolkit not found: set FSR_PYTHON to the toolkit venv interpreter, ' +
-          'put the CLI on PATH, or install uv for the uvx fallback. An env setup problem, not a content failure.',
-      );
-    }
-    // A tool error exits non-zero with {"error": ...} on stdout: raise that
-    // message (e.g. "module 'x' not found"), the same as the exit-0 path below.
-    try {
-      const parsed = JSON.parse(String(err?.stdout ?? ''));
-      if (parsed && parsed.error) throw new Error(`${name}: ${JSON.stringify(parsed.error).slice(0, 500)}`);
-    } catch (e: any) {
-      if (e instanceof Error && e.message.startsWith(`${name}: `)) throw e;
-    }
-    // Say why: the last lines of the toolkit's stderr (a network error, an auth
-    // failure) instead of only "Command failed".
-    const tail = String(err?.stderr ?? '').trim().split('\n').slice(-3).join(' | ');
-    if (tail && err && typeof err.message === 'string') err.message = `${err.message.split('\n')[0]}\n  toolkit stderr: ${tail}`;
-    throw err;
-  }
-  const result = JSON.parse(stdout);
-  if (result && result.error) throw new Error(`${name}: ${JSON.stringify(result.error).slice(0, 500)}`);
-  return result;
-}
+/** Replace the box's real URL, host, login and display name with the page's placeholders. */
+export const boxMasks = () => boxMasksFor({ login: SHOWN_LOGIN, name: 'Agent Lab', url: SHOWN_BOX_URL });
 
-/** Env with the FSR_PYTHON venv bin first on PATH, for shelling the pyfsr CLI. */
-export function pyfsrEnv(): NodeJS.ProcessEnv {
-  const py = process.env.FSR_PYTHON;
-  const bin = py && py.includes(path.sep) ? path.dirname(py) : null;
-  // The box coordinates live in FSR_ENV_FILE; load them so every child (pyfsr,
-  // the toolkit CLI) reaches the same box without the caller exporting FSR_*.
-  // Values already in the environment win.
-  const fromFile: Record<string, string> = {};
-  const envFile = process.env.FSR_ENV_FILE;
-  if (envFile && fs.existsSync(envFile)) {
-    for (const raw of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
-      const line = raw.trim();
-      if (!line || line.startsWith('#') || !line.includes('=')) continue;
-      const i = line.indexOf('=');
-      fromFile[line.slice(0, i).trim()] = line.slice(i + 1).trim().replace(/^["']|["']$/g, '');
-    }
-  }
-  return { ...fromFile, ...process.env, PATH: bin ? `${bin}${path.delimiter}${process.env.PATH}` : process.env.PATH };
-}
-
-/** Run a shell command (pyfsr CLI etc.) and return stdout; throws on nonzero. */
-export function sh(cmd: string, args: string[], cwd?: string): string {
-  return execFileSync(cmd, args, { encoding: 'utf8', timeout: 5 * 60 * 1000, env: pyfsrEnv(), cwd });
-}
-
-/**
- * Drive the repeatable python seeder (tools/lab_setup.py) from a docubot spec's
- * CONFIGURE phase, so one `docubot run` seeds the box and then captures. The
- * seeder is idempotent (create-if-absent), so this is safe to call every run.
- * It installs the SAME artifacts students download from static/examples, so the
- * seed path and the student import path never drift.
- *
- * Box connection comes from the FSR_* env the run already sets (FSR_BASE_URL,
- * FSR_USERNAME, FSR_PASSWORD, FSR_VERIFY_SSL). Mutating, so gate it behind the
- * chapter's build flag; it is a no-op worth skipping on a read-only run.
- *
- * @param cmd a lab_setup.py subcommand: 'seed' | 'org-context' | 'install-agent'
- *   | 'mcp-server' | 'records' (and chapter seeders as they are added)
- */
-/**
- * Capture options for an agent TUI screen: the student's window title, and the
- * agent's real working folder (the folder holding DOCUBOT_MCP_CONFIG) shown as
- * the ~/agent-lab folder the pages tell the student to work in.
- */
-/** Working folder for the TUI agent: outside every repo. */
-export const AGENT_CWD = path.join(os.tmpdir(), 'fsa-workshop', 'agent-lab');
-
-// Agent sessions are shown unmasked (scrub off); only the temp folder is
-// renamed to the folder the pages use.
-// Footer items that come from the capturing machine, not the lab: Claude Code's
-// count of other local sessions and the checkout's open merge request. Gaps
-// between words are serialized as cursor-forward escapes, and colour codes can
-// sit between them, so both count as space.
-const GAP = String.raw`(?:\s|\x1b\[[\d;]*[Cm])*`;
-const FOOTER_NOISE: Array<[RegExp, string]> = [
-  [new RegExp(`${GAP}[·•]${GAP}←${GAP}\\d+${GAP}agents?`, 'g'), ''],
-  [new RegExp(`${GAP}[·•]${GAP}MR${GAP}!\\d+`, 'g'), ''],
-  // Claude Code's self-update notice on the capturing machine.
-  [new RegExp(`(?:\x1b\\[[\\d;]*m)*✔${GAP}Update${GAP}installed${GAP}[·•]${GAP}/restart${GAP}to${GAP}apply(?:\x1b\\[[\\d;]*m)*`, 'g'), ''],
-];
-
-export function agentScreen(): { title: string; scrub: false; replace: Array<[string | RegExp, string]> } {
-  const dir = process.env.DOCUBOT_MCP_CONFIG ? path.dirname(path.resolve(process.env.DOCUBOT_MCP_CONFIG)) : '';
-  const home = process.env.HOME || '';
-  const tilde = dir && home && dir.startsWith(home) ? '~' + dir.slice(home.length) : '';
-  return {
-    title: 'student@laptop: ~/agent-lab',
-    scrub: false,
-    // boxMasks: show the login and box the pages tell students to use (agentlab at
-    // fortisoar.example.com), the same as codexScreen, whichever login captured it.
-    replace: [['/private' + AGENT_CWD, '~/agent-lab'], [AGENT_CWD, '~/agent-lab'], [dir, '~/agent-lab'], [tilde, '~/agent-lab'], ...FOOTER_NOISE, ...boxMasks()].filter(([f]) => f) as Array<[string | RegExp, string]>,
-  };
-}
-
-export function labSeed(cmd: string, ...args: string[]): string {
-  const py = process.env.FSR_PYTHON || process.env.DOCUBOT_PYTHON || 'python3';
-  const script = path.join(__dirname, '..', '..', 'tools', 'lab_setup.py');
-  let out: string;
-  try {
-    out = timedSync(`labSeed ${[cmd, ...args].join(' ')}`, () => execFileSync(py, [script, cmd, ...args], {
-      encoding: 'utf8',
-      timeout: 5 * 60 * 1000,
-      env: { ...pyfsrEnv(), FSR_SUPPRESS_INSECURE_WARNINGS: 'true' },
-      cwd: path.join(__dirname, '..', '..'),
-    }));
-  } catch (e: any) {
-    throw new Error(`lab_setup ${cmd} ${args.join(' ')} failed:\n${String(e.stdout || '')}${String(e.stderr || '')}`);
-  }
-  console.log(`[labSeed ${cmd}] ${out.trim().split('\n').pop()}`);
-  return out;
-}
+// The agent lab: this workshop's temp folder name, box masks, and how the toolkit's skills install.
+const lab = createAgentLab({ name: 'fsa-workshop', masks: boxMasks, skills: toolkitSkills });
+export const { AGENT_CWD, CODEX_HOME, agentScreen, codexScreen, startAgent, agentTurn, startCodex, codexShell } = lab;
 
 /**
  * The Nth "Give your agent this prompt" fenced block on a content page — the
@@ -219,168 +67,6 @@ export function promptYaml(chapter: string, page: string, startMarker: string, e
   const end = md.indexOf(endMarker, start);
   if (start < 0 || end < 0) throw new Error(`prompt YAML markers not found on content/${chapter}/${page}.md`);
   return md.slice(start, end).trim() + '\n';
-}
-
-/** The record list out of a toolkit result, whatever envelope key the tool used. */
-export function rows(res: any): any[] {
-  if (Array.isArray(res)) return res;
-  if (!res || typeof res !== 'object') return [];
-  for (const key of ['records', 'members', 'hydra:member', 'items', 'results', 'data']) {
-    if (Array.isArray(res[key])) return res[key];
-  }
-  for (const v of Object.values(res)) if (Array.isArray(v)) return v as any[];
-  return [];
-}
-
-/**
- * toolkit query_records -> rows. Pass `fields` in `extra` to get a custom
- * module's own field values (the default projection returns identity fields
- * only). FortiSOAR `like` needs SQL wildcards: pass `%value%`.
- */
-export function queryRows(module: string, filters: unknown[], extra: Record<string, unknown> = {}): any[] {
-  return rows(toolkit('query_records', { module, filters, limit: 100, ...extra }));
-}
-
-/**
- * Launch a Claude Code TUI against the box and return a session ready for a
- * prompt. How claude is launched, trusted and readied is docubot's
- * claudeAdapter; this adds only the workshop's choices: the box .mcp.json
- * (DOCUBOT_MCP_CONFIG) and a working folder outside any git repo, so the footer
- * shows no repo state (open merge request, project agents).
- */
-export async function startAgent(
-  local: (name: string, opts?: any) => Promise<LocalSession>,
-  name: string,
-  opts: { cols?: number; rows?: number; mcpEnv?: Record<string, string> } = {},
-): Promise<LocalSession> {
-  let mcp = process.env.DOCUBOT_MCP_CONFIG;
-  if (!mcp || !fs.existsSync(mcp)) {
-    throw new Error(
-      'DOCUBOT_MCP_CONFIG must point at a .mcp.json with the box fortisoar server ' +
-        '(an env setup problem, not a content failure).',
-    );
-  }
-  fs.mkdirSync(AGENT_CWD, { recursive: true });
-  // The page has students install the toolkit's skills; captures run with them
-  // too. DOCUBOT_NO_SKILLS=1 runs without, for a with/without comparison.
-  const skillsDir = path.join(AGENT_CWD, '.claude', 'skills');
-  fs.rmSync(skillsDir, { recursive: true, force: true });
-  if (process.env.DOCUBOT_NO_SKILLS !== '1') {
-    const py = process.env.FSR_PYTHON;
-    const cli = py ? path.join(path.dirname(py), 'fsr-agentic-toolkit') : 'fsr-agentic-toolkit';
-    execFileSync(cli, ['skills', '--install', '--dir', skillsDir], { encoding: 'utf8' });
-  }
-  if (opts.mcpEnv) {
-    // Extra server env (a page's FSR_SECRET_* reference) goes into a private copy
-    // of the config, never into the shared one.
-    const cfg = JSON.parse(fs.readFileSync(mcp, 'utf8'));
-    for (const server of Object.values<any>(cfg.mcpServers ?? {})) server.env = { ...server.env, ...opts.mcpEnv };
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsa-mcp-'));
-    mcp = path.join(dir, '.mcp.json');
-    fs.writeFileSync(mcp, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  }
-  const { file, args } = claudeAdapter.launchArgv({ type: 'agent', tool: 'claude' } as any, path.resolve(mcp));
-  const term = await local(name, { file, args, cwd: AGENT_CWD, cols: opts.cols ?? 100, rows: opts.rows ?? 40 });
-  await claudeAdapter.clearStartupGates(term);
-  await term.waitFor(claudeAdapter.readyPattern, { timeoutMs: 120_000 });
-  return term;
-}
-
-/**
- * Drive one agent turn and return its final screen for capture.screen(). The
- * turn logic (approval forms, prose go-aheads answered with `confirm`, waiting
- * for the turn's own completion line) is docubot's claudeAdapter.turn.
- */
-export async function agentTurn(
-  term: LocalSession,
-  prompt: string,
-  opts: { confirm?: string; quietMs?: number; timeoutMs?: number } = {},
-): Promise<string> {
-  return claudeAdapter.turn!(term, prompt, opts);
-}
-
-// ---------------------------------------------------------------------------
-// Codex. The captures run Codex on the student's own config.toml, written into an
-// isolated CODEX_HOME under the gitignored .agent-lab/ (auth.json is linked from
-// ~/.codex, which is never edited). Every Codex capture passes an effect check
-// (toolkit whoami / the alerts module) before its PNG is written.
-
-/** The isolated CODEX_HOME the Codex captures launch with. */
-export const CODEX_HOME = path.join(__dirname, '..', '..', '.agent-lab', 'codex-home');
-
-/** The login the captures show, as the page names it (`connected: agentlab`). The box's real login is masked. */
-export const SHOWN_LOGIN = 'agentlab';
-/** The box URL the captures show. */
-export const SHOWN_BOX_URL = 'https://fortisoar.example.com';
-
-/** Write the skills block and the student config.toml, as the page's steps do. */
-function prepareCodexLab(): string {
-  const mcp = process.env.DOCUBOT_MCP_CONFIG;
-  if (!mcp || !fs.existsSync(mcp)) {
-    throw new Error('DOCUBOT_MCP_CONFIG must point at a .mcp.json with the box fortisoar server (an env setup problem, not a content failure).');
-  }
-  fs.mkdirSync(AGENT_CWD, { recursive: true });
-  if (process.env.DOCUBOT_NO_SKILLS !== '1') {
-    const py = process.env.FSR_PYTHON;
-    const cli = py ? path.join(path.dirname(py), 'fsr-agentic-toolkit') : 'fsr-agentic-toolkit';
-    // The page's Codex/OpenCode skills step: a block in AGENTS.md that points at the skills.
-    execFileSync(cli, ['skills', '--install', '--agents-md', path.join(AGENT_CWD, 'AGENTS.md')], { encoding: 'utf8' });
-  }
-  prepareCodexHome(CODEX_HOME, path.resolve(mcp));
-  return path.resolve(mcp);
-}
-
-/** Start the Codex TUI on the box the way a student runs `codex` in the lab folder. */
-export async function startCodex(name: string, opts: { cols?: number; rows?: number } = {}): Promise<TuiSession> {
-  const mcp = prepareCodexLab();
-  return TuiSession.start(name, { type: 'agent', tool: 'codex', mcpConfig: mcp, cwd: AGENT_CWD, codexHome: CODEX_HOME }, {
-    cols: opts.cols ?? 100,
-    rows: opts.rows ?? 40,
-  });
-}
-
-/** A shell in the lab folder with CODEX_HOME set, for the `codex mcp list` check. */
-export async function codexShell(name: string, opts: { cols?: number; rows?: number } = {}): Promise<LocalSession> {
-  prepareCodexLab();
-  return LocalSession.spawn(name, { type: 'local' } as any, {
-    file: '/bin/bash',
-    args: ['--noprofile', '--norc', '-i'],
-    cwd: AGENT_CWD,
-    cols: opts.cols ?? 100,
-    rows: opts.rows ?? 40,
-    env: { PS1: 'student@laptop:~/agent-lab$ ', CODEX_HOME },
-  });
-}
-
-/** The box host the pages type (no scheme), from the lab env. */
-export function boxHost(): string {
-  const base = pyfsrEnv().FSR_BASE_URL || '';
-  try { return new URL(base).host; } catch { return base.replace(/^https?:\/\//, '').replace(/\/+$/, ''); }
-}
-
-/** The toolkit CLI the shots run: beside FSR_PYTHON, else on PATH. */
-function toolkitCli(): string {
-  const py = process.env.FSR_PYTHON;
-  return py && py.includes(path.sep) ? path.join(path.dirname(py), 'fsr-agentic-toolkit') : 'fsr-agentic-toolkit';
-}
-
-/**
- * Write the project .mcp.json that the Claude Code page step has the student
- * save, generated by the toolkit's own `init --claude-code` (the same snippet the
- * page prints). The file holds the password, so it is written 0600 into a
- * throwaway folder. Returns the file path.
- */
-export function writeClaudeMcpJson(folder: string): string {
-  const env = pyfsrEnv();
-  const out = execFileSync(toolkitCli(), [
-    'init', '--url', boxHost(), '--username', env.FSR_USERNAME ?? '', '--no-verify-ssl', '--claude-code',
-  ], { encoding: 'utf8', env: { ...env, FSR_SUPPRESS_INSECURE_WARNINGS: 'true' } as NodeJS.ProcessEnv, timeout: 2 * 60 * 1000 });
-  const m = /^# \.mcp\.json[^\n]*\n([\s\S]*?\n\})/m.exec(out);
-  if (!m) throw new Error('writeClaudeMcpJson: init printed no .mcp.json snippet');
-  fs.mkdirSync(folder, { recursive: true });
-  const file = path.join(folder, '.mcp.json');
-  fs.writeFileSync(file, m[1] + '\n', { mode: 0o600 });
-  return file;
 }
 
 /** The prompt the terminal shots show (the student's shell, as the pages name it). */
@@ -436,16 +122,6 @@ function applyMasks(text: string, masks: Array<[string | RegExp, string]>): stri
     else if (from) out = out.split(from).join(to);
   }
   return out;
-}
-
-/**
- * Swap for the toolkit's venv root (the folder above FSR_PYTHON's bin folder): a
- * shot shows it as /your/venv, the placeholder the pages use.
- */
-export function toolkitVenvMasks(): Array<[string, string]> {
-  const py = process.env.FSR_PYTHON;
-  if (!py || !py.includes(path.sep)) return [];
-  return [[path.dirname(path.dirname(path.resolve(py))), '/your/venv']];
 }
 
 /** Index range [first, last] of the lines from the first line matching `from` through the first matching `to`. */
@@ -546,51 +222,5 @@ export async function shellShot(capture: Capture, id: string, opts: ShellShotOpt
   } finally {
     sh.kill();
   }
-}
-
-/** The box login and display name, from the toolkit (the effect check's source of truth). */
-export function boxIdentity(): { loginid: string; name: string; version: string } {
-  const who = toolkit('whoami');
-  return { loginid: who.user.loginid, name: who.user.name ?? '', version: who.version };
-}
-
-/** Rows of the alerts module named exactly `name` (the approval test's effect). */
-export function alertsNamed(name: string): any[] {
-  return queryRows('alerts', [{ field: 'name', operator: 'eq', value: name }], { fields: ['name', 'severity'] }).filter((r) => r.name === name);
-}
-
-/** Replace the box's real URL, host, login and display name with the page's placeholders. */
-export function boxMasks(): Array<[string | RegExp, string]> {
-  const env = pyfsrEnv();
-  const base = env.FSR_BASE_URL || '';
-  const out: Array<[string | RegExp, string]> = [];
-  if (base) {
-    let host = base;
-    try { host = new URL(base).hostname; } catch { /* keep as is */ }
-    const who = (() => { try { return boxIdentity(); } catch { return null; } })();
-    // A multi-word display name: the gaps can be serialized as cursor-forward or
-    // colour escapes, so match each gap as GAP, not a literal space.
-    if (who?.name) {
-      const words = who.name.trim().split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      out.push([new RegExp(words.join(GAP), 'g'), 'Agent Lab']);
-    }
-    if (who?.loginid) out.push([who.loginid, SHOWN_LOGIN]);
-    // host:port first, so the port does not survive the hostname swap.
-    let hostPort = host;
-    try { hostPort = new URL(base).host; } catch { /* keep as is */ }
-    out.push([base, SHOWN_BOX_URL], [hostPort, 'fortisoar.example.com'], [host, 'fortisoar.example.com']);
-  }
-  return out;
-}
-
-/** agentScreen() for a Codex capture: the same folder and footer handling, plus the box masks, scrub kept on. */
-export function codexScreen(): { title: string; replace: Array<[string | RegExp, string]> } {
-  const a = agentScreen();
-  const home = process.env.HOME || '';
-  // The student's home folder shows as ~ (a path under it is a local detail, not a lab one).
-  const homeMask: Array<[string, string]> = home ? [[home, '~']] : [];
-  // Codex's footer shows the cwd, cut short; the temp root it sits under is local too.
-  const tempFolder: Array<[RegExp, string]> = [[/(?:\/private)?\/var\/folders\/\S*?fsa-workshop\/agent\S*/g, '~/agent-lab']];
-  return { title: a.title, replace: [...a.replace, ...homeMask, ...tempFolder] };
 }
 

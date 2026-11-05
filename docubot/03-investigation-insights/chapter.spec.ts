@@ -17,8 +17,9 @@ import {
   openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
   fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
 } from 'docubot';
-import { labSeed, shouldRunStep } from '../lib/agentlab';
+import { shouldRunStep } from '../lib/agentlab';
 import { timed, timing } from 'docubot';
+import { labSeed } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 

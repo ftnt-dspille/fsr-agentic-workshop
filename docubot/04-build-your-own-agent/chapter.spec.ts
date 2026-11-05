@@ -25,7 +25,8 @@ import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { boxHost, labSeed, pyfsrEnv, queryRows, sh, shouldRunStep, toolkit } from '../lib/agentlab';
+import { shouldRunStep } from '../lib/agentlab';
+import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. On-screen dates are legitimate content.

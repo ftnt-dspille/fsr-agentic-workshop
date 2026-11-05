@@ -10,7 +10,8 @@
 import { connectorResultsCount, expect, openConnector, removeConnectorConfiguration, selectConfig, test } from 'docubot';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, labSeed, promptFor, shouldRunStep, startAgent, toolkit } from '../lib/agentlab';
+import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, promptFor, shouldRunStep, startAgent } from '../lib/agentlab';
+import { labSeed, toolkit } from 'docubot';
 
 // The Content Hub connector the install page names.
 const HUB = 'whois-rdap';

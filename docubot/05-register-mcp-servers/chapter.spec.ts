@@ -38,11 +38,12 @@ import {
   readAgentConfig, saveAgentConfig, saveMcpServer, test,
   skipStep,
 } from 'docubot';
-import { labSeed, pageMd, shellShot, shouldRunStep } from '../lib/agentlab';
+import { pageMd, shellShot, shouldRunStep } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { labSeed } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 

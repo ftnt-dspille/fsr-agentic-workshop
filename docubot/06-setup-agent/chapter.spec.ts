@@ -14,15 +14,11 @@
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
 import { expect, goToState, skipStep, test, type AgentShotRun } from 'docubot';
-import {
-  SHOWN_LOGIN, agentScreen, agentTurn, alertsNamed, boxHost, boxIdentity, codexScreen, codexShell, promptFor, shellShot, shouldRunStep,
-  startAgent, startCodex, writeClaudeMcpJson,
-} from '../lib/agentlab';
-import { labSeed } from '../lib/agentlab';
+import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, promptFor, shellShot, shouldRunStep, startAgent, startCodex } from '../lib/agentlab';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { pyfsrEnv } from '../lib/agentlab';
+import { alertsNamed, boxHost, boxIdentity, writeClaudeMcpJson, labSeed, pyfsrEnv } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 

@@ -19,7 +19,8 @@
 import { expect, findAlert, forgetModuleCache, openRecord, test } from 'docubot';
 import { execFileSync } from 'child_process';
 import * as path from 'path';
-import { AGENT_CWD, agentScreen, labSeed, promptFor, rows, shouldRunStep, startAgent, agentTurn, toolkit } from '../lib/agentlab';
+import { AGENT_CWD, agentScreen, promptFor, shouldRunStep, startAgent, agentTurn } from '../lib/agentlab';
+import { labSeed, rows, toolkit } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
 // IP, hostname, key or sensitive term. The alert record shows dates and record
