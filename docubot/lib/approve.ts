@@ -123,7 +123,7 @@ export async function approvedTurn(run: ClaudeRun, prompt: string, allowed: Allo
  */
 export function snapFrom(run: ClaudeRun, prompt: string) {
   const first = prompt.split('\n')[0].trim().slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return run.real.snap({ startAt: new RegExp(`^\\s*[>❯]\\s+${first}`), terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
+  return run.real.snap({ startAt: new RegExp(`^\\s*[>❯]\\s+${first}`), lastMatch: true, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
 }
 
 /** The agent's visible text, for a check that something never reached the screen. */
