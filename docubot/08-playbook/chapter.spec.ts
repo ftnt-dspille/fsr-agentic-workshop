@@ -75,7 +75,6 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
     'fsa08-08-sweep',
   ])) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   // CONFIGURE: seed prerequisites (read-only run without the flag). When the agent
   // builds the playbook (SPEND_AI=1) nothing is pre-seeded, so its publish is the
@@ -118,7 +117,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture }) => {
 
     // UI: open the playbook's designer canvas in-app (collection -> playbook); a
     // direct /playbooks/<uuid> deep-link does not load the designer on 8.0.
-    await openPlaybook(soar, origin, { collectionName: COLLECTION, playbookName: TAG_PLAYBOOK });
+    await openPlaybook(soar, { collectionName: COLLECTION, playbookName: TAG_PLAYBOOK });
     const canvas = soar.locator('#designer-container');
     await expect(canvas, `designer canvas for ${TAG_PLAYBOOK} did not load`).toBeVisible({ timeout: 40_000 });
     await expect(canvas).toContainText('Tag Alert', { timeout: 30_000 });

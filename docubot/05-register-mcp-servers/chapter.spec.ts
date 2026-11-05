@@ -44,7 +44,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { labSeed } from 'docubot';
-import { anyStepSelected, shouldRunStep } from 'docubot';
+import { anyStepSelected, openAlertRecord, pollUntil, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -77,7 +77,6 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     'fsa05-05-chat-runs-tool',
   ])) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
   const ownsLab = shouldRunStep('fsa05-01-validate-register');
 
   try {
@@ -90,7 +89,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     if (ownsLab) await deleteMcpServer(soar, NAME);
 
     if (shouldRunStep('fsa05-01-validate-register')) await test.step('fsa05-01-validate-register', async () => {
-      const modal = await fillConnectMcpServer(soar, origin, {
+      const modal = await fillConnectMcpServer(soar, {
         name: NAME,
         description: 'Lab: DeepWiki remote server (public, no credentials)',
         transport: 'http',
@@ -119,7 +118,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       expect(row, `no ${NAME} row: run fsa05-01 or seed it with DOCUBOT_SEED=1`).toBeTruthy();
       expect(row?.active, 'registered server is active').toBe(true);
 
-      await openMcpServers(soar, origin);
+      await openMcpServers(soar);
       for (const name of [NAME, ...BUILT_IN]) {
         await mcpServerListRow(soar, name).catch(() => {
           throw new Error(`"${name}" missing from the MCP Servers page (run fsa05-01 / DOCUBOT_SEED=1, or a box without that built-in)`);
@@ -138,7 +137,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // lists the tools; this dialog is cancelled (never saved), so it leaves no row.
       // A dialog under the registered name cannot test (the name is taken), so the
       // validate-only dialog uses a scratch name and is cancelled, never saved.
-      const modal = await fillConnectMcpServer(soar, origin, {
+      const modal = await fillConnectMcpServer(soar, {
         name: `${NAME}-validate`,
         description: 'Lab: DeepWiki remote server (public, no credentials)',
         transport: 'http',
@@ -155,7 +154,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       await modal.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => undefined);
 
       // The saved server, as the MCP Servers list shows it.
-      await openMcpServers(soar, origin);
+      await openMcpServers(soar);
       const savedRow = await mcpServerListRow(soar, NAME);
       await clearMcpServerFilter(soar);
       await capture.shot(soar, 'fsa05-03-register-remote-saved', { highlight: savedRow, ...SKIP });
@@ -172,8 +171,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
 
     // Click the saved server: its detail panel lists the tools the server returned.
     if (shouldRunStep('fsa05-03-register-remote-tools')) await test.step('fsa05-03-register-remote-tools', async () => {
-      const origin = new URL(soar.url()).origin;
-      await openMcpServer(soar, origin, NAME);
+      await openMcpServer(soar, NAME);
       const tools = soar.getByText(/^\s*Tools \(\d+\):?\s*$/).first();
       await tools.waitFor({ timeout: 30_000 });
       // Effect: the server's own tool names came back (a real discovery, not an empty list).
@@ -193,7 +191,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // A custom configuration REPLACES the default server list: keep the built-in
       // servers selected, or the agent loses SOC Framework and every later
       // investigation silently stops writing its verdict back to the alert.
-      await fillAgentConfig(soar, origin, AGENT, { name: 'Agent Lab DeepWiki', mcpServer: [...BUILT_IN_MCP_SERVERS, NAME] });
+      await fillAgentConfig(soar, AGENT, { name: 'Agent Lab DeepWiki', mcpServer: [...BUILT_IN_MCP_SERVERS, NAME] });
       await capture.shot(soar, 'fsa05-04-grant-allowlist-agent-config', SKIP);
       if (process.env.DOCUBOT_CH05_GRANT !== '1') {
         console.log('[ch05] fsa05-04 not saved: set DOCUBOT_CH05_GRANT=1 to save the grant on the agent');
@@ -217,9 +215,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
         return;
       }
       // The AI Assistant launcher only appears on a record-detail page.
-      const alert = await findAlert(soar, /./);
-      expect(alert, 'need at least one alert to open the AI Assistant from').toBeTruthy();
-      await openRecord(soar, 'alerts', alert!.id, { tab: 'Alert Details' });
+      await openAlertRecord(soar, /./, { tab: 'Alert Details', hint: 'need at least one alert to open the AI Assistant from' });
 
       const { answer } = await askFortiSOARAssistant(soar, QUESTION);
       // The answer must name the intelligence source and a verdict, not just echo
@@ -282,13 +278,10 @@ test('chapter 5 - curl handshake', async ({ capture }) => {
     const log = fs.openSync(path.join(dir, 'server.log'), 'w');
     const server = spawn('bash', ['-c', `. .venv/bin/activate && ${serve[serve.length - 1]}`], { cwd: dir, detached: true, stdio: ['ignore', log, log] });
     try {
-      const deadline = Date.now() + 60_000;
-      for (;;) {
+      await pollUntil('the weather-lab server', () => {
         const code = (() => { try { return execFileSync('curl', ['-s', '-o', '/dev/null', '-w', '%{http_code}', LAB_PORT_URL], { encoding: 'utf8' }); } catch { return '000'; } })();
-        if (code !== '000') break;
-        if (Date.now() > deadline) throw new Error(`the weather-lab server did not answer on ${LAB_PORT_URL}: see ${path.join(dir, 'server.log')}`);
-        await new Promise((r) => setTimeout(r, 500));
-      }
+        return code !== '000';
+      }, { timeoutMs: 60_000, intervalMs: 500, message: `the weather-lab server did not answer on ${LAB_PORT_URL}: see ${path.join(dir, 'server.log')}` });
 
       // The protocol version the SDK supports, from the server's own venv (the page's instruction).
       const version = execFileSync(path.join(dir, '.venv', 'bin', 'python'), ['-c', 'from mcp.types import LATEST_PROTOCOL_VERSION as v; print(v)'], { encoding: 'utf8' }).trim();

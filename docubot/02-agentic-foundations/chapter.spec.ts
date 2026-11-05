@@ -95,7 +95,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   // agent's profile by hand; the catalog view (Content Hub > Discover, filtered to
   // AI Agent) is captured here.
   if (shouldRunStep('fsa02-02-agent-catalog')) await test.step('fsa02-02-agent-catalog', async () => {
-    await openDiscover(soar, origin, { only: ['AI Agent'] });
+    await openDiscover(soar, { only: ['AI Agent'] });
     await expect(soar.getByText('Alert Investigation', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-02-agent-catalog', SKIP);
   });
@@ -103,7 +103,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   // Open one agent's settings so the reader sees the LLM profile, the MCP servers
   // it may use, and its masking agent - not just the catalog card.
   if (shouldRunStep('fsa02-02-agent-settings')) await test.step('fsa02-02-agent-settings', async () => {
-    const uuid = await openAgentDetail(soar, origin, 'Alert Investigation');
+    const uuid = await openAgentDetail(soar, 'Alert Investigation');
     expect(uuid, 'Alert Investigation agent is in the catalog').toBeTruthy();
     await openAgentDetailTab(soar, 'Configurations');
     await expect(soar.getByText(/LLM Provider/i).first()).toBeVisible({ timeout: 30_000 });
@@ -112,7 +112,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   });
 
   if (shouldRunStep('fsa02-03-mcp-servers')) await test.step('fsa02-03-mcp-servers', async () => {
-    await openMcpServers(soar, origin);
+    await openMcpServers(soar);
     for (const name of [
       'FortiSOAR Module Management',
       'FortiSOAR Playbook Management',
@@ -129,7 +129,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   // Open one MCP server so the reader sees its transport, URL and the tools it
   // exposes (Discovered Capabilities), not just the server's name in a list.
   if (shouldRunStep('fsa02-03-mcp-server-detail')) await test.step('fsa02-03-mcp-server-detail', async () => {
-    await openMcpServer(soar, origin, 'SOC Framework');
+    await openMcpServer(soar, 'SOC Framework');
     await expect(soar.getByText(/Discovered Capabilities/i).first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-03-mcp-server-detail', SKIP);
   });
@@ -137,14 +137,14 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   if (shouldRunStep('fsa02-04-sop-compare')) await test.step('fsa02-04-sop-compare', async () => {
     // The org-context grid paginates, so filter the Title column to "SOP -" and
     // confirm the Malware SOP is among the matched rows.
-    await orgContextRow(soar, origin, 'SOP -', 'SOP - Malware Detection');
+    await orgContextRow(soar, 'SOP -', 'SOP - Malware Detection');
     await capture.shot(soar, 'fsa02-04-sop-compare', SKIP);
   });
 
   // Open one SOP record so the reader sees its question list, which chapter 3
   // compares against the questions the planner actually writes.
   if (shouldRunStep('fsa02-04-sop-detail')) await test.step('fsa02-04-sop-detail', async () => {
-    const uuid = await openOrgContextRecord(soar, origin, 'SOP -', 'SOP - Malware Detection');
+    const uuid = await openOrgContextRecord(soar, 'SOP -', 'SOP - Malware Detection');
     expect(uuid, 'the Malware SOP record opened').toBeTruthy();
     await expect(soar.getByText(/Questions/i).first()).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa02-04-sop-detail', SKIP);

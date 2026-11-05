@@ -218,7 +218,6 @@ test('chapter 6 - user roles', async ({ gui, capture }) => {
     for (const role of ['Full App Permissions', 'Application Administrator', 'Security Administrator', 'Playbook Administrator']) {
       await expect(soar.getByText(role, { exact: true }).filter({ visible: true }).first(), `role ${role} is assigned`).toBeVisible({ timeout: 30_000 });
     }
-    await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa06-01b-user-roles', {
       scrubSkip: ['email', 'date-or-time'],
     });

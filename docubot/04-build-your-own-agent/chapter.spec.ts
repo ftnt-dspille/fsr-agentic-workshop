@@ -57,14 +57,14 @@ async function triggerHello(soar: Page, entity: string): Promise<any> {
   return result;
 }
 
-const helloListed = (soar: Page, origin: string) => agentInCatalog(soar, origin, AGENT_LABEL);
+const helloListed = (soar: Page) => agentInCatalog(soar, AGENT_LABEL);
 
 /** Upload the bundle through the panel (uploads AND activates); fail when the toggle is off. */
-async function uploadHello(soar: Page, origin: string, zip: string): Promise<void> {
-  if (!(await agentUploadAvailable(soar, origin)).available) {
+async function uploadHello(soar: Page, zip: string): Promise<void> {
+  if (!(await agentUploadAvailable(soar)).available) {
     throw new Error('Upload AI Agent control is off: enable Advanced Development > Import/Upload Custom AI Agent');
   }
-  await uploadAgentBundle(soar, origin, zip, { replace: true });
+  await uploadAgentBundle(soar, zip, { replace: true });
 }
 
 test('chapter 4 - build your own agent', async ({ gui, capture }) => {
@@ -79,7 +79,6 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     'fsa04-04-playbook-branch',
   ])) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentlab-ch04-'));
   const zip = path.join(workdir, `${AGENT}.zip`);
 
@@ -100,7 +99,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // Page 02 s2: the Content Hub upload panel. Opening it uploads nothing, so it is
   // always safe; skipped (not failed) when the Advanced Development toggle is off.
   if (shouldRunStep('fsa04-00-upload-agent')) await test.step('fsa04-00-upload-agent', async () => {
-    if (!(await openAgentUploadPanel(soar, origin))) {
+    if (!(await openAgentUploadPanel(soar))) {
       skipStep('fsa04-00-upload-agent', 'the Import/Upload Custom AI Agent toggle is off');
       return;
     }
@@ -110,8 +109,8 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     if (build()) {
       sh('zip', ['-r', zip, AGENT], EXAMPLES);
       expect(fs.existsSync(zip)).toBe(true);
-      await uploadHello(soar, origin, zip);
-      expect(await helloListed(soar, origin), 'hello agent not in the catalog after upload').toBe(true);
+      await uploadHello(soar, zip);
+      expect(await helloListed(soar), 'hello agent not in the catalog after upload').toBe(true);
     }
   });
 
@@ -119,7 +118,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // AI Configurations page, then its System > System Configuration screen, and shows
   // the Advanced Development section. Read-only: the toggle is looked at, not changed.
   if (shouldRunStep('fsa04-00-advanced-toggle')) await test.step('fsa04-00-advanced-toggle', async () => {
-    await openMcpServers(soar, origin);
+    await openMcpServers(soar);
     await soar.getByText('System Configuration', { exact: true }).first().click();
     await soar.getByText('Advanced Development Features', { exact: true }).first().click();
     const toggle = soar.getByText(/Import\/Upload Custom AI Agent/i).first();
@@ -130,7 +129,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // Page 02 s4: the hello agent's detail page. The API round trip below only proves
   // the upload worked; students call it from a playbook on page 03. No LLM call.
   if (shouldRunStep('fsa04-01-hello-agent')) await test.step('fsa04-01-hello-agent', async () => {
-    if (!(await openAgentDetail(soar, origin, AGENT_LABEL))) {
+    if (!(await openAgentDetail(soar, AGENT_LABEL))) {
       skipStep('fsa04-01-hello-agent', 'hello agent not installed (set DOCUBOT_AGENT_BUILD=1)');
       return;
     }
@@ -148,7 +147,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // intact (replacing it with a short table silently stops the default questions).
   if (shouldRunStep('fsa04-02-tool-list-row')) await test.step('fsa04-02-tool-list-row', async () => {
     // Seed it first with DOCUBOT_SEED=1 (or `python3 tools/lab_setup.py org-context`).
-    const uuid = await openOrgContextRecord(soar, origin, 'TOOL_LIST').catch(() => null);
+    const uuid = await openOrgContextRecord(soar, 'TOOL_LIST').catch(() => null);
     expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
     for (const label of DEFAULT_TOOL_ROWS) {
       await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
@@ -171,7 +170,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     const openTrace = async () => {
       const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
       expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
-      await openAlertAiInvestigation(soar, origin, alert!.id);
+      await openAlertAiInvestigation(soar, alert!.id);
       // A finished investigation is read, not run again.
       const inv = (await readInvestigation(soar)).state === 'not-run'
         ? await runInvestigation(soar)
@@ -200,7 +199,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // login and step wiring are not scripted); this step opens it and captures the
   // canvas. Skipped when the playbook is not there.
   if (shouldRunStep('fsa04-04-playbook-branch')) await test.step('fsa04-04-playbook-branch', async () => {
-    const opened = await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME })
+    const opened = await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME })
       .then(() => true).catch(() => false);
     if (!opened) {
       skipStep('fsa04-04-playbook-branch', `no "${PLAYBOOK_NAME}" playbook in "${PLAYBOOK_COLLECTION}"`);
@@ -225,13 +224,12 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     await capture.shot(soar, 'fsa04-04-playbook-branch-run', { target: soar.locator('#mySidenav'), ...SKIP_RECORD });
     // Open the Invoke AI Agent step to see its returned data (the page branches on it).
     await soar.getByText('Invoke AI Agent', { exact: true }).first().click();
-    await soar.waitForTimeout(2000);
     // Expand the output's data node so its fields (what the Decision reads) show.
     // The tree's expand arrow for the data row (the label itself only moves the breadcrumb).
     const arrow = soar.getByText('data', { exact: true }).last();
+    await arrow.waitFor({ state: 'visible', timeout: 30_000 });
     const box = await arrow.boundingBox();
     if (box) await soar.mouse.click(box.x - 14, box.y + box.height / 2);
-    await soar.waitForTimeout(1500);
     const dataFields = await soar.getByText('confidence', { exact: true }).count();
     console.log(`[ch04] fsa04-04: confidence key shown in the step output: ${dataFields > 0}`);
     await capture.shot(soar, 'fsa04-04-playbook-branch-step-output', SKIP_RECORD);
@@ -246,10 +244,9 @@ test('chapter 4 - remote fortisoar config', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!shouldRunStep('fsa04-01-remote-fortisoar-config')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   await test.step('fsa04-01-remote-fortisoar-config', async () => {
-    await openConnector(soar, origin, 'FortiSOAR');
+    await openConnector(soar, 'FortiSOAR');
     await soar.getByText('Configurations', { exact: true }).first().click();
     expect(await selectConfig(soar, 'Lab'), 'the Lab configuration loads').toBe(true);
     // Checked before the capture: the values the page describes.
@@ -259,7 +256,6 @@ test('chapter 4 - remote fortisoar config', async ({ gui, capture }) => {
     expect((await readFieldAfterLabel(soar, 'Authentication Type')).value, 'Authentication Type is Basic').toBe('Basic');
     expect((await readFieldAfterLabel(soar, 'Verify SSL')).checked, 'Verify SSL is off').toBe(false);
     expect((await readFieldAfterLabel(soar, 'Mark As Default Configuration')).checked, 'the default-configuration checkbox is ticked').toBe(true);
-    await soar.waitForTimeout(1500);
     const hostPort = boxHost();
     const hostname = hostPort.replace(/:\d+$/, '');
     const login = pyfsrEnv().FSR_USERNAME ?? '';
@@ -278,7 +274,6 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!shouldRunStep('fsa04-04-invoke-step-config')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
     if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
@@ -288,7 +283,7 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
   });
 
   await test.step('fsa04-04-invoke-step-config', async () => {
-    await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
     // The canvas node (not the palette entry of the same name), then its config panel.
     await soar.locator('#designer-container .step-container').filter({ hasText: 'Invoke AI Agent' }).first().dblclick({ timeout: 15000 });
     await soar.getByText('Agent Name', { exact: false }).first().waitFor({ state: 'visible', timeout: 30000 });
@@ -301,10 +296,9 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
       return ((l?.closest('.form-group') as HTMLElement | null)?.innerText) ?? '';
     });
     expect(payloadText, 'Agent Payload holds the entity JSON').toContain('"entity": "host-01.example.com"');
-    await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
-    await leaveDesigner(soar, origin);
+    await leaveDesigner(soar);
   });
 });
 
@@ -314,15 +308,13 @@ test('chapter 4 - upload connector dialog', async ({ gui, capture }) => {
   test.setTimeout(5 * 60 * 1000);
   if (!shouldRunStep('fsa04-01b-upload-connector-dialog')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   await test.step('fsa04-01b-upload-connector-dialog', async () => {
-    await openUploadConnector(soar, origin);
+    await openUploadConnector(soar);
     // Checked before the capture: the connector panel is open and no file is chosen.
     const chosen = await soar.locator('input[type=file]').first().evaluate((el) => (el as HTMLInputElement).files?.length ?? 0);
     expect(chosen, 'no file is chosen').toBe(0);
     await expect(soar.getByText(/Drag and Drop/i).first(), 'the upload panel is open').toBeVisible({ timeout: 20_000 });
-    await soar.waitForTimeout(1000);
     await capture.shot(soar, 'fsa04-01b-upload-connector-dialog', SKIP);
   });
 });
@@ -333,18 +325,16 @@ test('chapter 4 - decision config', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!shouldRunStep('fsa04-04-decision-config')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   await test.step('fsa04-04-decision-config', async () => {
-    await openPlaybook(soar, origin, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
     await soar.locator('#designer-container .step-container').filter({ hasText: 'Confidence Check' }).first().dblclick({ timeout: 15000 });
     // Checked before the capture: the two branches the page names are the decision's conditions.
     await expect(soar.getByText('High confidence', { exact: false }).first(), 'the High confidence branch shows').toBeVisible({ timeout: 30_000 });
     await expect(soar.getByText('Low confidence', { exact: false }).first(), 'the Low confidence branch shows').toBeVisible();
-    await soar.waitForTimeout(1500);
     await capture.shot(soar, 'fsa04-04-decision-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
-    await leaveDesigner(soar, origin);
+    await leaveDesigner(soar);
   });
 });
 
@@ -359,10 +349,9 @@ test('chapter 4 - advanced toggle edit', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!shouldRunStep('fsa04-00-advanced-toggle-edit')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   await test.step('fsa04-00-advanced-toggle-edit', async () => {
-    await openMcpServers(soar, origin);
+    await openMcpServers(soar);
     await soar.getByText('System Configuration', { exact: true }).first().click();
     await soar.getByText('Advanced Development Features', { exact: true }).first().click();
     await expect(soar.getByText(/Import\/Upload Custom AI Agent/i).first()).toBeVisible({ timeout: 30_000 });
@@ -373,7 +362,6 @@ test('chapter 4 - advanced toggle edit', async ({ gui, capture }) => {
     const accept = soar.getByText(/accept responsibility for enabling Import\/Export and Upload of AI Agent/i).first();
     await expect(accept, 'the Import/Upload accept checkbox shows in edit mode').toBeVisible({ timeout: 20_000 });
     await accept.scrollIntoViewIfNeeded();
-    await soar.waitForTimeout(1000);
     await capture.shot(soar, 'fsa04-00-advanced-toggle-edit', { highlight: accept, ...SKIP });
     // Cancel, never Submit: the section goes back to read-only with its state unchanged.
     await barAction(soar, 'Cancel').click();
@@ -389,10 +377,9 @@ test('chapter 4 - tool list row saved', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
   if (!shouldRunStep('fsa04-02-tool-list-row-saved')) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
 
   await test.step('fsa04-02-tool-list-row-saved', async () => {
-    const uuid = await openOrgContextRecord(soar, origin, 'TOOL_LIST').catch(() => null);
+    const uuid = await openOrgContextRecord(soar, 'TOOL_LIST').catch(() => null);
     expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
     for (const label of DEFAULT_TOOL_ROWS) {
       await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });

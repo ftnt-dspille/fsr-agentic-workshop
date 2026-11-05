@@ -42,7 +42,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     // UI proof: the Content Hub results count, highlighted. Only the lab URL and
     // keys are ever masked (house rule); the scrub backstop refuses any other leak.
     const soar = await gui('soar');
-    const countEl = await connectorResultsCount(soar, new URL(soar.url()).origin);
+    const countEl = await connectorResultsCount(soar);
     await capture.shot(soar, 'fsa09-01-discover-connectors-ui-count', { highlight: countEl });
   });
 
@@ -115,7 +115,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     const listed = JSON.stringify(toolkit('list_connectors', {}));
     const label = new RegExp(`${DADJOKE} -- (.+?) v\\d`).exec(listed)?.[1];
     expect(label, `${DADJOKE} is not installed`).toBeTruthy();
-    await openConnector(soar, new URL(soar.url()).origin, label!);
+    await openConnector(soar, label!);
     await capture.shot(soar, 'fsa09-05-run-own-connector');
   });
 
@@ -188,8 +188,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture }) => {
     }
     // UI proof: the saved Lab configuration shows its API key as a masked password.
     const soar = await gui('soar');
-    const origin = new URL(soar.url()).origin;
-    await openConnector(soar, origin, 'VirusTotal');
+    await openConnector(soar, 'VirusTotal');
     await soar.getByText('Configurations', { exact: true }).first().click();
     expect(await selectConfig(soar, 'Lab'), 'the Lab configuration did not load').toBe(true);
     // The API key is write-only: the form shows a "Set API Key" link, never the value.
