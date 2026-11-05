@@ -10,7 +10,7 @@ import { buildExpect, toolkitSkills, type Expect, type PendingCall } from 'docub
 import { AGENT_CWD, startClaudeApproval } from './agentlab';
 
 /** Argument names that name a target on the FortiSOAR toolkit, beside `module` and `instance`. */
-const TOOLKIT_TARGET_KEYS = ['connector', 'server', 'name'];
+const TOOLKIT_TARGET_KEYS = ['module', 'connector', 'server', 'name'];
 /** Claude's own tools that never change anything on the box or the machine; every other built-in is denied unless the step lists it. */
 const READ_BUILTINS = ['Read', 'Glob', 'Grep', 'TodoWrite', 'ToolSearch', 'Skill'];
 
@@ -70,7 +70,7 @@ export async function startClaude(page: Page, o: { bash?: string[]; writeFiles?:
     ...(o.writeFiles ? ['Write', 'Edit'].map((tool) => ({ tool, key: 'file_path', under: dirs })) : []),
   ];
   const run = await startClaudeApproval(page, {
-    mcpConfig: config, cwd, isolation: 'operator-login', callRunMs: 15 * 60 * 1000, cols: o.cols ?? 100, rows: o.rows ?? 60,
+    mcpConfig: config, cwd, isolation: 'operator-login', callRunMs: 15 * 60 * 1000, cols: o.cols ?? 100, rows: o.rows ?? 90,
     policyExtra: { noConfirm: true, targetKeys: TOOLKIT_TARGET_KEYS, builtins: READ_BUILTINS, builtinRules },
   });
   return { ...run, cwd };
@@ -111,6 +111,9 @@ export async function approvedTurn(run: ClaudeRun, prompt: string, allowed: Allo
     await session.send(o.nudge ?? 'Yes, go ahead.');
   }
   await approval.turnDone(timeoutMs);
+  // A denied call is on the screen the picture would show (and the agent's answer is about it): that is a finding, not a picture.
+  const denied = approval.events().filter((e) => e.hook_event_name === 'PreToolUse' && e.verdict?.effect === 'deny');
+  if (denied.length) throw new Error(`the policy denied ${denied.length} call(s): ${denied.map((e) => `${e.tool_name} ${JSON.stringify(e.tool_input).slice(0, 200)} (${e.verdict.reason})`).join('; ')}`);
   return approved;
 }
 

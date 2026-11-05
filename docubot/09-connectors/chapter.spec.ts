@@ -23,6 +23,11 @@ const hubInstalled = (): boolean =>
 
 test.describe.configure({ mode: 'serial' });
 
+// The only shell commands the deploy step allows: the page's package command (the agent may add `2>&1` and a trailing `ls` to
+// find the .tgz), and a plain `ls` of a path. Each must fit as a whole; anything else is denied.
+const LS = String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*`;
+const PACKAGE_SHELL = [`pyfsr connector package ${DADJOKE}(?: 2>&1)?(?:; ${LS}(?: 2>&1)?)?`, LS];
+
 // The calls that save a connector's configuration. Each is a write Claude's own prompt asks about; the hook denies any other.
 const configTools = (connector: string): Allowed[] =>
   ['setup_connector', 'upsert_connector_configuration', 'create_connector_configuration', 'update_connector_configuration', 'set_default_connector_config']
@@ -96,7 +101,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     const prompt = promptFor('09-connectors', '02-build-a-connector', 2);
     // Installing puts code on the box, so Claude's own prompt asks before install_connector and before each configuration write.
     // The packaging is the page's own shell command (`pyfsr connector package`) in the lab folder: Bash is allowed for exactly that command, nothing else.
-    const run = await startClaude(page, { keepCwd: true, bash: [`pyfsr connector package ${DADJOKE}(?: 2>&1)?`] });
+    const run = await startClaude(page, { keepCwd: true, bash: PACKAGE_SHELL });
     let held: Awaited<ReturnType<typeof snapFrom>>;
     try {
       await approvedTurn(run, prompt, [

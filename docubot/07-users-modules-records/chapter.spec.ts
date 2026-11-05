@@ -117,7 +117,14 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture, pag
       const prompt = promptFor(CHAPTER, '02-create-a-module', 1);
       const run = await startClaude(page);
       try {
-        await approvedTurn(run, prompt, [{ tool: 'provision_module', args: { module: MODULE, confirm: true }, required: true }], {
+        await approvedTurn(run, prompt, [
+          // A new module is provisioned; one that already exists is only checked, and the page's test record is then a plain write.
+          { tool: 'provision_module', args: { module: MODULE, confirm: true }, required: 'done' },
+          ...['create_record', 'upsert_record', 'get_or_create_record'].map((tool) => ({
+            tool, args: { module: MODULE }, required: 'done',
+            check: (a: any) => (a.data?.hostname === 'build-server-01' ? undefined : 'the only record this page writes is build-server-01'),
+          })),
+        ], {
           nudge: 'Yes, go ahead and publish it.',
           timeoutMs: 600_000,
         });
