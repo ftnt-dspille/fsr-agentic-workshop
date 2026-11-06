@@ -1,7 +1,8 @@
 // Workshop-local helpers layered on docubot's device modules. Everything product-generic (the toolkit CLI, the
 // lab seeder, the agent launcher, login, nav, capture, pty) comes from docubot; this file holds only what is
 // specific to THIS workshop: the persona the shots show and the connector the ch09 lab builds.
-import { boxMasks as boxMasksFor, createAgentLab, pyfsrEnv, toolkitSkills, toolkitVenvMasks } from 'docubot';
+import { createAgentLab } from 'docubot/agents';
+import { boxMasks as boxMasksFor, pyfsrEnv, toolkitSkills, toolkitVenvMasks } from 'docubot/products/fortisoar';
 
 /** The connector the ch09 build lab produces (one source of truth). */
 export const DADJOKE = 'agentlab-dadjoke';

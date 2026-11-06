@@ -15,17 +15,14 @@
 // TOOL_LIST view. Authored OFFLINE from the pre-docubot spec
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
-import {
-  agentInCatalog, agentUploadAvailable, expect, findAgent, findAlert, openAgentDetail, openAgentUploadPanel, openMcpServers, openPlaybookLogs, openRecord,
-  openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep,
-  runInvestigation, test, triggerAgent, uploadAgentBundle, waitForInvestigation,
-  skipStep, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector,
-} from 'docubot';
+import { expect, test, skipStep } from 'docubot';
+import { agentInCatalog, agentUploadAvailable, findAgent, findAlert, openAgentDetail, openAgentUploadPanel, openMcpServers, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep, runInvestigation, triggerAgent, uploadAgentBundle, waitForInvestigation, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit, SCRUB } from 'docubot';
+import { SCRUB } from 'docubot';
+import { boxHost, labSeed, pyfsrEnv, queryRows, sh, toolkit } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab

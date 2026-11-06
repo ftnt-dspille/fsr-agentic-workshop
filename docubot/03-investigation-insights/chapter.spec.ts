@@ -9,16 +9,11 @@
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
 import type { Locator, Page } from '@playwright/test';
-import {
-  executeInsight, expect, findAlert, goToModuleList, openInsightBuilder, openRecord, openTracePanel,
-  openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, runInvestigation, selectDetailTab, test, waitForInvestigation, waitForRecordSettled,
-  skipStep, waitForAngular,
-  addCardCountWidget, addChartWidget, addRow, apiViaApp, enterEditMode, gotoDashboards,
-  openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading,
-  fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord,
-} from 'docubot';
-import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, originOf, pollUntil, timed, timing, SCRUB, picklistText, settledReading, widgetRoot } from 'docubot';
-import { labSeed } from 'docubot';
+import { expect, test, skipStep } from 'docubot';
+import { executeInsight, findAlert, goToModuleList, openInsightBuilder, openRecord, openTracePanel, openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, runInvestigation, selectDetailTab, waitForInvestigation, waitForRecordSettled, waitForAngular, addCardCountWidget, addChartWidget, addRow, apiViaApp, enterEditMode, gotoDashboards, openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading, fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord } from 'docubot/products/fortisoar';
+import { pollUntil, timed, timing, SCRUB } from 'docubot';
+import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, originOf, picklistText, settledReading, widgetRoot } from 'docubot/products/fortisoar';
+import { labSeed } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });

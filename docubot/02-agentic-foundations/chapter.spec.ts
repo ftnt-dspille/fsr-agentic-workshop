@@ -11,13 +11,8 @@
 // the date-or-time category (scrubSkip); it still refuses a real lab IP/hostname.
 //
 // Verify on a box with `docubot run --chapter 02-agentic-foundations`.
-import {
-  askFortiSOARAssistant, deleteRecord, expect, fillRecordForm, listRecords, findAlert, goToModuleList, ngGo,
-  openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm,
-  openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, test, waitForAlert,
-  waitForRecordSettled,
-  skipStep,
-} from 'docubot';
+import { expect, test, skipStep } from 'docubot';
+import { askFortiSOARAssistant, deleteRecord, fillRecordForm, listRecords, findAlert, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep, SCRUB } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });

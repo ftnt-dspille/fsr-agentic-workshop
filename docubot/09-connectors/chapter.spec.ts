@@ -7,12 +7,13 @@
 // Live-only (needs the box + the agent). Authored against the pre-docubot specs
 // tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js; verify on
 // a box with `docubot run --chapter 09-connectors`.
-import { connectorResultsCount, expect, openConnector, removeConnectorConfiguration, selectConfig, test } from 'docubot';
+import { expect, test } from 'docubot';
+import { connectorResultsCount, openConnector, removeConnectorConfiguration, selectConfig } from 'docubot/products/fortisoar';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude, type Allowed, type ClaudeRun } from '../lib/approve';
-import { labSeed, toolkit } from 'docubot';
+import { labSeed, toolkit } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 

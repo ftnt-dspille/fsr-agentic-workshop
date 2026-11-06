@@ -14,7 +14,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { expect, test, shouldRunStep, promptFor, alertsNamed, boxHost, labSeed, writeClaudeMcpJson, withFortiagentLock, waitForFortiagentLock } from 'docubot';
+import { expect, test, shouldRunStep, promptFor } from 'docubot';
+import { withFortiagentLock, waitForFortiagentLock } from 'docubot/agents';
+import { alertsNamed, boxHost, labSeed, writeClaudeMcpJson } from 'docubot/products/fortisoar';
 import { FortiagentApp, withFortiagentApp } from 'docubot/agents';
 
 const FA = process.env.FORTIAGENT_BIN || '/Applications/FortiAgent.app/Contents/Resources/bin/fortiagent';

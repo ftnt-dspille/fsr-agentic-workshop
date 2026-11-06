@@ -13,12 +13,14 @@
 //
 // Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
-import { buildExpect, expect, goToState, skipStep, test, type AgentShotRun, type Expect } from 'docubot';
+import { expect, skipStep, test, type AgentShotRun } from 'docubot';
+import { buildExpect, type Expect } from 'docubot/agents';
+import { goToState } from 'docubot/products/fortisoar';
 import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex, startCodexApproval } from '../lib/agentlab';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { alertsNamed, boxHost, boxIdentity, writeClaudeMcpJson, labSeed, pyfsrEnv } from 'docubot';
+import { alertsNamed, boxHost, boxIdentity, writeClaudeMcpJson, labSeed, pyfsrEnv } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 

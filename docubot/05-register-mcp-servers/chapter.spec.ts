@@ -32,19 +32,17 @@
 //
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
-import {
-  askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, expect, BUILT_IN_MCP_SERVERS, fillAgentConfig, fillConnectMcpServer,
-  findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord,
-  readAgentConfig, saveAgentConfig, saveMcpServer, test,
-  skipStep,
-} from 'docubot';
+import { expect, test, skipStep } from 'docubot';
+import { askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, BUILT_IN_MCP_SERVERS, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { labSeed, SCRUB } from 'docubot';
-import { anyStepSelected, openAlertRecord, pollUntil, shouldRunStep } from 'docubot';
+import { SCRUB } from 'docubot';
+import { labSeed } from 'docubot/products/fortisoar';
+import { anyStepSelected, pollUntil, shouldRunStep } from 'docubot';
+import { openAlertRecord } from 'docubot/products/fortisoar';
 import { pageMd } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });

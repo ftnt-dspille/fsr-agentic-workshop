@@ -6,7 +6,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Page } from '@playwright/test';
-import { buildExpect, toolkitSkills, type Expect, type PendingCall } from 'docubot';
+import { buildExpect, type Expect, type PendingCall } from 'docubot/agents';
+import { toolkitSkills } from 'docubot/products/fortisoar';
 import { AGENT_CWD, startClaudeApproval } from './agentlab';
 
 /** Argument names that name a target on the FortiSOAR toolkit, beside `module` and `instance`. */

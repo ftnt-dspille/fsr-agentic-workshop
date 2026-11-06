@@ -23,10 +23,11 @@
 // Prerequisites: the read-only guard is OFF in DOCUBOT_MCP_CONFIG (no
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
 // fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
-import { clearGridFilter, expect, filterGridRow, goToModuleList, test, SCRUB } from 'docubot';
+import { expect, test, SCRUB } from 'docubot';
+import { clearGridFilter, filterGridRow, goToModuleList } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude } from '../lib/approve';
-import { labSeed, queryRows, toolkit } from 'docubot';
+import { labSeed, queryRows, toolkit } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 

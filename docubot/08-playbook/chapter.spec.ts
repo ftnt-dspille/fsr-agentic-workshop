@@ -18,10 +18,11 @@
 //
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
-import { expect, openPlaybook, openPlaybookLogs, openRecord, skipStep, test, SCRUB } from 'docubot';
+import { expect, skipStep, test, SCRUB } from 'docubot';
+import { openPlaybook, openPlaybookLogs, openRecord } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
-import { labSeed, queryRows, toolkit } from 'docubot';
+import { labSeed, queryRows, toolkit } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 import { pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf } from 'docubot';
 

@@ -16,13 +16,14 @@
 // Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
-import { expect, findAlert, forgetModuleCache, openRecord, test, SCRUB } from 'docubot';
+import { expect, test, SCRUB } from 'docubot';
+import { findAlert, forgetModuleCache, openRecord } from 'docubot/products/fortisoar';
 import { execFileSync } from 'child_process';
 import type { Page } from '@playwright/test';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
-import { labSeed, rows, toolkit } from 'docubot';
+import { labSeed, rows, toolkit } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 
