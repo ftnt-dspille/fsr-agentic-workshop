@@ -33,7 +33,7 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import { expect, test, skipStep } from 'docubot';
-import { askFortiSOARAssistant, clearMcpServerFilter, deleteMcpServer, BUILT_IN_MCP_SERVERS, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer } from 'docubot/products/fortisoar';
+import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
@@ -43,7 +43,7 @@ import { SCRUB } from 'docubot';
 import { labSeed } from 'docubot/products/fortisoar';
 import { anyStepSelected, pollUntil, shouldRunStep } from 'docubot';
 import { openAlertRecord } from 'docubot/products/fortisoar';
-import { pageMd } from 'docubot';
+import { pageMd, ScratchRun } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -77,6 +77,8 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
   ])) return;
   const soar = await gui('soar');
   const ownsLab = shouldRunStep('fsa05-01-validate-register');
+  // The MCP server this run registers is tagged with the run id (a scratch ledger entry); see the sweep and teardown.
+  const scratch = new ScratchRun(fsrScratchHandlers(soar));
 
   try {
     if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
@@ -84,10 +86,17 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       if (!shouldRunStep('fsa05-01-validate-register')) labSeed('mcp-server');
     });
 
-    // A leftover from an interrupted run would make the name collide.
-    if (ownsLab) await deleteMcpServer(soar, NAME);
+    // A leftover from an interrupted run would make the name collide: the sweep removes the server a run that died
+    // created (tagged in its ledger). A server of that name no run tagged (the lab seed, a student's) is never
+    // deleted: fsa05-01 then skips its save and the later steps use the server that is there.
+    if (ownsLab) await scratch.sweep();
+    const preexisting = ownsLab && !!(await findMcpServerRow(soar, NAME));
 
     if (shouldRunStep('fsa05-01-validate-register')) await test.step('fsa05-01-validate-register', async () => {
+      if (preexisting) {
+        skipStep('fsa05-01-validate-register', `${NAME} is already registered (not by this run); left as is`);
+        return;
+      }
       const modal = await fillConnectMcpServer(soar, {
         name: NAME,
         description: 'Lab: DeepWiki remote server (public, no credentials)',
@@ -105,6 +114,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       // the row was persisted with a UUID.
       const row = await saveMcpServer(soar, modal, NAME);
       expect(row['@id']).toContain('/api/3/mcp_configurations/');
+      scratch.track({ kind: FSR_MCP_SERVER_KIND, id: row['@id']!, label: NAME });
     });
 
     if (shouldRunStep('fsa05-02-status-check')) await test.step('fsa05-02-status-check', async () => {
@@ -239,7 +249,8 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     });
   } finally {
     // Leave the box as found, even when a step failed.
-    if (ownsLab && process.env.DOCUBOT_KEEP_LAB !== '1') await deleteMcpServer(soar, NAME).catch(() => undefined);
+    // A delete that does not take fails the run. DOCUBOT_KEEP_LAB=1 keeps it; the next run's sweep removes it.
+    if (ownsLab && process.env.DOCUBOT_KEEP_LAB !== '1') await scratch.teardown();
   }
 });
 

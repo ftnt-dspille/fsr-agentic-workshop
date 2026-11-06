@@ -12,10 +12,16 @@
 //
 // Verify on a box with `docubot run --chapter 02-agentic-foundations`.
 import { expect, test, skipStep } from 'docubot';
-import { askFortiSOARAssistant, deleteRecord, fillRecordForm, listRecords, findAlert, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
-import { anyStepSelected, shouldRunStep, SCRUB } from 'docubot';
+import { askFortiSOARAssistant, fillRecordForm, findAlert, fsrRecordKind, fsrScratchHandlers, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
+import { anyStepSelected, shouldRunStep, SCRUB, ScratchRun } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
+
+// Every alert this run creates is tagged with the run id (a scratch ledger entry). The test's start sweeps the ones a
+// run that died left behind (only those its ledger names, never anyone else's alert); afterEach deletes this run's own
+// and checks they are gone, failing the run when a delete does not take.
+let scratch: ScratchRun | undefined;
+test.afterEach(async () => { await scratch?.teardown(); });
 
 // On-screen dates are intended content on these tour pages; the scan still
 // refuses a real lab IP or hostname.
@@ -37,17 +43,16 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   ])) return;
   const soar = await gui('soar');
   const origin = new URL(soar.url()).origin;
+  const tags = scratch = new ScratchRun(fsrScratchHandlers(soar, ['alerts']));
+  await tags.sweep();
 
   if (shouldRunStep('fsa02-00-create-alert')) await test.step('fsa02-00-create-alert', async () => {
     if (process.env.DOCUBOT_CREATE_ALERT !== '1') {
       skipStep('fsa02-00-create-alert', 'set DOCUBOT_CREATE_ALERT=1 to create an alert in the UI');
       return;
     }
-    // Alerts dedupe on Source + Source ID, and the page's documented values are
-    // fixed, so remove the orientation alerts earlier runs of this step created.
-    for (const a of await listRecords<{ uuid: string; name?: string }>(soar, 'alerts', '$search=Agent%20Lab%20-%20orientation&$limit=50')) {
-      if (/^Agent Lab - orientation \d+$/.test(a.name || '')) await deleteRecord(soar, 'alerts', a.uuid);
-    }
+    // Alerts dedupe on Source + Source ID and the page's documented values are fixed: an earlier run's alert is
+    // removed by the sweep (tagged ones only) and this run's own by the teardown.
     const name = `Agent Lab - orientation ${Date.now()}`;
     await goToModuleList(soar, 'alerts');
     await openNewRecordForm(soar, /Add\s+Alert/i);
@@ -67,6 +72,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
       attempts: 30,
       intervalMs: 1_000,
     });
+    tags.track({ kind: fsrRecordKind('alerts'), id: created.id, label: name });
     await ngGo(soar, 'viewPanel.modulesDetail', { module: 'alerts', id: created.id });
     await selectDetailTab(soar, 'Alert Details');
     await expect(soar.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
