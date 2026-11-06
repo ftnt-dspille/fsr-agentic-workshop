@@ -33,3 +33,51 @@
     - name: Print the same proof to the onboard log
       ansible.builtin.debug:
         msg: "GitHub extension phase ran OK -- fetched from fsr-agentic-workshop and executed on this guest."
+
+# Proof that extension content can CHANGE the lab after the on-disk onboarding
+# and FortiGuard steps: an idempotent, harmless address object on the current
+# gate (FGT_IP/FGT_USER/FGT_PASSWORD are exported by run-onboard.sh per gate),
+# read back so the log shows the gate actually holds it.
+- name: GitHub extension-phase gate change (ext-proof address)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    askpass: /tmp/fsr-ext-askpass
+    gate: "{{ lookup('env', 'FGT_IP') }}"
+  tasks:
+    - name: Install the SSH_ASKPASS helper
+      ansible.builtin.copy:
+        dest: "{{ askpass }}"
+        mode: "0700"
+        content: |
+          #!/bin/sh
+          printf '%s\n' "$FS_SSHPW_PASSWORD"
+
+    - name: "Set firewall address ext-proof on {{ gate }}"
+      environment: &ssh_env
+        SSH_ASKPASS: "{{ askpass }}"
+        SSH_ASKPASS_REQUIRE: force
+        DISPLAY: ":0"
+        FS_SSHPW_PASSWORD: "{{ lookup('env', 'FGT_PASSWORD') }}"
+      no_log: true
+      ansible.builtin.shell:
+        cmd: >-
+          timeout 60 ssh -n -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{ lookup('env', 'FGT_USER') }}@{{ gate }}
+          "$(printf 'config firewall address\nedit ext-proof\nset subnet 192.0.2.250 255.255.255.255\nset comment \"set by GitHub extension phase {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}\"\nnext\nend')"
+      changed_when: true
+
+    - name: "Read ext-proof back from {{ gate }}"
+      environment: *ssh_env
+      ansible.builtin.shell:
+        cmd: >-
+          timeout 60 ssh -n -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{ lookup('env', 'FGT_USER') }}@{{ gate }} 'show firewall address ext-proof'
+      register: readback
+      changed_when: false
+      failed_when: "'192.0.2.250' not in readback.stdout"
+
+    - name: Report the gate change
+      ansible.builtin.debug:
+        msg: "ext-proof present on {{ gate }}: {{ readback.stdout | regex_search('set comment .*') }}"
