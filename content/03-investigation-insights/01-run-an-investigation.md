@@ -9,7 +9,7 @@ An AI investigation takes one alert and works through it in a fixed order. It cl
 
 ## 1. Know the stages
 
-The stages run in the same order every time. Only the answers change.
+Think of a run as a small experiment: the hypotheses are the claims, the questions are the tests, and the evidence either supports or weakens each claim. The stages run in the same order every time. Only the answers change.
 
 | Stage | What happens | Calls the LLM | Calls tools |
 |---|---|---|---|
