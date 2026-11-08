@@ -2,7 +2,7 @@
 title: "Capstone: Agent-Led Investigation"
 linkTitle: Capstone
 weight: 10
-description: "One prompt, a full investigation: enrich, correlate, conclude, and write the findings back to the alert."
+description: "One prompt, a full investigation: enrich, correlate, conclude, write the findings back -- then contain the threat across every gateway at once."
 ---
 
 In this investigation the agent takes an alert, gathers evidence with the tools from earlier chapters, reaches a verdict, and writes the findings back to the alert. The next analyst then sees the findings on the record.
@@ -52,7 +52,9 @@ Let the agent run. The write-back is an update to the alert, so your coding agen
 <!-- capture: fsa10-02-investigate -->
 ![fsa10-02-investigate](fsa10-02-investigate.png?height=600px)
 
-## 3. You are done when
+## 3. Review the investigation result
+
+Before containing, confirm the investigation itself held up:
 
 - The agent used the asset record from chapter 7 (web-server-01, owner web-team, criticality Medium) in its reasoning.
 - The verdict cites its evidence, and it says what the agent could not check.
@@ -63,7 +65,55 @@ Let the agent run. The write-back is an update to the alert, so your coding agen
 <!-- capture: fsa10-02-investigate-findings-on-alert -->
 ![fsa10-02-investigate-findings-on-alert](fsa10-02-investigate-findings-on-alert.png?height=600px)
 
-## 4. Optional: compare with the platform's own AI investigation
+## 4. Contain across the whole fleet
+
+Investigation reaches a verdict; containment acts on it. In a real SOC you do not
+log into each firewall. You publish the indicator **once** to FortiSOAR, and every
+gateway picks it up on its own.
+
+That is already wired in this lab. FortiSOAR runs a native **TAXII 2.1 server** that
+publishes a "Block List (IP Address)" collection, and all three FortiGates
+(Branch1, Branch2, Enterprise_Core) subscribe to it as a threat feed with a deny
+policy. Adding the C2 to that block list is the "block it everywhere" action — no
+per-gate push.
+
+Give your agent this prompt:
+
+```text
+Contain the destination from the investigation. Add 203.0.113.99 to our
+FortiSOAR block list so the firewalls drop it: create a threat_intel_feeds
+record with value 203.0.113.99, type of feed "IP Address", reputation
+"Malicious", and confidence 90, sourced "Agent Lab capstone". Then confirm
+it is being served on the Block List (IP Address) TAXII collection.
+```
+
+The record has to clear the collection's own filter — **IP Address, confidence ≥ 70,
+Malicious** — or it is created but never served. That filter is also the expiry: an
+indicator ages out of the feed 24 hours after it is added, so containment is
+self-cleaning.
+
+The gates refresh on a 5-minute timer, so the block is not instant. A minute or two
+after the record is served, the indicator appears in each gate's feed address table
+and the deny policy in front of the accept rules starts dropping it.
+
+## 5. You are done when
+
+- The agent used the asset record from chapter 7 in its reasoning, cited its
+  evidence, and said what it could not check.
+- The alert's description holds the structured findings, and any severity change is
+  justified.
+- `203.0.113.99` is served on the Block List (IP Address) collection, and within a
+  refresh interval it shows up in the gates' feed and is denied. Blocking on
+  FortiSOAR reached the whole fleet without touching a single firewall.
+
+> **If the block list is empty or the gates never pick it up:** the feed is a
+> post-install step (the gates' subscription key is minted when the feed is set up,
+> so a fabric reinstall drops it). Re-run
+> `topologies/fsr_agentic_lab/config/soar_taxii_feed.yml` to re-establish it. That
+> play also verifies, end to end, that every gate builds the indicator into its
+> address table.
+
+## 6. Optional: compare with the platform's own AI investigation
 
 If your box has FortiSOAR's native AI Investigation set up (Part 1), run both on the same alert and compare the results. Give your agent this prompt:
 
@@ -80,7 +130,7 @@ Starting the native investigation is a write, so your coding agent's approval pr
 <!-- capture: fsa10-03-native-compare -->
 ![fsa10-03-native-compare](fsa10-03-native-compare.png?height=600px)
 
-## 5. Take it further
+## 7. Take it further
 
 Chapter 8 showed how to turn a proven investigation into a playbook. As a take-home exercise, ask the agent to build a playbook that repeats the investigation steps in the prompt above for any "Agent Lab" alert, and publish it.
 
