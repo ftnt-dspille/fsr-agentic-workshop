@@ -103,12 +103,13 @@ test('chapter 3 - chat with the assistants', async ({ gui, capture }) => {
       return;
     }
     await decideAgenticCard(soar, feed, 'reject', {
-      // The connector's own help text on the card's argument form uses 1.1.1.1 / 2.2.2.2 as examples: mask them.
+      // The connector's own help text on the card's argument form uses 1.1.1.1 / 2.2.2.2 as examples: mask only
+      // those help lines. Never mask the inputs (or use maskText, which also caught the input through its example
+      // placeholder): IP Addresses is one of them, and masking it hid the staged IP, so the card looked empty.
       onCard: async () => {
         await capture.shot(soar, 'fsa03-23-agentic-assistant-approval', {
           ...SKIP,
-          maskText: [/1\.1\.1\.1|2\.2\.2\.2/],
-          mask: [soar.locator('input[placeholder*="1.1.1.1"], textarea[placeholder*="1.1.1.1"]')],
+          mask: [soar.locator('.arg-desc', { hasText: /1\.1\.1\.1|2\.2\.2\.2/ })],
         });
       },
     });
