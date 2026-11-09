@@ -1,6 +1,6 @@
 ---
 title: Reference
-linkTitle: 11. Reference
+linkTitle: 12. Reference
 weight: 110
 description: "Reference material for the workshop: lab cleanup, glossary and where to find more documentation."
 ---

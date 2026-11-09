@@ -1,0 +1,73 @@
+# Agent Lab - Contain IP (with Approval)
+#
+# The approval-gate exercise: a destructive action (fleet-wide containment of an
+# IP) is held behind a manual-input approval. Approve and the IP is added to the
+# SOAR TAXII block list, so every gate drops it on its next feed refresh. Reject
+# and the playbook does NOTHING -- the gate fails closed. The two outcomes route
+# to different ends, so there is no path to the block step without an approval.
+#
+# Import under AI Configurations / Playbooks (or Automation > Playbooks), then run
+# it from an alert's Execute menu (or let the capstone agent reference it) with the
+# investigated IP.
+collection: Agent Lab
+visible: true
+playbooks:
+  - name: Agent Lab - Contain IP (with Approval)
+    description: >
+      Approval-gated fleet containment. An analyst must approve before the IP is
+      added to the SOAR block list; declining takes no action (fails closed).
+    parameters:
+      ip: string
+    steps:
+      - name: Start
+        type: start
+        module: alerts
+        requires_record: false
+        inputVariables:
+          - {name: ip}
+        next: Approve Containment
+      - name: Approve Containment
+        type: manual_input
+        title: "Approve containment of {{ vars.input.params.ip }}?"
+        description: >
+          The investigation recommends blocking **{{ vars.input.params.ip }}**
+          across the whole fleet. Approving adds it to the SOAR TAXII block list,
+          which every FortiGate pulls and denies on its next refresh. Reject to
+          take no action.
+        is_approval: true
+        assign_to:
+          team: "SOC Team"
+        options:
+          - display: Approve
+            primary: true
+            next: Block IP
+          - display: Reject
+            next: Declined
+      - name: Block IP
+        type: create_record
+        module: threat_intel_feeds
+        fields:
+          value: "{{ vars.input.params.ip }}"
+          name: "{{ vars.input.params.ip }}"
+          # IP Address / Malicious picklists on this box (resolved IRIs)
+          typeOfFeed: "/api/3/picklists/b788efc2-dadb-4448-9018-043b37266de4"
+          reputation: "/api/3/picklists/7074e547-7785-4979-be32-c6d0c863e4bd"
+          confidence: 90
+          source: "Agent Lab approval-gated containment"
+          # STIX fields so the TAXII feed builds an address on the gates
+          pattern: "[ipv4-addr:value = '{{ vars.input.params.ip }}']"
+          patternType: stix
+          patternVersion: "2.1"
+        next: Blocked
+      - name: Blocked
+        type: set_variable
+        vars:
+          outcome: "APPROVED - {{ vars.input.params.ip }} added to the block list; gates drop it on next feed refresh."
+        next: Done
+      - name: Declined
+        type: set_variable
+        vars:
+          outcome: "DECLINED - no containment performed (gate failed closed)."
+        next: Done
+      - name: Done
+        type: end

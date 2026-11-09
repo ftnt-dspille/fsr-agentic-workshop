@@ -3,6 +3,7 @@ title: "Capstone: Agent-Led Investigation"
 linkTitle: Capstone
 weight: 10
 description: "One prompt, a full investigation: enrich, correlate, conclude, write the findings back -- then contain the threat across every gateway at once."
+tags: ["fabric"]
 ---
 
 In this investigation the agent takes an alert, gathers evidence with the tools from earlier chapters, reaches a verdict, and writes the findings back to the alert. The next analyst then sees the findings on the record.
@@ -74,8 +75,8 @@ gateway picks it up on its own.
 That is already wired in this lab. FortiSOAR runs a native **TAXII 2.1 server** that
 publishes a "Block List (IP Address)" collection, and all three FortiGates
 (Branch1, Branch2, Enterprise_Core) subscribe to it as a threat feed with a deny
-policy. Adding the C2 to that block list is the "block it everywhere" action — no
-per-gate push.
+policy. Adding the C2 to that block list is the "block it everywhere" action, with
+no per-gate push.
 
 Give your agent this prompt:
 
@@ -87,8 +88,8 @@ record with value 203.0.113.99, type of feed "IP Address", reputation
 it is being served on the Block List (IP Address) TAXII collection.
 ```
 
-The record has to clear the collection's own filter — **IP Address, confidence ≥ 70,
-Malicious** — or it is created but never served. That filter is also the expiry: an
+The record has to clear the collection's own filter, **IP Address, confidence ≥ 70,
+Malicious**, or it is created but never served. That filter is also the expiry: an
 indicator ages out of the feed 24 hours after it is added, so containment is
 self-cleaning.
 
