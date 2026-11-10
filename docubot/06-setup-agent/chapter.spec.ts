@@ -15,7 +15,7 @@
 // DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
 import { expect, skipStep, test, type AgentShotRun } from 'docubot';
 import { buildExpect, type Expect } from 'docubot/agents';
-import { goToState } from 'docubot/products/fortisoar';
+import { openPeopleList } from 'docubot/products/fortisoar';
 import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex, startCodexApproval } from '../lib/agentlab';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -45,10 +45,9 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
   // a hard goto to a bare path bootstraps only the app chrome, so navigate in-app. ---
   if (shouldRunStep('fsa06-01-create-user')) await test.step('fsa06-01-create-user', async () => {
     const soar = await gui('soar');
-    await goToState(soar, 'main.iam.people');
-    // Anchor on a VISIBLE People/Users element: a bare text match hits a hidden
-    // nav <li> and never becomes visible.
-    await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+    // Navigates in-app (main.iam.people) and waits for a VISIBLE People/Users
+    // anchor: a bare text match hits a hidden nav <li> and never becomes visible.
+    await openPeopleList(soar);
     // The People grid lists user email addresses; these are not lab secrets, so
     // leave them visible (the scan skips email/date). The backstop still refuses a
     // real lab IP, hostname, key or sensitive term.
@@ -118,7 +117,7 @@ test('chapter 6 - claude whoami', async ({ local, capture }) => {
     const who = boxIdentity();
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const screen = await agentTurn(agent, promptFor('06-setup-agent', '02-wire-the-agent'), { timeoutMs: 5 * 60 * 1000 });
-    const plain = screen.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ');
+    const plain = agent.plainScreen();   // the session strips ANSI itself
     // Effect: the agent really called whoami and names the box's own login and version.
     expect(plain).toMatch(/whoami/i);
     expect(plain).toContain(who.loginid);
@@ -138,11 +137,9 @@ test('chapter 6 - agent init', async ({ local, capture }) => {
     agent.enter();
     await agent.waitFor(/fortisoar/i, { timeoutMs: 120_000 });
     await agent.waitIdle({ quietMs: 2_500, timeoutMs: 60_000 });
-    // The account's own usage banner ("You've used N% of your weekly limit, resets ...") is the capturing account's, not the lab's.
-    const opts = agentScreen();
-    const GAP = String.raw`(?:\s|\x1b\[[\d;]*[Cm])*`;
-    const usage = new RegExp(`You've${GAP}used${GAP}\\d+%${GAP}of${GAP}your${GAP}(?:weekly|5-hour|session)${GAP}limit[^\\n]*?\\)`, 'g');
-    await capture.screen('fsa06-03-agent-init', agent.screen(), { ...opts, replace: [...opts.replace, [usage, '']] });
+    // The account's own usage banner ("You've used N% of your weekly limit, resets ...")
+    // is the capturing account's, not the lab's: the kit's FOOTER_NOISE strips it.
+    await capture.screen('fsa06-03-agent-init', agent.screen(), agentScreen());
   });
 });
 
@@ -208,8 +205,7 @@ test('chapter 6 - user roles', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   await test.step('fsa06-01b-user-roles', async () => {
-    await goToState(soar, 'main.iam.people');
-    await expect(soar.getByText(/People|Users/i).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+    await openPeopleList(soar);
     // The page's login is "agentlab" (the masked name the shots show). The box's own login
     // is not the workshop user, so only the page's name is looked for.
     // The list shows names and emails, not login ids: match the login itself or an

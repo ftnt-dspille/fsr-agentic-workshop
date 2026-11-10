@@ -27,7 +27,7 @@ import { expect, test, SCRUB } from 'docubot';
 import { clearGridFilter, filterGridRow, goToModuleList } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude } from '../lib/approve';
-import { labSeed, queryRows, toolkit } from 'docubot/products/fortisoar';
+import { labSeed, moduleExists, queryRows, toolkit } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 
@@ -45,16 +45,6 @@ const RUN_AGENT = process.env.SPEND_AI === '1';
 
 const text = (v: unknown) => JSON.stringify(v ?? '');
 const query = queryRows;
-
-function moduleExists(): boolean {
-  try {
-    toolkit('describe_module', { module: MODULE });
-    return true;
-  } catch (err: any) {
-    if (!/not found|does not exist|unknown module/i.test(String(err.message))) throw err;
-    return false;
-  }
-}
 
 const SEEDS = [
   { hostname: 'db-server-01', ip_address: '203.0.113.10', owner: 'dba-team', criticality: 'Critical' },
@@ -114,7 +104,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture, pag
       // Skipped when the module already exists (the agent would only re-verify).
       // The page has the agent create build-server-01 as its test record; remove
       // earlier runs' copies so a rerun does not add a duplicate.
-      if (moduleExists()) labSeed('delete-records', MODULE, 'hostname', 'build-server-01');
+      if (moduleExists(MODULE)) labSeed('delete-records', MODULE, 'hostname', 'build-server-01');
       const prompt = promptFor(CHAPTER, '02-create-a-module', 1);
       const run = await startClaude(page);
       try {
@@ -133,7 +123,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture, pag
       } finally {
         run.session.kill();
       }
-    } else if (!moduleExists()) {
+    } else if (!moduleExists(MODULE)) {
       toolkit('provision_module', {
         module: MODULE,
         label: 'Agent Lab Assets',
@@ -166,7 +156,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture, pag
   });
 
   if (shouldRunStep('fsa07-03-seed-records')) await test.step('fsa07-03-seed-records', async () => {
-    expect(moduleExists(), 'agentlab_assets missing: run fsa07-02 first').toBe(true);
+    expect(moduleExists(MODULE), 'agentlab_assets missing: run fsa07-02 first').toBe(true);
     const hostnames = () => query(MODULE, [{ field: 'hostname', operator: 'like', value: '%-%' }], { fields: ['hostname'] }).map((r) => r.hostname);
     if (RUN_AGENT) {
       const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });

@@ -17,14 +17,14 @@
 // Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, test, SCRUB } from 'docubot';
-import { findAlert, forgetModuleCache, openRecord } from 'docubot/products/fortisoar';
+import { findAlert, forgetModuleCache, openRecord, recordDetailText } from 'docubot/products/fortisoar';
 import { execFileSync } from 'child_process';
-import type { Page } from '@playwright/test';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
-import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
+import { approvedTurn, approvedTurnOnce, snapFrom, startClaude, type Allowed } from '../lib/approve';
+import { alertNamed, FELL_BACK_TO_HANDS, laptopAgent, yamlNames } from '../lib/fsr-lab';
 import { labSeed, rows, toolkit } from 'docubot/products/fortisoar';
-import { shouldRunStep } from 'docubot';
+import { pollUntil, shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
@@ -70,20 +70,6 @@ function hasFindings(a: StagedAlert): boolean {
   return !/^Triaged automatically/.test(text) && /verdict/i.test(text) && /confidence/i.test(text);
 }
 
-/**
- * One Claude turn whose page lets the agent make the writes in `allowed`: each is asked by Claude's own prompt, decided by the
- * step's policy, and approved here. Returns the screen text and the held picture; the caller saves it once its effect checks pass.
- */
-async function claudeTurn(page: Page, prompt: string, allowed: Allowed[], o: { nudge?: string; timeoutMs?: number; writeFiles?: boolean } = {}) {
-  const run = await startClaude(page, { writeFiles: o.writeFiles });
-  try {
-    await approvedTurn(run, prompt, allowed, { nudge: o.nudge ?? 'Yes, go ahead.', timeoutMs: o.timeoutMs });
-    return { held: await snapFrom(run, prompt), plain: run.real.term.plainScreen() };
-  } finally {
-    run.session.kill();
-  }
-}
-
 /** The staged capstone alert's uuids, for a check that a call acts on the capstone alert and nothing else. */
 const capstoneRefCheck = (what: string): NonNullable<Allowed['check']> => {
   const uuids = stagedAlerts().map((a) => a.uuid).filter((u): u is string => !!u);
@@ -111,7 +97,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
       // stops to ask which to update. ch07's reset-alerts restores the demo copy.
       labSeed('delete-records', 'alerts', 'name', ALERT_NAME);
       // The page's own staging prompt, driven in a real agent TUI.
-      const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+      const agent = await laptopAgent(local);
       const screen = await agentTurn(agent, promptFor(CHAPTER, PAGE, 1));
       await capture.screen('fsa10-01-stage-alert', screen, agentScreen());
     } else {
@@ -152,7 +138,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
     if (SPEND) {
       // The write-back is one update_record on the capstone alert; Claude's own prompt asks before it. Any other write is denied.
       const refCheck = capstoneRefCheck('the write-back');
-      ({ held } = await claudeTurn(page, promptFor(CHAPTER, PAGE, 2), [{
+      ({ held } = await approvedTurnOnce(page, promptFor(CHAPTER, PAGE, 2), [{
         tool: 'update_record', args: { module: 'alerts' }, required: true,
         check: (a) => refCheck(a) ?? (/closed/i.test(JSON.stringify(a.data?.status ?? '')) ? 'the page says never close the alert' : undefined),
       }], { timeoutMs: 20 * 60 * 1000 }));
@@ -185,7 +171,9 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
     // the locator and capture the wrong panel). On Alert Details the only
     // "verdict" on screen is the agent's write-back.
     await openRecord(soar, 'alerts', alertId!, { tab: 'Alert Details' });
-    const findings = soar.locator('#view-panel-content').getByText(/verdict/i).first();
+    // recordDetailText scopes to the open detail panel (the detail renders OVER
+    // the list, so a bare text match can hit the grid beneath it).
+    const findings = recordDetailText(soar, /verdict/i);
     await expect(findings, 'findings not rendered on the alert: run fsa10-02 with SPEND_AI=1').toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa10-02-investigate-findings-on-alert', {
       highlight: findings,
@@ -238,15 +226,11 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   const PAGE = '03-advanced-labs';
   // The read-only labs (3, 6, 7): nothing to approve, so the plain agent turn.
   const run = async (n: number) => {
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
-    return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { timeoutMs: 10 * 60 * 1000 });
+      const agent = await laptopAgent(local);
+      return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { timeoutMs: 10 * 60 * 1000 });
   };
   // The labs that write: the calls the page lets the agent make, each asked by Claude's own prompt.
-  const yamlOf = (playbook: string): NonNullable<Allowed['check']> => (a) => (String(a.yaml_text ?? '').includes(playbook) ? undefined : `the YAML is not the "${playbook}" playbook`);
-  const alertNamed = (prefix: string): Allowed => ({
-    tool: 'create_record', args: { module: 'alerts' },
-    check: (a) => (String(a.data?.name ?? '').startsWith(prefix) ? undefined : `a test alert must be named starting with "${prefix}"`),
-  });
+  // The YAML and alert-name checks are the shared ones (lib/fsr-lab.ts).
 
   if (shouldRunStep('fsa10-04-registered-mcp-tool')) await test.step('fsa10-04-registered-mcp-tool', async () => {
     // Precondition: chapter 5's registration. Fail as setup, not content.
@@ -254,7 +238,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     expect(listed.tools?.length, 'agentlab-deepwiki is not registered: run chapter 5 page 2 first').toBeGreaterThan(0);
     // The page: calling a registered tool needs the student's go-ahead. Claude's own prompt asks before call_registered_mcp_tool,
     // for this server and its question tool only.
-    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 1), [
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 1), [
       { tool: 'call_registered_mcp_tool', args: { server: 'agentlab-deepwiki', tool: 'ask_wiki_question', confirm: true }, required: true },
     ], { nudge: 'Yes, go ahead and call it.', timeoutMs: 10 * 60 * 1000 });
     // The answer must come from the registered server's own tool, not memory.
@@ -266,8 +250,8 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
 
   if (shouldRunStep('fsa10-05-repair-playbook')) await test.step('fsa10-05-repair-playbook', async () => {
     // Save the YAML, publish it, trigger it with a test alert, repair it, publish the repair, trigger again.
-    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 2), [
-      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Repair Practice') },
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 2), [
+      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Repair Practice') },
       alertNamed('Agent Lab repair'),
     ], { writeFiles: true, timeoutMs: 10 * 60 * 1000 });
     // The fix must be repair_playbook's, not a hand edit the agent fell back to.
@@ -306,7 +290,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     try {
       // Turn 1: publish the heartbeat playbook and schedule it. trigger_schedule_now is never declared, so a manual fire is denied.
       await approvedTurn(run, createPrompt, [
-        { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Heartbeat') },
+        { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Heartbeat') },
         { tool: 'schedule_playbook', args: { name: 'Agent Lab heartbeat' }, required: true },
       ], { nudge: 'Yes, go ahead.' });
       createdShot = await snapFrom(run, createPrompt);
@@ -314,12 +298,10 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
       expect(created).toMatch(/schedule/i);
       // Only an admission counts: an agent often says it did NOT call trigger_schedule_now.
       expect(created).not.toMatch(/(?<!not |n't )\b(fired|triggered|ran) it (by hand|manually|now)\b/i);
-      let fired = false;
-      for (let i = 0; i < 36 && !fired; i++) {
-        await new Promise((r) => setTimeout(r, 10_000));
-        fired = Boolean(toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }).ever_fired);
-      }
-      expect(fired, 'beat never recorded a fire within 6 minutes').toBe(true);
+      await pollUntil('the heartbeat schedule fires', () => (toolkit('diagnose_schedule', { name: 'Agent Lab heartbeat' }).ever_fired ? true : null), {
+        timeoutMs: 6 * 60 * 1000, intervalMs: 10_000,
+        message: 'beat never recorded a fire within 6 minutes',
+      });
       // Turn 2: diagnose (a read), then delete the schedule: the one write, asked by Claude's own prompt.
       await approvedTurn(run, deletePrompt, [
         { tool: 'delete_schedule', args: { name: 'Agent Lab heartbeat', confirm: true }, required: true },
@@ -360,23 +342,21 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     // The build is a module (provision_module, or create_module and publish_module_changes), the playbook on it and a test record.
     // Each write is asked by Claude's own prompt; the page's alert is raised by the playbook, so no alert write is declared.
     const recordIn = (tool: string): Allowed => ({ tool, args: { module: 'agentlab_lost_devices' }, required: 'record' });
-    const { held, plain: screen } = await claudeTurn(page, promptFor('10-capstone-investigation', PAGE, 6), [
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 6), [
       { tool: 'provision_module', args: { module: 'agentlab_lost_devices', confirm: true }, required: 'module' },
       { tool: 'create_module', args: { module: 'agentlab_lost_devices' }, required: 'module' },
       { tool: 'publish_module_changes', args: { confirm: true }, anyTarget: true },
-      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlOf('Agent Lab Lost Device Alert') },
+      { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Lost Device Alert') },
       recordIn('create_record'), recordIn('upsert_record'), recordIn('get_or_create_record'),
     ], { timeoutMs: 30 * 60 * 1000 });
-    expect(screen).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
+    expect(screen).not.toMatch(FELL_BACK_TO_HANDS);
     // Effect: the test record exists, and the playbook raised its alert.
     const devices = rows(toolkit('search_records', { module: 'agentlab_lost_devices', term: 'LT-0042' }));
     expect(devices.length, 'no LT-0042 record in agentlab_lost_devices').toBeGreaterThan(0);
-    let alerts: any[] = [];
-    for (let i = 0; i < 12 && !alerts.length; i++) {
-      alerts = rows(toolkit('find_records', { module: 'alerts', where: 'name=Agent Lab lost device LT-0042' }));
-      if (!alerts.length) await new Promise((r) => setTimeout(r, 5000));
-    }
-    expect(alerts.length, 'the playbook raised no alert for LT-0042').toBeGreaterThan(0);
+    await pollUntil('the playbook raises the LT-0042 alert', () => {
+      const found = rows(toolkit('find_records', { module: 'alerts', where: 'name=Agent Lab lost device LT-0042' }));
+      return found.length ? found : null;
+    }, { timeoutMs: 60_000, intervalMs: 5_000, message: 'the playbook raised no alert for LT-0042 (polled 60s)' });
     // Proof in the product itself: the module the agent built, showing its record.
     const newest = devices.reduce((a: any, b: any) => (Number(b.createDate) > Number(a.createDate) ? b : a));
     const soar = await gui('soar');

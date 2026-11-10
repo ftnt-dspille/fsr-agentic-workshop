@@ -8,11 +8,12 @@
 //
 // Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
 // `docubot run --chapter 03-investigation-insights`.
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { expect, test, skipStep } from 'docubot';
-import { executeInsight, findAlert, goToModuleList, openInsightBuilder, openRecord, openTracePanel, openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, runInvestigation, selectDetailTab, waitForInvestigation, waitForRecordSettled, waitForAngular, addCardCountWidget, addChartWidget, addRow, apiViaApp, enterEditMode, gotoDashboards, openOrCreateDashboard, readWidget, saveDashboard, selectDashboard, type WidgetReading, fillChartWidget, fillCardCountWidget, cancelBuilder, removeDashboard, isEditing, openOrgContextRecord } from 'docubot/products/fortisoar';
-import { pollUntil, timed, timing, SCRUB } from 'docubot';
-import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, originOf, picklistText, settledReading, widgetRoot } from 'docubot/products/fortisoar';
+import { executeInsight, findAlert, goToModuleList, openInsightBuilder, openTracePanel, openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, selectDetailTab, waitForRecordSettled, addCardCountWidget, addChartWidget, addRow, enterEditMode, gotoDashboards, openOrCreateDashboard, saveDashboard, selectDashboard, type ChartWidgetSpec, type CardCountWidgetSpec, fillChartWidget, fillCardCountWidget, cancelBuilder, openOrgContextRecord, listRecords, readVerdictText, widgetTitles, finishedInvestigationOnAlert } from 'docubot/products/fortisoar';
+import { pageVisibleText, discardDashboardEdits } from 'docubot/products/fortisoar';
+import { timed, SCRUB } from 'docubot';
+import { ensureInvestigation, executeGenerated, generateInsight, openAlertRecord, picklistText, settledReading, widgetRoot } from 'docubot/products/fortisoar';
 import { labSeed } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep } from 'docubot';
 
@@ -186,14 +187,13 @@ const NO_SOURCE_RE = /C2 callback from dev-laptop-13/i;
 
 /** Open a chapter 3 alert's AI Investigation tab and leave a finished run on it. */
 async function finishedRun(soar: Page, re: RegExp, search: string, label: string): Promise<void> {
-  const alert = await findAlert(soar, re, { search, oldest: true });
-  expect(alert, `stage the chapter 3 alerts first: tools/lab_setup.py investigation-alerts (${label})`).toBeTruthy();
-  // A fresh load of the record's own URL, so the previous record's panel cannot
-  // leave this one unsettled. The alert page is read from the same origin as the GUI.
-  await soar.goto(`${originOf(soar)}/modules/view-panel/alerts/${alert!.id}`, { waitUntil: 'domcontentloaded' });
-  await waitForRecordSettled(soar, { timeoutMs: 90_000 });
-  await selectDetailTab(soar, 'AI Investigation');
-  const run = await ensureInvestigation(soar, { spend: SPEND, label: `investigation ${label}` });
+  const run = await finishedInvestigationOnAlert(soar, re, {
+    search,
+    oldest: true,
+    spend: SPEND,
+    label: `investigation ${label}`,
+    hint: `stage the chapter 3 alerts first: tools/lab_setup.py investigation-alerts (${label})`,
+  });
   if (!run) test.skip(true, 'no finished investigation and SPEND_AI is not set');
   expect(run!.state, `${label}: the investigation must reach a verdict`).toBe('done');
 }
@@ -219,7 +219,7 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
     // A first run here must not see the approved record; 08a fills it next.
     labSeed('approved-backup', '--clear');
     await finishedRun(soar, BENIGN_RE, 'nightly backup push', 'benign alert');
-    if (AFTER_RESULT.test(await verdictText(soar))) {
+    if (AFTER_RESULT.test(await readVerdictText(soar))) {
       skipStep('fsa03-08-benign-rerun', 'the alert holds the after-result; clear the record (lab_setup approved-backup --clear) and re-investigate to retake it');
       return;
     }
@@ -233,9 +233,8 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
     const id = await openOrgContextRecord(soar, 'Approved Backup System', 'Organization Context - Approved Backup System');
     expect(id, 'the Approved Backup System record opens').toBeTruthy();
     // Checked before the capture: the record holds the filled text, not the placeholder.
-    await expect.poll(async () => soar.evaluate(() => document.body.innerText + Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n')),
-      { timeout: 30_000 }).toMatch(/CHG-2041/);
-    const body = await soar.evaluate(() => document.body.innerText + Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n'));
+    await expect.poll(async () => pageVisibleText(soar), { timeout: 30_000 }).toMatch(/CHG-2041/);
+    const body = await pageVisibleText(soar);
     expect(body, 'the record names the approved backup system').toMatch(/Agent Lab nightly backup/);
     expect(body, 'the placeholder is gone').not.toMatch(/No Information Available/);
     await capture.shot(soar, 'fsa03-08a-approved-backup-record', SKIP);
@@ -247,14 +246,12 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
     labSeed('approved-backup');
     await finishedRun(soar, BENIGN_RE, 'nightly backup push', 'benign alert');
     const current = await readInvestigation(soar);
-    if (current.state === 'done' && AFTER_RESULT.test(await verdictText(soar))) {
+    if (current.state === 'done' && AFTER_RESULT.test(await readVerdictText(soar))) {
       console.log(`[ch03] benign alert: reusing the after-result (${current.verdict}); no new investigation`);
-      timing('investigation benign alert (after)', 0, 'reused');
+      // ensureInvestigation/readInvestigation record their own reuse timing.
     } else {
       if (!SPEND) test.skip(true, 'the alert has no after-result and SPEND_AI is not set');
-      const t0 = Date.now();
-      const after = await reinvestigate(soar);
-      timing('investigation benign alert (re-run)', Date.now() - t0, 'spent', undefined, t0);
+      const after = await reinvestigate(soar);   // the driver records the run's timing
       expect(after.state, 'the re-run must reach a verdict').toBe('done');
       console.log(`[ch03] benign alert: before=${current.verdict} after=${after.verdict}`);
     }
@@ -267,21 +264,8 @@ test('chapter 3 - benign verdict', async ({ gui, capture }) => {
   if (shouldRunStep('fsa03-08b-approved-rerun')) labSeed('approved-backup', '--clear');
 });
 
-/**
- * Read a finished run's Key Findings as text. The verdict panel is open after
- * finishedRun, so this only switches its tab. The lines are what the investigation
- * found, so a source-data IOC shows up here (and a bare alert does not).
- */
-async function keyFindings(soar: Page): Promise<string> {
-  return (await readVerdictTab(soar, 'Key Findings')).join('\n');
-}
-
-/** Highlights + Key Findings + Next Steps as one text: where a source-data IOC can surface. */
-async function verdictText(soar: Page): Promise<string> {
-  const parts: string[] = [];
-  for (const tab of ['Highlights', 'Key Findings', 'Next Steps']) parts.push(...(await readVerdictTab(soar, tab)));
-  return parts.join('\n');
-}
+// The verdict text read-back is the kit's readVerdictText (Highlights + Key
+// Findings + Next Steps, joined) — where a source-data IOC can surface.
 
 /** The source-data IOCs (process and destination) that only the with-source alert carries. */
 const SOURCE_IOC = /updater\.exe|203\.0\.113\.121/;
@@ -297,13 +281,13 @@ test('chapter 3 - source data check', async ({ gui, capture }) => {
   // The expectations run before each capture, so a failed check writes no PNG.
   await test.step('fsa03-09-sourcedata-check', async () => {
     await finishedRun(soar, SOURCE_RE, 'dev-laptop-12', 'alert with source data');
-    const withSource = await verdictText(soar);
+    const withSource = await readVerdictText(soar);
     expect(withSource, 'with source data, the verdict names updater.exe or 203.0.113.121').toMatch(SOURCE_IOC);
     await readVerdictTab(soar, 'Key Findings');
     await capture.shot(soar, 'fsa03-09-sourcedata-check', SKIP);
 
     await finishedRun(soar, NO_SOURCE_RE, 'dev-laptop-13', 'alert without source data');
-    const bare = await verdictText(soar);
+    const bare = await readVerdictText(soar);
     expect(bare, 'without source data, the verdict names neither updater.exe nor 203.0.113.121').not.toMatch(SOURCE_IOC);
     await readVerdictTab(soar, 'Key Findings');
     await capture.shot(soar, 'fsa03-09-sourcedata-check-b', SKIP);
@@ -352,10 +336,7 @@ test('chapter 3 - widget builder chart', async ({ gui, capture }) => {
     try {
       await enterEditMode(soar);
       await addRow(soar, 1);
-      const modal = await fillChartWidget(soar, {
-        title: SEVERITY, dataSource: 'Alerts', chartType: 'Bar', categories: 'Severity', values: 'AI Verdict',
-        view: 'Chart & Table', assignedTo: 'All', filters: [LAB_FILTER],
-      });
+      const modal = await fillChartWidget(soar, SEVERITY_SPEC);
       // Checked before the capture: the builder holds what the page says to set.
       const picked = (sel: string) => modal.locator(`${sel} option:checked`).first().textContent().then((t) => (t ?? '').trim());
       expect(await modal.locator('input#title').first().inputValue(), 'the widget is titled Verdict by severity').toBe(SEVERITY);
@@ -367,8 +348,7 @@ test('chapter 3 - widget builder chart', async ({ gui, capture }) => {
       await cancelBuilder(soar);
     } finally {
       // Discard the scratch edits, then remove the scratch dashboard. Nothing was saved.
-      if (await isEditing(soar)) await soar.locator('#revert-view-template').first().click().catch(() => undefined);
-      await removeDashboard(soar, SCRATCH_DASHBOARD).catch(() => false);
+      await discardDashboardEdits(soar, SCRATCH_DASHBOARD);
     }
   });
 });
@@ -386,10 +366,7 @@ test('chapter 3 - funnel card config', async ({ gui, capture }) => {
     try {
       await enterEditMode(soar);
       await addRow(soar, 3);
-      const modal = await fillCardCountWidget(soar, {
-        title: FUNNEL[0], dataSource: 'Alerts', groupBy: 'Status',
-        filters: [LAB_FILTER, { field: 'Status', operator: 'Equals', value: 'Open' }],
-      });
+      const modal = await fillCardCountWidget(soar, FUNNEL_OPEN_SPEC);
       // Checked before the capture: the builder holds what the page says to set.
       expect(await modal.locator('input#title').first().inputValue(), 'the card is titled Investigation funnel: new').toBe(FUNNEL[0]);
       expect(await modal.locator('select#fieldName option:checked').first().textContent(), 'Group By is Status').toBe('Status');
@@ -399,8 +376,7 @@ test('chapter 3 - funnel card config', async ({ gui, capture }) => {
       await cancelBuilder(soar);
     } finally {
       // Discard the scratch edits, then remove the scratch dashboard. Nothing was saved.
-      if (await isEditing(soar)) await soar.locator('#revert-view-template').first().click().catch(() => undefined);
-      await removeDashboard(soar, SCRATCH_DASHBOARD).catch(() => false);
+      await discardDashboardEdits(soar, SCRATCH_DASHBOARD);
     }
   });
 });
@@ -418,11 +394,20 @@ const REAL_VERDICTS = ['Benign', 'Suspicious', 'Malicious', 'Inconclusive'];
 const SEVERITY = 'Verdict by severity';
 const VERDICT_TYPES = 'Verdict types';
 const FUNNEL = ['Investigation funnel: new', 'Investigation funnel: investigated', 'Investigation funnel: verdict'];
+// The two shared widget specs, verbatim: the builder flow FILLS them (fsa03-07b/07c)
+// and the dashboard build ADDS them (fsa03-07) — one definition, both consumers.
+const SEVERITY_SPEC: ChartWidgetSpec = { title: SEVERITY, dataSource: 'Alerts', chartType: 'Bar', categories: 'Severity', values: 'AI Verdict', view: 'Chart & Table', assignedTo: 'All', filters: [LAB_FILTER] };
+const FUNNEL_OPEN_SPEC: CardCountWidgetSpec = { title: FUNNEL[0], dataSource: 'Alerts', groupBy: 'Status', filters: [LAB_FILTER, { field: 'Status', operator: 'Equals', value: 'Open' }] };
 
 /** The lab alerts as the API returns them. */
 async function labAlerts(page: Page): Promise<Array<Record<string, unknown>>> {
-  const body = await apiViaApp<{ 'hydra:member': Array<Record<string, unknown>> }>(page, 'GET', '/api/3/alerts?$limit=1000');
-  return body['hydra:member'].filter((a) => String(a.name ?? '').startsWith(LAB_PREFIX));
+  return (await listRecords(page, 'alerts', '$limit=1000')).filter((a) => String(a.name ?? '').startsWith(LAB_PREFIX));
+}
+
+/** The two dashboard captures want a taller viewport; the session's default is 1500x1100. */
+async function withTallViewport(page: Page, fn: () => Promise<void>): Promise<void> {
+  await page.setViewportSize({ width: 1500, height: 1500 });
+  try { await fn(); } finally { await page.setViewportSize({ width: 1500, height: 1100 }); }
 }
 
 test('chapter 3 - verdict dashboard', async ({ gui, capture }) => {
@@ -433,24 +418,20 @@ test('chapter 3 - verdict dashboard', async ({ gui, capture }) => {
   await test.step('fsa03-07-verdict-dashboard', async () => {
     await openOrCreateDashboard(soar, DASHBOARD);
     await enterEditMode(soar);
-    const has = (t: string) => soar.evaluate((x) => document.body.innerText.includes(x), t);
-    if (!(await has(SEVERITY))) {
+    if (!(await widgetTitles(soar)).includes(SEVERITY)) {
       await addRow(soar, 1);
-      await addChartWidget(soar, {
-        title: SEVERITY, dataSource: 'Alerts', chartType: 'Bar', categories: 'Severity', values: 'AI Verdict',
-        view: 'Chart & Table', assignedTo: 'All', filters: [LAB_FILTER],
-      });
+      await addChartWidget(soar, SEVERITY_SPEC);
     }
-    if (!(await has(VERDICT_TYPES))) {
+    if (!(await widgetTitles(soar)).includes(VERDICT_TYPES)) {
       await addRow(soar, 1);
       await addChartWidget(soar, {
         title: VERDICT_TYPES, dataSource: 'Alerts', chartType: 'Bar', categories: 'AI Verdict',
         view: 'Table Only', assignedTo: 'All', filters: [LAB_FILTER],
       });
     }
-    if (!(await has(FUNNEL[0]))) {
+    if (!(await widgetTitles(soar)).includes(FUNNEL[0])) {
       await addRow(soar, 3);
-      await addCardCountWidget(soar, { title: FUNNEL[0], dataSource: 'Alerts', groupBy: 'Status', filters: [LAB_FILTER, { field: 'Status', operator: 'Equals', value: 'Open' }] });
+      await addCardCountWidget(soar, FUNNEL_OPEN_SPEC);
       await addCardCountWidget(soar, { title: FUNNEL[1], dataSource: 'Alerts', groupBy: 'AI Verdict', filters: [LAB_FILTER, { field: 'AI Verdict', operator: 'Not Equals', value: 'Not Investigated' }] });
       await addCardCountWidget(soar, { title: FUNNEL[2], dataSource: 'Alerts', groupBy: 'AI Verdict', filters: [LAB_FILTER, { field: 'AI Verdict', operator: 'Is In List', value: REAL_VERDICTS }] });
     }
@@ -460,16 +441,13 @@ test('chapter 3 - verdict dashboard', async ({ gui, capture }) => {
       const r = await settledReading(soar, t);
       expect(r.kind === 'table' ? r.rows.length : r.cards.length, `${t} renders data`).toBeGreaterThan(0);
     }
-    await soar.setViewportSize({ width: 1500, height: 1500 });
-    try {
+    await withTallViewport(soar, async () => {
       await capture.shot(soar, 'fsa03-07-verdict-dashboard', {
         highlight: [SEVERITY, VERDICT_TYPES, ...FUNNEL].map((t) => soar.locator('h5', { hasText: t }).first()),
         highlightFit: 'text',
         ...SKIP,
       });
-    } finally {
-      await soar.setViewportSize({ width: 1500, height: 1100 });
-    }
+    });
   });
 });
 
@@ -542,8 +520,7 @@ test('chapter 3 - verify counts', async ({ gui, capture }) => {
 
     // Only now capture. The highlights are the counts that were just checked.
     const cellCount = (t: string, n: number) => widgetRoot(soar, t).locator('td').filter({ hasText: new RegExp(`^${n}$`) });
-    await soar.setViewportSize({ width: 1500, height: 1500 });
-    try {
+    await withTallViewport(soar, async () => {
       await capture.shot(soar, 'fsa03-11-verify-counts', {
         highlight: [
           // The table splits each severity by verdict, so mark the High row label, not a total.
@@ -554,8 +531,6 @@ test('chapter 3 - verify counts', async ({ gui, capture }) => {
         highlightFit: 'text',
         ...SKIP,
       });
-    } finally {
-      await soar.setViewportSize({ width: 1500, height: 1100 });
-    }
+    });
   });
 });

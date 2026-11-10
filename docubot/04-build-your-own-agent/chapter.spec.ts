@@ -16,7 +16,7 @@
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
 import { expect, test, skipStep } from 'docubot';
-import { agentInCatalog, agentUploadAvailable, findAgent, findAlert, openAgentDetail, openAgentUploadPanel, openMcpServers, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, readInvestigation, selectTraceStep, runInvestigation, triggerAgent, uploadAgentBundle, waitForInvestigation, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector } from 'docubot/products/fortisoar';
+import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, readFieldGroupText, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -64,6 +64,24 @@ async function uploadHello(soar: Page, zip: string): Promise<void> {
   await uploadAgentBundle(soar, zip, { replace: true });
 }
 
+/** Publish the page-03 playbook from the shipped "working version" YAML, when absent. */
+function publishPlaybookIfAbsent(): void {
+  if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
+    const yaml = fs.readFileSync(path.join(EXAMPLES, 'playbooks', 'invoke_hello_agent.yaml'), 'utf8');
+    expect(toolkit('publish_playbook', { yaml_text: yaml }).published).toBe(true);
+  }
+}
+
+/** Open the TOOL_LIST org-context record and verify the nine default rows render. */
+async function openToolList(soar: Page): Promise<string> {
+  const uuid = await openOrgContextRecord(soar, 'TOOL_LIST').catch(() => null);
+  expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
+  for (const label of DEFAULT_TOOL_ROWS) {
+    await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  }
+  return uuid!;
+}
+
 test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   test.setTimeout(20 * 60 * 1000);
   // Skip the whole test (and its setup) when --only selects none of its steps.
@@ -86,11 +104,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
     labSeed('org-context');          // the TOOL_LIST record fsa04-02 reads
     if (build()) labSeed('install-agent'); // the hello agent fsa04-01 checks
-    // The page-03 playbook, from the shipped "working version" YAML, when absent.
-    if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
-      const yaml = fs.readFileSync(path.join(EXAMPLES, 'playbooks', 'invoke_hello_agent.yaml'), 'utf8');
-      expect(toolkit('publish_playbook', { yaml_text: yaml }).published).toBe(true);
-    }
+    publishPlaybookIfAbsent();       // the page-03 playbook, from the shipped "working version" YAML
   });
 
   // Page 02 s2: the Content Hub upload panel. Opening it uploads nothing, so it is
@@ -115,9 +129,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // AI Configurations page, then its System > System Configuration screen, and shows
   // the Advanced Development section. Read-only: the toggle is looked at, not changed.
   if (shouldRunStep('fsa04-00-advanced-toggle')) await test.step('fsa04-00-advanced-toggle', async () => {
-    await openMcpServers(soar);
-    await soar.getByText('System Configuration', { exact: true }).first().click();
-    await soar.getByText('Advanced Development Features', { exact: true }).first().click();
+    await openSystemConfigSection(soar, 'Advanced Development Features');
     const toggle = soar.getByText(/Import\/Upload Custom AI Agent/i).first();
     await expect(toggle).toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa04-00-advanced-toggle', { highlight: toggle, ...SKIP });
@@ -144,11 +156,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // intact (replacing it with a short table silently stops the default questions).
   if (shouldRunStep('fsa04-02-tool-list-row')) await test.step('fsa04-02-tool-list-row', async () => {
     // Seed it first with DOCUBOT_SEED=1 (or `python3 tools/lab_setup.py org-context`).
-    const uuid = await openOrgContextRecord(soar, 'TOOL_LIST').catch(() => null);
-    expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
-    for (const label of DEFAULT_TOOL_ROWS) {
-      await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
-    }
+    await openToolList(soar);
     await capture.shot(soar, 'fsa04-02-tool-list-row-record', SKIP_RECORD);
   });
 
@@ -168,10 +176,9 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       const alert = await findAlert(soar, /Agent Lab - Outbound beacon/i, { search: 'Agent Lab - Outbound beacon' });
       expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
       await openAlertAiInvestigation(soar, alert!.id);
-      // A finished investigation is read, not run again.
-      const inv = (await readInvestigation(soar)).state === 'not-run'
-        ? await runInvestigation(soar)
-        : await waitForInvestigation(soar, { timeoutMs: 60_000 });
+      // A finished investigation is read, not run again (ensureInvestigation reuses
+      // done runs free, waits out a running one, starts only when not-run).
+      const inv = await ensureInvestigation(soar, { spend: true, label: 'fsa04-03', timeoutMs: 60_000 });
       expect(inv.state).toBe('done');
       return openTracePanel(soar);
     };
@@ -218,15 +225,11 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
     expect(run.status, 'the route-A run did not finish').toBe('finished');
     await openRecord(soar, 'alerts', created.uuid, { tab: null });
     await openPlaybookLogs(soar, { select: PLAYBOOK_NAME });
-    await capture.shot(soar, 'fsa04-04-playbook-branch-run', { target: soar.locator('#mySidenav'), ...SKIP_RECORD });
-    // Open the Invoke AI Agent step to see its returned data (the page branches on it).
-    await soar.getByText('Invoke AI Agent', { exact: true }).first().click();
-    // Expand the output's data node so its fields (what the Decision reads) show.
-    // The tree's expand arrow for the data row (the label itself only moves the breadcrumb).
-    const arrow = soar.getByText('data', { exact: true }).last();
-    await arrow.waitFor({ state: 'visible', timeout: 30_000 });
-    const box = await arrow.boundingBox();
-    if (box) await soar.mouse.click(box.x - 14, box.y + box.height / 2);
+    await capture.shot(soar, 'fsa04-04-playbook-branch-run', { target: playbookLogsSideNav(soar), ...SKIP_RECORD });
+    // Open the Invoke AI Agent step to see its returned data (the page branches on it);
+    // openRunStep also switches to the output tab and expands the data node so its
+    // fields (what the Decision reads) show.
+    await openRunStep(soar, { run: PLAYBOOK_NAME, step: /Invoke AI Agent/, tab: 'output' });
     const dataFields = await soar.getByText('confidence', { exact: true }).count();
     console.log(`[ch04] fsa04-04: confidence key shown in the step output: ${dataFields > 0}`);
     await capture.shot(soar, 'fsa04-04-playbook-branch-step-output', SKIP_RECORD);
@@ -244,7 +247,7 @@ test('chapter 4 - remote fortisoar config', async ({ gui, capture }) => {
 
   await test.step('fsa04-01-remote-fortisoar-config', async () => {
     await openConnector(soar, 'FortiSOAR');
-    await soar.getByText('Configurations', { exact: true }).first().click();
+    await openConnectorTab(soar, 'Configurations');
     expect(await selectConfig(soar, 'Lab'), 'the Lab configuration loads').toBe(true);
     // Checked before the capture: the values the page describes.
     const endpoint = await readFieldAfterLabel(soar, 'FortiSOAR Endpoint URL');
@@ -273,25 +276,19 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
-    if (queryRows('workflows', [{ field: 'name', operator: 'eq', value: PLAYBOOK_NAME }]).length === 0) {
-      const yaml = fs.readFileSync(path.join(EXAMPLES, 'playbooks', 'invoke_hello_agent.yaml'), 'utf8');
-      expect(toolkit('publish_playbook', { yaml_text: yaml }).published).toBe(true);
-    }
+    publishPlaybookIfAbsent();
   });
 
   await test.step('fsa04-04-invoke-step-config', async () => {
     await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
-    // The canvas node (not the palette entry of the same name), then its config panel.
-    await soar.locator('#designer-container .step-container').filter({ hasText: 'Invoke AI Agent' }).first().dblclick({ timeout: 15000 });
-    await soar.getByText('Agent Name', { exact: false }).first().waitFor({ state: 'visible', timeout: 30000 });
+    // The canvas node (openCanvasStep scopes to #designer-container, so the palette
+    // entry of the same name cannot win), then its config panel.
+    await openCanvasStep(soar, 'Invoke AI Agent');
     // Checked before the capture: the two inputs the page tells the student to set.
     // The panel's labels are "Agent Name" (the YAML key agent_name) and "Agent Payload" (body).
     expect((await readFieldAfterLabel(soar, 'Agent Name')).value, 'Agent Name is the hello agent').toBe('workshop_hello_agent');
     // The payload is an ACE code editor, not an input: read its text inside the field's own group.
-    const payloadText = await soar.evaluate(() => {
-      const l = Array.from(document.querySelectorAll('label')).find((x) => (x.innerText || '').trim().startsWith('Agent Payload') && (x as HTMLElement).offsetParent);
-      return ((l?.closest('.form-group') as HTMLElement | null)?.innerText) ?? '';
-    });
+    const payloadText = await readFieldGroupText(soar, 'Agent Payload');
     expect(payloadText, 'Agent Payload holds the entity JSON').toContain('"entity": "host-01.example.com"');
     await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
@@ -325,7 +322,7 @@ test('chapter 4 - decision config', async ({ gui, capture }) => {
 
   await test.step('fsa04-04-decision-config', async () => {
     await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
-    await soar.locator('#designer-container .step-container').filter({ hasText: 'Confidence Check' }).first().dblclick({ timeout: 15000 });
+    await openCanvasStep(soar, 'Confidence Check');
     // Checked before the capture: the two branches the page names are the decision's conditions.
     await expect(soar.getByText('High confidence', { exact: false }).first(), 'the High confidence branch shows').toBeVisible({ timeout: 30_000 });
     await expect(soar.getByText('Low confidence', { exact: false }).first(), 'the Low confidence branch shows').toBeVisible();
@@ -338,9 +335,6 @@ test('chapter 4 - decision config', async ({ gui, capture }) => {
 // Page 02 s2 step 4: the Advanced Development section in edit mode, with the accept
 // checkbox showing. Nothing is submitted: Cancel leaves the toggle as it was, and the
 // checkbox state is read before and after to prove it.
-/** A visible action in the section's bottom bar (Edit, Cancel, ...), matched by its text. */
-const barAction = (page: Page, label: string) =>
-  page.locator('button, a').filter({ hasText: new RegExp(`^\\s*${label}\\s*$`) }).filter({ visible: true }).first();
 
 test('chapter 4 - advanced toggle edit', async ({ gui, capture }) => {
   test.setTimeout(10 * 60 * 1000);
@@ -348,21 +342,19 @@ test('chapter 4 - advanced toggle edit', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   await test.step('fsa04-00-advanced-toggle-edit', async () => {
-    await openMcpServers(soar);
-    await soar.getByText('System Configuration', { exact: true }).first().click();
-    await soar.getByText('Advanced Development Features', { exact: true }).first().click();
+    await openSystemConfigSection(soar, 'Advanced Development Features');
     await expect(soar.getByText(/Import\/Upload Custom AI Agent/i).first()).toBeVisible({ timeout: 30_000 });
     const before = await readFieldAfterLabel(soar, 'Import/Upload Custom AI Agent');
-    await barAction(soar, 'Edit').click();
-    await expect(barAction(soar, 'Cancel'), 'edit mode is open').toBeVisible({ timeout: 20_000 });
+    await sectionBarAction(soar, 'Edit').click();
+    await expect(sectionBarAction(soar, 'Cancel'), 'edit mode is open').toBeVisible({ timeout: 20_000 });
     // The accept checkbox sits below the fold: scroll it into view, then shoot it.
     const accept = soar.getByText(/accept responsibility for enabling Import\/Export and Upload of AI Agent/i).first();
     await expect(accept, 'the Import/Upload accept checkbox shows in edit mode').toBeVisible({ timeout: 20_000 });
     await accept.scrollIntoViewIfNeeded();
     await capture.shot(soar, 'fsa04-00-advanced-toggle-edit', { highlight: accept, ...SKIP });
     // Cancel, never Submit: the section goes back to read-only with its state unchanged.
-    await barAction(soar, 'Cancel').click();
-    await expect(barAction(soar, 'Edit'), 'back to read-only').toBeVisible({ timeout: 20_000 });
+    await sectionBarAction(soar, 'Cancel').click();
+    await expect(sectionBarAction(soar, 'Edit'), 'back to read-only').toBeVisible({ timeout: 20_000 });
     const after = await readFieldAfterLabel(soar, 'Import/Upload Custom AI Agent');
     expect(JSON.stringify(after), 'the toggle is unchanged after Cancel').toBe(JSON.stringify(before));
   });
@@ -376,11 +368,7 @@ test('chapter 4 - tool list row saved', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   await test.step('fsa04-02-tool-list-row-saved', async () => {
-    const uuid = await openOrgContextRecord(soar, 'TOOL_LIST').catch(() => null);
-    expect(uuid, 'no TOOL_LIST org-context record: seed it with DOCUBOT_SEED=1').toBeTruthy();
-    for (const label of DEFAULT_TOOL_ROWS) {
-      await expect(soar.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
-    }
+    await openToolList(soar);
     // The hello row, the tenth line: no row, no capture (run tools/lab_setup.py tool-list-row).
     await expect(soar.getByText('Workshop Hello Agent', { exact: false }).first(), 'the hello row is saved: run tools/lab_setup.py tool-list-row').toBeVisible({ timeout: 20_000 });
     await capture.shot(soar, 'fsa04-02-tool-list-row-saved', SKIP_RECORD);

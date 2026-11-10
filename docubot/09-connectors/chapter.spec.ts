@@ -8,13 +8,14 @@
 // tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js; verify on
 // a box with `docubot run --chapter 09-connectors`.
 import { expect, test } from 'docubot';
-import { connectorResultsCount, openConnector, removeConnectorConfiguration, selectConfig } from 'docubot/products/fortisoar';
+import { connectorResultsCount, openConnector, openConnectorTab, removeConnectorConfiguration, selectConfig } from 'docubot/products/fortisoar';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, DADJOKE, agentTurn, startAgent } from '../lib/agentlab';
-import { approvedTurn, snapFrom, startClaude, type Allowed, type ClaudeRun } from '../lib/approve';
-import { labSeed, toolkit } from 'docubot/products/fortisoar';
-import { shouldRunStep } from 'docubot';
+import { approvedTurn, approvedTurnOnce, snapFrom, startClaude, type Allowed, type ClaudeRun } from '../lib/approve';
+import { laptopAgent } from '../lib/fsr-lab';
+import { connectorDisplayLabel, labSeed, toolkit } from 'docubot/products/fortisoar';
+import { pollUntil, shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 
 // The Content Hub connector the install page names.
@@ -48,7 +49,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
 
     // TUI capture, driven by the page's OWN discover prompt (promptFor reads the
     // first prompt fence), so the picture matches the words on the page.
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const agent = await laptopAgent(local);
     const screen = await agentTurn(agent, promptFor('09-connectors', '01-explore-and-run', 1));
     await capture.screen('fsa09-01-discover-connectors', screen, agentScreen());
 
@@ -62,7 +63,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
   if (shouldRunStep('fsa09-02-run-operation')) await test.step('fsa09-02-run-operation', async () => {
     // Page §2 is the agent running a harmless read-only operation and
     // interpreting the result, captured in the TUI with the page's own prompt.
-    const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const agent = await laptopAgent(local);
     const screen = await agentTurn(agent, promptFor('09-connectors', '01-explore-and-run', 2));
     await capture.screen('fsa09-02-run-operation', screen, agentScreen());
 
@@ -87,7 +88,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     // running the old code, so the health check reads stale).
     fs.rmSync(conndir, { recursive: true, force: true });
     labSeed('reset-connector', DADJOKE);
-    const agent = buildAgent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
+    const agent = buildAgent = await laptopAgent(local);
     const screen = await agentTurn(agent, promptFor('09-connectors', '02-build-a-connector', 1));
     await capture.screen('fsa09-03-scaffold-connector', screen, agentScreen());
     // Effect-check: info.json and operations.py agree on get_joke.
@@ -102,20 +103,13 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     const prompt = promptFor('09-connectors', '02-build-a-connector', 2);
     // Installing puts code on the box, so Claude's own prompt asks before install_connector and before each configuration write.
     // The packaging is the page's own shell command (`pyfsr connector package`) in the lab folder: Bash is allowed for exactly that command, nothing else.
-    const run = await startClaude(page, { keepCwd: true, bash: PACKAGE_SHELL });
-    let held: Awaited<ReturnType<typeof snapFrom>>;
-    try {
-      await approvedTurn(run, prompt, [
-        {
-          tool: 'install_connector', args: { confirm: true }, anyTarget: true, required: true,
-          check: (a) => (`${a.path ?? ''} ${a.name ?? ''}`.includes(DADJOKE) ? undefined : `the install is not ${DADJOKE}`),
-        },
-        ...configTools(DADJOKE),
-      ], { nudge: 'Yes, go ahead and install it.' });
-      held = await snapFrom(run, prompt);
-    } finally {
-      run.session.kill();
-    }
+    const { held } = await approvedTurnOnce(page, prompt, [
+      {
+        tool: 'install_connector', args: { confirm: true }, anyTarget: true, required: true,
+        check: (a) => (`${a.path ?? ''} ${a.name ?? ''}`.includes(DADJOKE) ? undefined : `the install is not ${DADJOKE}`),
+      },
+      ...configTools(DADJOKE),
+    ], { nudge: 'Yes, go ahead and install it.', keepCwd: true, bash: PACKAGE_SHELL });
     const health = toolkit('healthcheck_connector', { connector: DADJOKE });
     expect(JSON.stringify(health)).toContain('Available');
     await capture.agent('fsa09-04-deploy-connector', held);
@@ -125,12 +119,12 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     if (!buildAgent) throw new Error('fsa09-05 continues the fsa09-03 conversation; run the build steps together');
     // Right after a reinstall, connector workers can keep serving the previous
     // code for a few minutes. Wait until a run returns exactly what the agent's
-    // code returns ({joke} only) so the capture shows the agent's own code.
-    for (let i = 0; i < 24; i++) {
+    // code returns ({joke} only) so the capture shows the agent's own code —
+    // pollUntil fails the step at the deadline instead of shooting stale output.
+    await pollUntil('the reinstalled connector serves the agent code', () => {
       const data = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} }).data ?? {};
-      if (data.joke && Object.keys(data).length === 1) break;
-      await new Promise((r) => setTimeout(r, 10_000));
-    }
+      return data.joke && Object.keys(data).length === 1 ? data : null;
+    }, { timeoutMs: 240_000, intervalMs: 10_000 });
     const screen = await agentTurn(buildAgent, promptFor('09-connectors', '02-build-a-connector', 3));
     await capture.screen('fsa09-05-run-own-connector-joke', screen, agentScreen());
     const out = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} });
@@ -140,8 +134,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     const soar = await gui('soar');
     // The tile shows the label the agent chose in info.json ("Dad Joke",
     // "AgentLab Dad Joke", ...), so read it from the box instead of guessing.
-    const listed = JSON.stringify(toolkit('list_connectors', {}));
-    const label = new RegExp(`${DADJOKE} -- (.+?) v\\d`).exec(listed)?.[1];
+    const label = connectorDisplayLabel(DADJOKE);
     expect(label, `${DADJOKE} is not installed`).toBeTruthy();
     await openConnector(soar, label!);
     await capture.shot(soar, 'fsa09-05-run-own-connector');
@@ -164,13 +157,11 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     });
     const held = await snapFrom(run, prompt);
     // Effect-check: the agent's install landed. The hub install is async on the
-    // appliance, so poll a short window.
-    let installed = false;
-    for (let i = 0; i < 20 && !installed; i++) {
-      installed = hubInstalled();
-      if (!installed) await new Promise((r) => setTimeout(r, 5000));
-    }
-    expect(installed, `${HUB} is not installed after the hub install (polled 100s)`).toBe(true);
+    // appliance, so poll a short window (pollUntil fails loudly at the deadline).
+    await pollUntil(`${HUB} installs after the hub install`, () => (hubInstalled() ? true : null), {
+      timeoutMs: 100_000, intervalMs: 5_000,
+      message: `${HUB} is not installed after the hub install (polled 100s)`,
+    });
     await capture.agent('fsa09-06-install-from-hub', held);
     // The next step continues this conversation; without it the session ends here.
     if (!shouldRunStep('fsa09-07-configure-and-health')) { run.session.kill(); hubRun = undefined; }
@@ -192,12 +183,10 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     }
     // Effect-check: the hub connector now has a configuration (polled; the
     // connector list can lag the agent's save).
-    let line = '';
-    for (let i = 0; i < 12 && !/\(\d+ configs?\)/.test(line); i++) {
-      line = String((toolkit('list_connectors', {}).connectors || []).find((l: string) => String(l).startsWith(`${HUB} `)) || '');
-      if (!/\(\d+ configs?\)/.test(line)) await new Promise((r) => setTimeout(r, 5000));
-    }
-    expect(line, `${HUB} has no configuration`).toMatch(/\(\d+ configs?\)/);
+    await pollUntil(`${HUB} has a configuration`, () => {
+      const line = String((toolkit('list_connectors', {}).connectors || []).find((x: string) => String(x).startsWith(`${HUB} `)) || '');
+      return /\(\d+ configs?\)/.test(line) ? line : null;
+    }, { timeoutMs: 60_000, intervalMs: 5_000, message: `${HUB} has no configuration after the agent's save (polled 60s)` });
     await capture.agent('fsa09-07-configure-and-health', held);
   });
 
@@ -209,24 +198,15 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     const realKey = process.env.DOCUBOT_VT_API_KEY;
     const key = realKey || 'lab-dummy-key-not-a-secret';
     const prompt = promptFor('09-connectors', '01c-configure-without-sharing-secrets', 1);
-    const run = await startClaude(page, { mcpEnv: { FSR_SECRET_VIRUSTOTAL__API_KEY: key } });
-    let held: Awaited<ReturnType<typeof snapFrom>>;
-    let screen: string;
-    try {
-      // setup_connector is the page's one tool for credentials (a secret goes in as an env reference, never a value); its
-      // check_only, write and install-if-missing calls each ask. Any other tool that writes a configuration is denied.
-      await approvedTurn(run, prompt, [
-        {
-          tool: 'setup_connector', args: { connector: 'virustotal' }, required: true,
-          check: (a) => (JSON.stringify(a).includes(key) ? 'the call carries the key itself, not an env reference' : undefined),
-        },
-        { tool: 'install_connector', args: { confirm: true }, anyTarget: true, check: (a) => (a.name === 'virustotal' ? undefined : 'the install is not virustotal') },
-      ], { nudge: 'Yes, go ahead and install it if it is missing.' });
-      held = await snapFrom(run, prompt);
-      screen = run.real.term.plainScreen();
-    } finally {
-      run.session.kill();
-    }
+    // setup_connector is the page's one tool for credentials (a secret goes in as an env reference, never a value); its
+    // check_only, write and install-if-missing calls each ask. Any other tool that writes a configuration is denied.
+    const { held, plain: screen } = await approvedTurnOnce(page, prompt, [
+      {
+        tool: 'setup_connector', args: { connector: 'virustotal' }, required: true,
+        check: (a) => (JSON.stringify(a).includes(key) ? 'the call carries the key itself, not an env reference' : undefined),
+      },
+      { tool: 'install_connector', args: { confirm: true }, anyTarget: true, check: (a) => (a.name === 'virustotal' ? undefined : 'the install is not virustotal') },
+    ], { nudge: 'Yes, go ahead and install it if it is missing.', mcpEnv: { FSR_SECRET_VIRUSTOTAL__API_KEY: key } });
     // The point of the page: the key never reaches the chat.
     expect(screen.includes(key), 'the API key appeared on the agent screen').toBe(false);
     expect(screen).toMatch(/FSR_SECRET_VIRUSTOTAL__API_KEY/);
@@ -238,7 +218,7 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
     // UI proof: the saved Lab configuration shows its API key as a masked password.
     const soar = await gui('soar');
     await openConnector(soar, 'VirusTotal');
-    await soar.getByText('Configurations', { exact: true }).first().click();
+    await openConnectorTab(soar, 'Configurations');
     expect(await selectConfig(soar, 'Lab'), 'the Lab configuration did not load').toBe(true);
     // The API key is write-only: the form shows a "Set API Key" link, never the value.
     const keyField = soar.getByRole('link', { name: 'Set API Key' }).first();

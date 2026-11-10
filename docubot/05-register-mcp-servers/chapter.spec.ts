@@ -33,7 +33,7 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import { expect, test, skipStep } from 'docubot';
-import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer } from 'docubot/products/fortisoar';
+import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer, testMcpServerConnection, closeMcpServerModal } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
@@ -153,14 +153,11 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
         url: SERVER_URL,
         authType: 'None',
       });
-      await modal.getByRole('button', { name: 'Test Connection' }).click();
-      // Save enables only after the handshake returns a tool list (saveMcpServer's signal).
-      await expect(modal.getByRole('button', { name: 'Save' })).toBeEnabled({ timeout: 120_000 });
+      // Save enables only after the handshake returns a tool list — the same
+      // signal saveMcpServer waits on, driven here without saving.
+      await testMcpServerConnection(soar, modal);
       await capture.shot(soar, 'fsa05-03-register-remote-validate', { target: modal, ...SKIP });
-      const cancel = modal.getByRole('button', { name: /^Cancel$|^Close$/i }).first();
-      if (await cancel.isVisible().catch(() => false)) await cancel.click();
-      else await soar.keyboard.press('Escape');
-      await modal.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => undefined);
+      await closeMcpServerModal(soar, modal);
 
       // The saved server, as the MCP Servers list shows it.
       await openMcpServers(soar);

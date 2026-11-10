@@ -12,7 +12,7 @@
 //
 // Verify on a box with `docubot run --chapter 02-agentic-foundations`.
 import { expect, test, skipStep } from 'docubot';
-import { askFortiSOARAssistant, fillRecordForm, findAlert, fsrRecordKind, fsrScratchHandlers, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
+import { BUILT_IN_MCP_SERVERS, askFortiSOARAssistant, escapeRe, fillRecordForm, findAlert, fsrRecordKind, fsrScratchHandlers, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openAiFeaturesSetup, openAiPrompts, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep, SCRUB, ScratchRun } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
@@ -42,7 +42,6 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
     'fsa02-05-assistant-readonly',
   ])) return;
   const soar = await gui('soar');
-  const origin = new URL(soar.url()).origin;
   const tags = scratch = new ScratchRun(fsrScratchHandlers(soar, ['alerts']));
   await tags.sweep();
 
@@ -68,7 +67,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
       }, null, 2)] });
     await capture.shot(soar, 'fsa02-00-create-alert', SKIP);
     await submitForm(soar);
-    const created = await waitForAlert(soar, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
+    const created = await waitForAlert(soar, new RegExp(escapeRe(name)), {
       attempts: 30,
       intervalMs: 1_000,
     });
@@ -79,14 +78,12 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   });
 
   if (shouldRunStep('fsa02-01-ai-enabled')) await test.step('fsa02-01-ai-enabled', async () => {
-    await soar.goto(`${origin}/ai-configuration/prompts`, { waitUntil: 'domcontentloaded' });
+    await openAiPrompts(soar);   // /ai-configuration/prompts, settles on the AI Configuration header
     // The AI area opens with no enablement banner (enablement itself lives under
     // System > FortiAI, an admin screen, not here).
     await expect(soar.locator('text=AI feature not enabled')).toHaveCount(0);
-    await expect(soar.getByText(/AI Configuration/i).first()).toBeVisible({ timeout: 30_000 });
 
-    await soar.goto(`${origin}/system/system-configuration/ai-features-setup`, { waitUntil: 'domcontentloaded' });
-    await expect(soar.getByText('Unlock AI-powered investigation and analysis')).toBeVisible({ timeout: 30_000 });
+    await openAiFeaturesSetup(soar);   // /system/system-configuration/ai-features-setup, settles on the headline
     // This page shows FortiSOAR's audit sentence with the enablement date; that
     // date is intended content, so the scan skips date-or-time (not the host/IP).
     await capture.shot(soar, 'fsa02-01-ai-enabled', SKIP);
@@ -114,12 +111,9 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
 
   if (shouldRunStep('fsa02-03-mcp-servers')) await test.step('fsa02-03-mcp-servers', async () => {
     await openMcpServers(soar);
-    for (const name of [
-      'FortiSOAR Module Management',
-      'FortiSOAR Playbook Management',
-      'SOC Framework',
-      'Utility Tools',
-    ]) {
+    // The four built-ins are the kit's list (aiAgents.ts) — one source of truth,
+    // so a build that adds a server updates every consumer.
+    for (const name of BUILT_IN_MCP_SERVERS) {
       await expect(soar.getByText(name).first()).toBeVisible({ timeout: 30_000 });
     }
     // The Url column shows each server's endpoint; on 8.0.1 the built-ins are on

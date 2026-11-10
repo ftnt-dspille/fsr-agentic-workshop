@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Page } from '@playwright/test';
 import { buildExpect, type Expect, type PendingCall } from 'docubot/agents';
-import { toolkitSkills } from 'docubot/products/fortisoar';
+import { escapeRe, toolkitSkills } from 'docubot/products/fortisoar';
 import { AGENT_CWD, startClaudeApproval } from './agentlab';
 
 /** Argument names that name a target on the FortiSOAR toolkit, beside `module` and `instance`. */
@@ -132,9 +132,31 @@ const TURN_DONE_ROW = /for (?:\d+h )?(?:\d+m )?\d+s.*\bdone\b/i;
  * and ends at the turn's done row, so trailing blank rows and the idle input box are not in the clip.
  */
 export function snapFrom(run: ClaudeRun, prompt: string) {
-  const first = prompt.split('\n')[0].trim().slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const first = escapeRe(prompt.split('\n')[0].trim().slice(0, 24));
   return run.real.snap({ startAt: new RegExp(`^\\s*[>❯]\\s+${first}`), lastMatch: true, endAt: TURN_DONE_ROW, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
 }
 
 /** The agent's visible text, for a check that something never reached the screen. */
 export const plainScreen = (run: ClaudeRun): string => run.real.term.plainScreen();
+
+/**
+ * startClaude -> one approvedTurn -> snapFrom -> plainScreen -> kill: the shape
+ * most agent steps use, one turn in a throwaway session. `o` passes straight
+ * through to startClaude (bash, writeFiles, mcpEnv, keepCwd) beside the turn's
+ * nudge/timeout. For a session that must continue across steps, or several
+ * turns in one session, drive startClaude/approvedTurn directly.
+ */
+export async function approvedTurnOnce(
+  page: Page,
+  prompt: string,
+  allowed: Allowed[],
+  o: { nudge?: string; timeoutMs?: number } & Parameters<typeof startClaude>[1] = {},
+) {
+  const run = await startClaude(page, o);
+  try {
+    await approvedTurn(run, prompt, allowed, { nudge: o.nudge, timeoutMs: o.timeoutMs });
+    return { run, held: await snapFrom(run, prompt), plain: run.real.term.plainScreen() };
+  } finally {
+    run.session.kill();
+  }
+}

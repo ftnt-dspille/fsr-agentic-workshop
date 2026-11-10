@@ -19,11 +19,12 @@
 // Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
 // Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
 import { expect, skipStep, test, SCRUB } from 'docubot';
-import { openPlaybook, openPlaybookLogs, openRecord } from 'docubot/products/fortisoar';
+import { openPlaybook, openPlaybookLogs, openRecord, waitCanvasStep, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
-import { approvedTurn, snapFrom, startClaude, type Allowed } from '../lib/approve';
-import { labSeed, queryRows, toolkit } from 'docubot/products/fortisoar';
-import { anyStepSelected, shouldRunStep } from 'docubot';
+import { approvedTurnOnce, type Allowed } from '../lib/approve';
+import { alertNamed, FELL_BACK_TO_HANDS, yamlNames } from '../lib/fsr-lab';
+import { labSeed, queryRows, rows, toolkit } from 'docubot/products/fortisoar';
+import { anyStepSelected, pollUntil, shouldRunStep } from 'docubot';
 import { pageYaml as pageYamlOf, promptFor, promptYaml as promptYamlOf } from 'docubot';
 
 // Mask only truly sensitive values; the scrub backstop still refuses a real lab
@@ -121,9 +122,8 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
     // UI: open the playbook's designer canvas in-app (collection -> playbook); a
     // direct /playbooks/<uuid> deep-link does not load the designer on 8.0.
     await openPlaybook(soar, { collectionName: COLLECTION, playbookName: TAG_PLAYBOOK });
-    const canvas = soar.locator('#designer-container');
-    await expect(canvas, `designer canvas for ${TAG_PLAYBOOK} did not load`).toBeVisible({ timeout: 40_000 });
-    await expect(canvas).toContainText('Tag Alert', { timeout: 30_000 });
+    // openPlaybook already waits for the canvas; this waits for the step itself.
+    await waitCanvasStep(soar, 'Tag Alert');
     await capture.shot(soar, 'fsa08-02-publish-playbook-canvas', SKIP_RECORD);
   });
 
@@ -161,17 +161,16 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
     if (!AGENT) expect(JSON.stringify(alert), 'the playbook replaced the description').toContain(KEEP_TEXT);
 
     // UI: the alert's Executed Playbook Logs (historical) draw the run's step graph.
-    await openRecord(soar, 'alerts', alertUuid, { tab: null });
-    // The alert's description carries the playbook's appended text (page 02 s2).
-    // The record opens on its last tab, so select Alert Details explicitly.
-    await soar.getByText('Alert Details', { exact: true }).first().click();
+    // The alert's description carries the playbook's appended text (page 02 s2);
+    // pin Alert Details when the record opens (openRecord settles after the switch).
+    await openRecord(soar, 'alerts', alertUuid, { tab: 'Alert Details' });
     await expect(soar.getByText(TAG_TEXT).first(), 'the alert description does not show the playbook text').toBeVisible({ timeout: 30_000 });
     await capture.shot(soar, 'fsa08-03-trigger-and-verify-alert', SKIP_RECORD);
     // A run that just finished is listed under Recent Playbook Logs, not the
     // Historical table (which only holds aged/persisted runs), so read Recent.
     await openPlaybookLogs(soar, { select: 'Tag Agent Lab' });
     await capture.shot(soar, 'fsa08-03-trigger-and-verify-run-history', {
-      target: soar.locator('#mySidenav'),
+      target: playbookLogsSideNav(soar),
       ...SKIP_RECORD,
     });
   });
@@ -234,24 +233,18 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
   // the page to fall back on), so these run under SPEND_AI=1 and skip otherwise.
   const GALLERY = '05-playbook-gallery';
   const val = (v: any) => (v && typeof v === 'object' ? v.itemValue ?? v['@id'] : v);
-  const alertsLike = (prefix: string): any[] => {
-    const out = toolkit('search_records', {
+  const alertsLike = (prefix: string): any[] =>
+    rows(toolkit('search_records', {
       module: 'alerts', term: prefix, fields: ['name', 'status', 'severity', 'hostIPAddress'], summary: false, limit: 50,
-    });
-    return (out?.members ?? out?.records ?? out?.['hydra:member'] ?? out ?? []).filter?.((r: any) => String(r?.name ?? '').startsWith(prefix)) ?? [];
-  };
+    })).filter((r: any) => String(r?.name ?? '').startsWith(prefix));
   const fresh = (prefix: string, playbook: string) => {
     labSeed('delete-prefix', 'alerts', 'name', prefix);
     labSeed('delete-records', 'workflows', 'name', playbook);
   };
   // What each gallery page lets the agent write: the playbook it builds and the test alerts it names "Agent Lab ...". Claude's own
-  // prompt asks before each one; the hook denies any other write. publish_playbook and run_playbook_yaml have no target argument
-  // (they act on the box the server is configured for), so their check reads the playbook's name from the YAML.
-  const yamlNames = (playbook: string): Allowed['check'] => (a) => (String(a.yaml_text ?? '').includes(playbook) ? undefined : `the YAML is not the "${playbook}" playbook`);
-  const labAlert: Allowed = {
-    tool: 'create_record', args: { module: 'alerts' },
-    check: (a) => (String(a.data?.name ?? '').startsWith('Agent Lab') ? undefined : 'a test alert must be named starting with "Agent Lab"'),
-  };
+  // prompt asks before each one; the hook denies any other write. The YAML and alert-name checks are the shared ones
+  // (lib/fsr-lab.ts): publish_playbook and run_playbook_yaml have no target argument (they act on the box the server is
+  // configured for), so their check reads the playbook's name from the YAML.
   // Each call site wraps this in a literal test.step(id) so lint can see the step.
   const gallery = async (id: string, n: number, prefix: string, playbook: string, allowed: Allowed[], check: () => void) => {
       if (!AGENT) {
@@ -260,32 +253,16 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
       }
       fresh(prefix, playbook);
       const prompt = promptFor(CHAPTER, GALLERY, n);
-      const run = await startClaude(page);
-      let held: Awaited<ReturnType<typeof snapFrom>>;
-      let plain: string;
-      try {
-        await approvedTurn(run, prompt, allowed, { nudge: 'Yes, go ahead.', timeoutMs: 15 * 60 * 1000 });
-        held = await snapFrom(run, prompt);
-        plain = run.real.term.plainScreen();
-      } finally {
-        run.session.kill();
-      }
-      expect(plain).not.toMatch(/couldn't (?:finish|complete|publish|build)|could not (?:finish|complete|publish|build)|(?:do|finish|create|publish|run) (?:it|this|that|them) (?:by hand|manually)/i);
+      const { held, plain } = await approvedTurnOnce(page, prompt, allowed, { nudge: 'Yes, go ahead.', timeoutMs: 15 * 60 * 1000 });
+      expect(plain).not.toMatch(FELL_BACK_TO_HANDS);
       // Triggers run server-side after the agent's last call: give them a moment.
-      for (let i = 0; i < 12; i++) {
-        try {
-          check();
-          break;
-        } catch {
-          await new Promise((r) => setTimeout(r, 5000));
-        }
-        if (i === 11) check();
-      }
+      // pollUntil retries until check() stops throwing; the deadline fails loudly.
+      await pollUntil('the gallery effect check', () => { check(); return true; }, { timeoutMs: 60_000, intervalMs: 5_000 });
       // Checked before the picture is saved: a failed run never lands a PNG in content/.
       await capture.agent(id, held);
   };
 
-  if (shouldRunStep('fsa08-06-escalate-critical')) await test.step('fsa08-06-escalate-critical', () => gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Escalate Critical') }, labAlert], () => {
+  if (shouldRunStep('fsa08-06-escalate-critical')) await test.step('fsa08-06-escalate-critical', () => gallery('fsa08-06-escalate-critical', 1, 'Agent Lab crit', 'Agent Lab Escalate Critical', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Escalate Critical') }, alertNamed('Agent Lab')], () => {
     const rows = alertsLike('Agent Lab crit');
     const crit = rows.filter((r) => /critical/i.test(String(val(r.severity))));
     const low = rows.filter((r) => /low/i.test(String(val(r.severity))));
@@ -295,12 +272,12 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
     expect(low.every((r) => val(r.status) === 'Open')).toBe(true);
   }));
 
-  if (shouldRunStep('fsa08-07-ioc-extract')) await test.step('fsa08-07-ioc-extract', () => gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab IOC Extract') }, labAlert], () => {
+  if (shouldRunStep('fsa08-07-ioc-extract')) await test.step('fsa08-07-ioc-extract', () => gallery('fsa08-07-ioc-extract', 2, 'Agent Lab ioc', 'Agent Lab IOC Extract', [{ tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab IOC Extract') }, alertNamed('Agent Lab')], () => {
     const rows = alertsLike('Agent Lab ioc');
     expect(rows.some((r) => r.hostIPAddress === '198.51.100.23'), JSON.stringify(rows)).toBe(true);
   }));
 
-  if (shouldRunStep('fsa08-08-sweep')) await test.step('fsa08-08-sweep', () => gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', [labAlert, { tool: 'run_playbook_yaml', anyTarget: true, required: true, check: yamlNames('Agent Lab Sweep') }], () => {
+  if (shouldRunStep('fsa08-08-sweep')) await test.step('fsa08-08-sweep', () => gallery('fsa08-08-sweep', 3, 'Agent Lab sweep', 'Agent Lab Sweep', [alertNamed('Agent Lab'), { tool: 'run_playbook_yaml', anyTarget: true, required: true, check: yamlNames('Agent Lab Sweep') }], () => {
     const rows = alertsLike('Agent Lab sweep');
     expect(rows.length).toBe(3);
     expect(rows.every((r) => val(r.status) === 'Closed'), JSON.stringify(rows)).toBe(true);
