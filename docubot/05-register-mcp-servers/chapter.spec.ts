@@ -33,7 +33,7 @@
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
 import { expect, test, skipStep } from 'docubot';
-import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpStatus, openMcpServer, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer, testMcpServerConnection, closeMcpServerModal } from 'docubot/products/fortisoar';
+import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpServerTools, mcpStatus, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer, testMcpServerConnection, closeMcpServerModal } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
 import * as fs from 'fs';
@@ -177,15 +177,15 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
 
     // Click the saved server: its detail panel lists the tools the server returned.
     if (shouldRunStep('fsa05-03-register-remote-tools')) await test.step('fsa05-03-register-remote-tools', async () => {
-      await openMcpServer(soar, NAME);
-      const tools = soar.getByText(/^\s*Tools \(\d+\):?\s*$/).first();
-      await tools.waitFor({ timeout: 30_000 });
+      // The kit read: open the panel, wait for the connection to validate, and
+      // parse the Discovered Capabilities lists (bold label + sibling names).
+      const caps = await mcpServerTools(soar, NAME);
       // Effect: the server's own tool names came back (a real discovery, not an empty list).
-      const n = Number(((await tools.innerText()).match(/\d+/) || ['0'])[0]);
-      expect(n, 'the server returned at least one tool').toBeGreaterThan(0);
-      const list = soar.getByText(/ask_wiki_question/).first();
-      await expect(list).toBeVisible();
-      await capture.shot(soar, 'fsa05-03-register-remote-tools', { highlight: [tools, list], ...SKIP });
+      expect(caps.count, 'the server returned at least one tool').toBeGreaterThan(0);
+      expect(caps.tools, 'ask_wiki_question is among the discovered tools').toContain('ask_wiki_question');
+      await capture.shot(soar, 'fsa05-03-register-remote-tools', {
+        highlight: [caps.sectionLabel, caps.toolsNames], ...SKIP,
+      });
     });
 
     if (shouldRunStep('fsa05-04-grant-allowlist')) await test.step('fsa05-04-grant-allowlist', async () => {
