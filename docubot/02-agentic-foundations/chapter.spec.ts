@@ -86,7 +86,15 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
     await openAiFeaturesSetup(soar);   // /system/system-configuration/ai-features-setup, settles on the headline
     // This page shows FortiSOAR's audit sentence with the enablement date; that
     // date is intended content, so the scan skips date-or-time (not the host/IP).
-    await capture.shot(soar, 'fsa02-01-ai-enabled', SKIP);
+    // A box whose FortiAI token balance is spent renders a "Failed to load token
+    // data ... Connector :: <name>" banner here; mask that transient error (its
+    // connector name reads as a key-like token) so the picture shows the page's
+    // own content. On a recharged box the banner is absent, the mask matches
+    // nothing, and the same capture is clean.
+    await capture.shot(soar, 'fsa02-01-ai-enabled', {
+      ...SKIP,
+      maskText: [/Insufficient tokens remaining/],
+    });
   });
 
   // Manual step fsa02-02-agent-catalog: the analyst reads each Triage/Insight

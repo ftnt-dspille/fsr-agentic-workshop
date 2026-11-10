@@ -16,7 +16,7 @@
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
 import { expect, test, skipStep } from 'docubot';
-import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, readFieldGroupText, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
+import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, installedConnectorLabels, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, readFieldGroupText, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -246,6 +246,14 @@ test('chapter 4 - remote fortisoar config', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   await test.step('fsa04-01-remote-fortisoar-config', async () => {
+    // The book has the student upload the shipped Remote FortiSOAR build
+    // (static/examples/connectors/remote-fortisoar-2.1.0.tgz, page 03 s1) and add
+    // the Lab configuration by hand. On a box without it this step cannot run:
+    // skip like the other prerequisite-gated steps.
+    if (!(await installedConnectorLabels(soar)).some((l) => /^fortisoar$/i.test(l))) {
+      skipStep('fsa04-01-remote-fortisoar-config', 'the Remote FortiSOAR connector is not installed (upload remote-fortisoar-2.1.0.tgz per the book, then add the Lab configuration)');
+      return;
+    }
     await openConnector(soar, 'FortiSOAR');
     await openConnectorTab(soar, 'Configurations');
     expect(await selectConfig(soar, 'Lab'), 'the Lab configuration loads').toBe(true);
@@ -280,7 +288,14 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
   });
 
   await test.step('fsa04-04-invoke-step-config', async () => {
-    await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    // The playbook is built by hand in the book (or published by DOCUBOT_SEED=1);
+    // without it this read-only look cannot run.
+    const opened = await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME })
+      .then(() => true).catch(() => false);
+    if (!opened) {
+      skipStep('fsa04-04-invoke-step-config', `no "${PLAYBOOK_NAME}" playbook in "${PLAYBOOK_COLLECTION}" (seed it with DOCUBOT_SEED=1 or build it per the book)`);
+      return;
+    }
     // The canvas node (openCanvasStep scopes to #designer-container, so the palette
     // entry of the same name cannot win), then its config panel.
     await openCanvasStep(soar, 'Invoke AI Agent');
@@ -321,7 +336,13 @@ test('chapter 4 - decision config', async ({ gui, capture }) => {
   const soar = await gui('soar');
 
   await test.step('fsa04-04-decision-config', async () => {
-    await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME });
+    // Same prerequisite as the invoke-step look: the hand-built playbook.
+    const opened = await openPlaybook(soar, { collectionName: PLAYBOOK_COLLECTION, playbookName: PLAYBOOK_NAME })
+      .then(() => true).catch(() => false);
+    if (!opened) {
+      skipStep('fsa04-04-decision-config', `no "${PLAYBOOK_NAME}" playbook in "${PLAYBOOK_COLLECTION}" (seed it with DOCUBOT_SEED=1 or build it per the book)`);
+      return;
+    }
     await openCanvasStep(soar, 'Confidence Check');
     // Checked before the capture: the two branches the page names are the decision's conditions.
     await expect(soar.getByText('High confidence', { exact: false }).first(), 'the High confidence branch shows').toBeVisible({ timeout: 30_000 });
