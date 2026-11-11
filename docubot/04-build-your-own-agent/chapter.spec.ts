@@ -14,7 +14,12 @@
 // installed, so a read-only run still captures the upload panel and the
 // TOOL_LIST view. Authored OFFLINE from the pre-docubot spec
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
-// unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
+// unverified - live-only (needs the box). Verify one spec at a time through
+// Playwright (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> FSR_ENV_FILE=<repo>/.env.lab \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/04-build-your-own-agent/chapter.spec.ts
+// The opt-in gates above decide what runs; the default pass is read-only.
 import { expect, test, skipStep } from 'docubot';
 import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, installedConnectorLabels, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
