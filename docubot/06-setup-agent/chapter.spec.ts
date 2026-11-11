@@ -11,8 +11,17 @@
 // MCP (AGENT_SHOTS_STUB), so no box is touched by the agent; only the one UI shot needs
 // the live box. These shots spend tokens, so they are gated behind DOCUBOT_AGENT_SHOTS=1.
 //
-// Verify on a box with `docubot run --chapter 06-setup-agent`, and the agent shots with
-// DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
+// Verify one spec at a time through Playwright (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//     --tsconfig=<kit>/tsconfig.json <repo>/docubot/06-setup-agent/chapter.spec.ts
+// The TUI shots need DOCUBOT_AGENT_SHOTS=1 AGENT_SHOTS_STUB=... FSR_PYTHON=<python with the toolkit>.
+// The LIVE agent turns (SPEND_AI=1) need three more facts, each diagnosed the hard way:
+//   - a PATH-pinned claude 2.1.321: 2.1.322 stalls big multi-tool turns (thinking_drop prefix_mismatch,
+//     then a hung request; reproduced 4/4, small stub turns were unaffected);
+//   - ENABLE_TOOL_SEARCH=false: deferring the lab server's 74 tools behind ToolSearch triggers the same stall;
+//   - DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*": a plain agentTurn has no permission driver, so an MCP tool
+//     prompt would just sit until the timeout; the write-approval prompts themselves are captured on page 03
+//     through the governed drivers, which answer their own prompts.
 import { expect, skipStep, test, type AgentShotRun } from 'docubot';
 import { buildExpect, type Expect } from 'docubot/agents';
 import { openPeopleList } from 'docubot/products/fortisoar';
@@ -78,8 +87,18 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
   // headless before, so a miss here is reported, not worked around.
   if (shouldRunStep('fsa06-07-opencode-approval')) await test.step('fsa06-07-opencode-approval', async () => {
     // Same pinned model as fsa06-08: the user's default tier thinks longer and varies.
+    // The ask rule is explicit: a global V1 `permission` block normalizes unspecified
+    // tools to allow, so an unqualified ask never fires -- and a blanket ask would ask
+    // for the READS too (whoami first, observed), which contradicts the page's "reads
+    // never ask". Allow every fortisoar tool, then ask for the write (last match wins).
+    // This build's dialog reads "Permission required" (older ones said "is requesting
+    // input"), so the wait accepts both wordings.
     await capture.agentShot('fsa06-07-opencode-approval', {
-      ...approvalRun('opencode', /is requesting input/i), model: 'frank/coding-b200/eco', timeoutMs: 180_000,
+      ...approvalRun('opencode', /permission required|is requesting input/i), model: 'frank/coding-b200/eco', timeoutMs: 180_000,
+      permissions: [
+        { action: 'fortisoar_*', resource: '*', effect: 'allow' },
+        { action: 'fortisoar_create_record', resource: '*', effect: 'ask' },
+      ],
     });
   });
 
@@ -118,8 +137,9 @@ test('chapter 6 - claude whoami', async ({ local, capture }) => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const screen = await agentTurn(agent, promptFor('06-setup-agent', '02-wire-the-agent'), { timeoutMs: 5 * 60 * 1000 });
     const plain = agent.plainScreen();   // the session strips ANSI itself
-    // Effect: the agent really called whoami and names the box's own login and version.
-    expect(plain).toMatch(/whoami/i);
+    // Effect: the agent really answered from whoami -- the box's own login and
+    // version appear only in its output. (Not a /whoami/ word match: the prompt
+    // must not name the tool, so the word may not appear on screen at all.)
     expect(plain).toContain(who.loginid);
     expect(plain).toMatch(/8\.\d+\.\d+/);
     expect(plain).not.toMatch(/Do you want to proceed|approve this/i);

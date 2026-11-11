@@ -28,5 +28,7 @@ tools/agent-shots/__pycache__/
 .docubot/step-results.json
 # docubot run staging: pictures and fingerprints waiting for `docubot publish`
 .docubot/staging/
+# the per-chapter fingerprint sidecars publish writes next to the pictures
+content/*/.docubot-fingerprints.json
 .docubot/*.log
 docs/plans/

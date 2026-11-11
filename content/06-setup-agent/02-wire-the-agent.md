@@ -199,7 +199,8 @@ Skip this step. FortiAgent does not read `.claude/skills` or `AGENTS.md`, so `fs
 Give your agent this prompt:
 
 ```text
-In one short paragraph, who are you and what can you help me do with this FortiSOAR box? Call the fortisoar whoami tool first.
+In one short paragraph: who am I on this FortiSOAR box, and what can you help
+me do here?
 ```
 
 The agent calls `whoami`. It answers with your login id and the box version. `whoami` only reads, so nothing on the box changes. Every write that you allow later runs under this login, and the audit log records it under this login.
