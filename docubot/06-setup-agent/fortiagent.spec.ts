@@ -177,7 +177,10 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
             if (s === 'sheet') await app.decide('decline'); else await app.declineQuestion();
           }
           expect(alertsNamed(APPROVAL_NAME).length, 'the declined write created nothing').toBe(0);
-          expect(await app.lastReply()).toMatch(/not (been )?created|declin|wasn.t created|did not create/i);
+          // The reply owns the decline in its own words; live replies have said
+          // "not been created", "denied by user, so no alert was created".
+          expect(await app.lastReply(), 'the reply owns the decline')
+            .toMatch(/declin|denied|not (been )?created|wasn.t created|did not create|no [a-z ]{0,25}created/i);
           await shot(app, 'fsa06-19-fortiagent-declined');
         });
       } finally {

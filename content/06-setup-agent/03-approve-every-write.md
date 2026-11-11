@@ -81,11 +81,13 @@ FortiAgent asks only while Auto mode is off or paused, or when the FortiSOAR **C
 
 <!-- step: fsa06-18-fortiagent-approval -->
 <!-- capture: fsa06-18-fortiagent-approval -->
+![fsa06-18-fortiagent-approval](fsa06-18-fortiagent-approval.png?height=600px)
 
 Choose **No**, and FortiAgent reports that the alert was not created:
 
 <!-- step: fsa06-19-fortiagent-declined -->
 <!-- capture: fsa06-19-fortiagent-declined -->
+![fsa06-19-fortiagent-declined](fsa06-19-fortiagent-declined.png?height=600px)
 
 For more on the card and the rules, see the **Approvals and Rules** chapter of the FortiAgent workshop.
 {{% /tab %}}
