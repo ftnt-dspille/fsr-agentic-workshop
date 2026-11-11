@@ -5,8 +5,22 @@
 // local device and captured with capture.screen.
 //
 // Live-only (needs the box + the agent). Authored against the pre-docubot specs
-// tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js; verify on
-// a box with `docubot run --chapter 09-connectors`.
+// tools/e2e/09-connectors.spec.js and tools/e2e/captures/ch09.spec.js. Verify one
+// spec at a time through Playwright (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> SPEND_AI=1 FSR_ENV_FILE=<repo>/.env.lab \
+//   FSR_PYTHON=<python with the toolkit> DOCUBOT_MCP_CONFIG=<repo>/.agent-lab/.mcp.json \
+//   PATH=<claude 2.1.321 pin dir>:$PATH ENABLE_TOOL_SEARCH=false \
+//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*,Bash,Edit,Write" \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/09-connectors/chapter.spec.ts
+// fsa09-03→04→05 share one agent conversation and fsa09-06→07 another — run each
+// pair together (DOCUBOT_ONLY_STEPS takes both ids; a lone second half throws).
+// The build turns scaffold files with shell commands: without Bash,Edit,Write
+// pre-approved a plain agentTurn stalls on a TUI permission dialog it can never
+// answer (that is exactly how fsa09-03 failed on 2026-11-11 — the turn returned
+// with "shell operators that require approval" on screen and no info.json).
+// fsa09-08 is self-contained: without DOCUBOT_VT_API_KEY a dummy key exercises the
+// env-reference path and the masked key field, and its Lab config is removed after.
 import { expect, test } from 'docubot';
 import { connectorResultsCount, openConnector, openConnectorTab, removeConnectorConfiguration, selectConfig } from 'docubot/products/fortisoar';
 import * as fs from 'fs';
@@ -25,10 +39,14 @@ const hubInstalled = (): boolean =>
 
 test.describe.configure({ mode: 'serial' });
 
-// The only shell commands the deploy step allows: the page's package command (the agent may add `2>&1` and a trailing `ls` to
-// find the .tgz), and a plain `ls` of a path. Each must fit as a whole; anything else is denied.
+// The only shell commands the deploy step allows: the page's package command (the agent may add `2>&1`, a pipe to
+// tail/head to keep the output short, and a trailing `ls` to find the .tgz), and a plain `ls` of a path. Each must
+// fit as a whole; anything else is denied. The tail/head tolerance is not hypothetical: a live run's agent packaged
+// with `pyfsr connector package agentlab-dadjoke 2>&1 | tail -20; ls` and the narrower rule denied it, which left
+// the turn with nothing to install.
 const LS = String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*`;
-const PACKAGE_SHELL = [`pyfsr connector package ${DADJOKE}(?: 2>&1)?(?:; ${LS}(?: 2>&1)?)?`, LS];
+const TAIL = String.raw`(?: 2>&1)?(?: \| (?:tail|head)(?: -n \d+| -\d+)?(?: \d+)?)?`;
+const PACKAGE_SHELL = [`pyfsr connector package ${DADJOKE}${TAIL}(?:; ${LS}${TAIL})?`, `${LS}${TAIL}`];
 
 // The calls that save a connector's configuration. Each is a write Claude's own prompt asks about; the hook denies any other.
 const configTools = (connector: string): Allowed[] =>
@@ -118,12 +136,14 @@ test('chapter 9 — connectors', async ({ gui, local, capture, page }) => {
   if (shouldRunStep('fsa09-05-run-own-connector')) await test.step('fsa09-05-run-own-connector', async () => {
     if (!buildAgent) throw new Error('fsa09-05 continues the fsa09-03 conversation; run the build steps together');
     // Right after a reinstall, connector workers can keep serving the previous
-    // code for a few minutes. Wait until a run returns exactly what the agent's
-    // code returns ({joke} only) so the capture shows the agent's own code —
-    // pollUntil fails the step at the deadline instead of shooting stale output.
+    // code for a few minutes. Wait until a run answers with a joke — the page's
+    // own bar ("You are done when: a joke comes back") — so the capture shows a
+    // working run; pollUntil fails the step at the deadline instead of shooting
+    // an error. The agent's code may return the joke's id next to the text (the
+    // API hands both over), so the shape is not pinned to one key.
     await pollUntil('the reinstalled connector serves the agent code', () => {
       const data = toolkit('run_connector_operation', { connector: DADJOKE, operation: 'get_joke', params: {} }).data ?? {};
-      return data.joke && Object.keys(data).length === 1 ? data : null;
+      return data.joke ? data : null;
     }, { timeoutMs: 240_000, intervalMs: 10_000 });
     const screen = await agentTurn(buildAgent, promptFor('09-connectors', '02-build-a-connector', 3));
     await capture.screen('fsa09-05-run-own-connector-joke', screen, agentScreen());
