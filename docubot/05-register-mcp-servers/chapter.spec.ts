@@ -30,8 +30,14 @@
 //                          REPUTATION_IP at an IP VirusTotal currently rates
 //                          (default 204.168.212.68 - live verdicts age out).
 //
-// Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
-// verify on a box with `docubot run --chapter 05-register-mcp-servers`.
+// Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js.
+// Live-only (needs the box). Verify one spec at a time through Playwright
+// (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> FSR_ENV_FILE=<repo>/.env.lab \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/05-register-mcp-servers/chapter.spec.ts
+// Free by default (cleanup leaves the box as found); the opt-ins above
+// (DOCUBOT_SEED, DOCUBOT_CH05_GRANT, SPEND_AI, DOCUBOT_KEEP_LAB) decide the rest.
 import { expect, test, skipStep } from 'docubot';
 import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpServerTools, mcpStatus, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer, testMcpServerConnection, closeMcpServerModal } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
