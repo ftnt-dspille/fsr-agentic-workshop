@@ -131,9 +131,39 @@ Starting the native investigation is a write, so your coding agent's approval pr
 <!-- capture: fsa10-03-native-compare -->
 ![fsa10-03-native-compare](fsa10-03-native-compare.png?height=600px)
 
+The box has a third investigator: the **Agentic Assistant** you installed in
+chapter 1, and watched triage this same scenario in chapter 3 ("Chat with the
+Assistants"). It investigates on the record itself. Open the capstone alert,
+launch the assistant, and hold it to the same bar you held your coding agent:
+
+```text
+Investigate this alert like a SOC analyst: read the record and its history,
+use the tools you have, and give me a verdict that cites the evidence behind
+every claim -- and says what you could not check.
+```
+
+The three surfaces differ in shape, not in goal. The native AI Investigation
+runs one phased trace you read afterwards. Your coding agent works from a
+full transcript you can audit line by line, and reaches every tool in the
+toolkit. The Agentic Assistant holds the conversation on the record: every
+answer carries its evidence chips, every write arrives as an approval card
+you accept or reject, and every turn lands in the **Agentic Assistant
+Monitor** dashboard's audit trail. Run all three on the same alert: the
+verdicts should agree, and where they differ is exactly the conversation a
+SOC team has about how much to trust each surface.
+
 ## 7. Take it further
 
-Chapter 8 showed how to turn a proven investigation into a playbook. As a take-home exercise, ask the agent to build a playbook that repeats the investigation steps in the prompt above for any "Agent Lab" alert, and publish it.
+Chapter 8 built playbooks from an investigation two ways: your coding agent
+wrote the YAML outside FortiSOAR and published it (pages 1-5), and the
+Agentic Assistant compiled a plain-English request into steps on the
+Playbook Designer (page 6). As a take-home exercise, do the capstone both
+ways: ask the agent to build and publish a playbook that repeats the
+investigation steps above for any "Agent Lab" alert. Then open the designer,
+launch the Agentic Assistant, and ask it for the same playbook. Compare the
+two canvases: the same trigger and enrichment order means the investigation
+survived the translation, and whatever the two authors disagree on is the
+interesting part.
 
 ## Troubleshooting
 

@@ -78,6 +78,13 @@ collection you just compiled to the box, then confirm it exists and is active.
 <!-- capture: fsa08-02-publish-playbook-canvas -->
 ![fsa08-02-publish-playbook-canvas](fsa08-02-publish-playbook-canvas.png?height=600px)
 
+This page built the playbook with your coding agent, writing YAML outside
+FortiSOAR. The **Agentic Assistant** builds from the inside: on the Playbook
+Designer, the same launcher you met in chapter 3 compiles a plain-English
+request into steps, shows you the plan, and puts it on your canvas -- you
+still click **Apply** and publish it yourself. That flow is page 6, "Build
+With the Assistant".
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
