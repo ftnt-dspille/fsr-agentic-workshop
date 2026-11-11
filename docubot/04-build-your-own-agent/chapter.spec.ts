@@ -16,7 +16,7 @@
 // tools/e2e/captures/ch04.spec.js; selectors and the /ai/* API paths are
 // unverified - run on a box with `docubot run --chapter 04-build-your-own-agent`.
 import { expect, test, skipStep } from 'docubot';
-import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, installedConnectorLabels, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, readFieldGroupText, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
+import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, installedConnectorLabels, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -301,12 +301,14 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
     // The canvas node (openCanvasStep scopes to #designer-container, so the palette
     // entry of the same name cannot win), then its config panel.
     await openCanvasStep(soar, 'Invoke AI Agent');
-    // Checked before the capture: the two inputs the page tells the student to set.
-    // The panel's labels are "Agent Name" (the YAML key agent_name) and "Agent Payload" (body).
-    expect((await readFieldAfterLabel(soar, 'Agent Name')).value, 'Agent Name is the hello agent').toBe('workshop_hello_agent');
-    // The payload is an ACE code editor, not an input: read its text inside the field's own group.
-    const payloadText = await readFieldGroupText(soar, 'Agent Payload');
-    expect(payloadText, 'Agent Payload holds the entity JSON').toContain('"entity": "host-01.example.com"');
+    // Checked before the capture: the two values the page tells the student to set.
+    // The designer panel renders them without <label> elements (Agent Name is a
+    // combobox — a search input plus the selected agent as text — and the payload
+    // is an ACE editor), so readFieldAfterLabel has no field to read here: assert
+    // on the rendered values instead. Both load asynchronously after the panel
+    // opens, hence the visibility waits.
+    await expect(soar.getByText('workshop_hello_agent', { exact: true }).first(), 'Agent Name is the hello agent').toBeVisible({ timeout: 20_000 });
+    await expect(soar.getByText('"entity": "host-01.example.com"').first(), 'Agent Payload holds the entity JSON').toBeVisible({ timeout: 20_000 });
     await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
     await leaveDesigner(soar);
