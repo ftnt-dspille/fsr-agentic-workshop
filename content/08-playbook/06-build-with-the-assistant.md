@@ -22,7 +22,7 @@ Create a new playbook in the **Agent Lab** collection and open it on the Playboo
 <!-- capture: fsa08-60-designer-assistant -->
 ![fsa08-60-designer-assistant](fsa08-60-designer-assistant.png?height=600px)
 
-Click the **Agentic Assistant** launcher on the right edge and start a new chat.
+Click the **Agentic Assistant** launcher on the right edge and start a new chat. Two look-alike launchers sit on that edge: the platform's **AI Assistant** below is the read-only one from chapter 3, and this chapter wants **Agentic Assistant**, the top one.
 
 ## 2. Ask for the playbook
 
