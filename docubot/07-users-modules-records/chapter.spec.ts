@@ -13,8 +13,17 @@
 // The two browser captures (module in the UI, records grid) prove the UI view.
 //
 // Live-only. Ported from tools/e2e/07-users-modules-records.spec.js (API proof)
-// and tools/e2e/captures/ch07.spec.js. Verify on a box with
-// `docubot run --chapter 07-users-modules-records`.
+// and tools/e2e/captures/ch07.spec.js. Verify one spec at a time through Playwright
+// (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> SPEND_AI=1 DOCUBOT_SEED=1 FSR_ENV_FILE=<repo>/.env.lab \
+//   FSR_PYTHON=<python with the toolkit> DOCUBOT_MCP_CONFIG=<repo>/.agent-lab/.mcp.json \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/07-users-modules-records/chapter.spec.ts
+// The live TUI turns need the three facts chapter 6 diagnosed the hard way: a
+// PATH-pinned claude 2.1.321 (2.1.322 stalls big multi-tool turns), ENABLE_TOOL_SEARCH=false
+// (deferring the lab server's 74 tools behind ToolSearch triggers the same stall), and
+// DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*" for the plain agentTurn turns (fsa07-02's
+// governed approval flow answers its own prompts).
 //
 // Env: SPEND_AI=1 for the agent captures; DOCUBOT_SEED=1 seeds the Agent Lab
 // alerts (labSeed('seed')); DOCUBOT_MCP_CONFIG for startAgent. The module and

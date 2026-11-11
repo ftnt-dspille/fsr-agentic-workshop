@@ -28,6 +28,8 @@ tools/agent-shots/__pycache__/
 .docubot/step-results.json
 .docubot/*.log
 .docubot/tsconfig.check.json
+.ocr-allow.json
+.ocr-expect.json
 # docubot run staging: pictures and fingerprints waiting for `docubot publish`
 .docubot/staging/
 # the per-chapter fingerprint sidecars publish writes next to the pictures
