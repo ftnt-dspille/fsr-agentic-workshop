@@ -13,11 +13,13 @@
 //                   SPEND_AI, else the free toolkit), never by the seeder.
 //   SPEND_AI=1      agent-TUI turns (stage prompt + investigation). PRIMARY capture.
 //
-// Needs the ch07 module (agentlab_assets) and ch08 playbook ("Tag Agent Lab
-// Alerts") on the box. Ported from tools/e2e/10-capstone-investigation.spec.js.
+// Needs the ch07 module (agentlab_assets), ch08 playbook ("Tag Agent Lab
+// Alerts"), and the ch10 §8 approval playbook ("Agent Lab - Contain IP (with
+// Approval)", deployed from static/examples/playbooks/). Ported from
+// tools/e2e/10-capstone-investigation.spec.js.
 // Verify live with `docubot run --chapter 10-capstone-investigation`.
 import { expect, test, SCRUB } from 'docubot';
-import { findAlert, forgetModuleCache, openRecord, recordDetailText } from 'docubot/products/fortisoar';
+import { findAlert, forgetModuleCache, openRecord, pyfsrEnv, recordDetailText } from 'docubot/products/fortisoar';
 import { execFileSync } from 'child_process';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
@@ -38,6 +40,9 @@ test.describe.configure({ mode: 'serial' });
 const SPEND = process.env.SPEND_AI === '1';
 const ALERT_NAME = 'Agent Lab - beaconing from web-server-01';
 const ALERT_RE = /Agent Lab - beaconing from web-server-01/i;
+// The approval-gate drill (page §8) fires the playbook with this one input and
+// answers the gate in the UI. A documentation IP: never routed, never real.
+const GATE_IP = '203.0.113.99';
 const CHAPTER = '10-capstone-investigation';
 const PAGE = '01-capstone';
 
@@ -406,6 +411,59 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   });
 });
 
+// The approval-gate drill (page §8's item-4 lab) is the one advanced lab a human
+// drives: trigger the playbook, then answer its gate in the UI. No agent turn,
+// no model credits, so it stays runnable when SPEND_AI is unset.
+test('chapter 10 - approval gate (manual)', async ({ gui, capture }) => {
+  test.setTimeout(10 * 60 * 1000);
+  if (shouldRunStep('fsa10-11-approval-gate')) await test.step('fsa10-11-approval-gate', async () => {
+    // Manual: a human decides the gate in the UI, so nothing here spends model
+    // credits. The playbook is fired over the same notrigger route the Execute
+    // button uses (its `ip` input travels as a top-level body key, which the
+    // handler evaluates into vars.input.params -- NOT vars.inputs), and the
+    // gate is answered where a student meets it: the header's Tasks panel >
+    // Approval tab > decision modal. Reject must fail closed: the run finishes
+    // and the block list never gains the IP.
+    const py = process.env.FSR_PYTHON || 'python3';
+    const spawn = (args: string[], timeout: number) =>
+      JSON.parse(execFileSync(py, ['-c', GATE_PY, ...args], {
+        encoding: 'utf8', env: pyfsrEnv(), stdio: ['ignore', 'pipe', 'pipe'], timeout,
+      }));
+    const gate = spawn(['trigger', GATE_IP], 4 * 60_000);
+    const soar = await gui('soar');
+    // The approvals queue lives in the header's pending-tasks panel. Open it
+    // only when it is not already up (the button toggles the panel closed).
+    const tab = soar.locator('li.uib-tab a.nav-link', { hasText: /Approval \(/ }).first();
+    if (!(await tab.isVisible().catch(() => false))) {
+      await soar.locator('a[title="Tasks"]').first().click({ timeout: 30_000 });
+    }
+    await tab.click({ timeout: 30_000 });
+    const row = soar.locator('.notification-container:visible', { hasText: GATE_IP }).first();
+    await row.waitFor({ timeout: 30_000 });
+    await row.click({ timeout: 15_000 });
+    const modal = soar.locator('.modal.in:visible').first();
+    await modal.waitFor({ timeout: 30_000 });
+    const heading = modal.locator('h1,h2,h3,h4,h5,.modal-title').first();
+    await expect(heading, 'the decision modal did not title the gate with the IP').toContainText(GATE_IP, { timeout: 30_000 });
+    // Crop to the dialog: the dashboard behind it carries the box's help widget
+    // (contact e-mail, internal links) that has nothing to do with this step.
+    // The scan still reads the whole page, so the widget is masked for it.
+    await capture.shot(soar, 'fsa10-11-approval-gate', {
+      highlight: heading,
+      crop: modal,
+      mask: [soar.locator('.widget-wrapper-element', { hasText: 'Need Help?' })],
+      ...SKIP_RECORD,
+    });
+    // Reject in the UI, like the page asks the reader to.
+    await soar.locator('#submit-pending-decision-btn-1').click({ timeout: 15_000 });
+    await modal.waitFor({ state: 'detached', timeout: 30_000 });
+    const verdict = spawn(['verify', GATE_IP, String(gate.run_pk), String(gate.mi_id)], 5 * 60_000);
+    expect(verdict.pending_gone, 'the gate is still waiting: the Reject click did not resume the run').toBe(true);
+    expect(verdict.run_status, 'the rejected run did not finish').toBe('finished');
+    expect(verdict.feeds, 'the block list gained the IP although the gate was rejected (did not fail closed)').toEqual([]);
+  });
+});
+
 // Writes a private instances file: "staging" = the lab box's env file, "production"
 // = a copy of the author's own alias. Prints only the path and the two base URLs.
 const INSTANCES_PY = String.raw`
@@ -437,4 +495,82 @@ u1 = url_of(staging_env)
 u2 = url_of(prod.get("env_file"), prod)
 fix = lambda u: u if "://" in u else ("https://" + u if u else u)
 print(json.dumps({"file": path, "urls": [fix(u1), fix(u2)]}))
+`;
+
+// The approval-gate drill's box side, over pyfsr (the same client the agent's
+// toolkit wraps). `trigger <ip>` rejects this capture's own leftover gates for
+// the IP (a reject resumes down the decline branch, which writes nothing), fires
+// the playbook with the ip as a top-level body key -- the notrigger handler
+// evaluates the trigger's declared inputVariables from those keys into
+// vars.input.params -- and polls until the gate is waiting. `verify <ip>
+// <run_pk> <mi_id>` polls until the gate is answered and its run finished, then
+// reads the block list back. Prints one JSON object per call, nothing else.
+const GATE_PY = String.raw`
+import json, os, sys, time
+from pyfsr import FortiSOAR, Query
+
+PLAYBOOK = "Agent Lab - Contain IP (with Approval)"
+
+def main():
+    cmd, ip = sys.argv[1], sys.argv[2]
+    c = FortiSOAR.from_env_file(os.environ["FSR_ENV_FILE"])
+    title = f"Approve containment of {ip}?"
+
+    def pending():
+        out = []
+        for row in c.manual_input.list(assigned_to="all", is_approval=True, ordering="-id", limit=200):
+            d = row if isinstance(row, dict) else row.model_dump(by_alias=True)
+            if d.get("title") == title:
+                out.append(d)
+        return out
+
+    if cmd == "trigger":
+        for d in pending():
+            c.manual_input.reject(input_id=d["id"])
+        resp = c.playbooks.trigger(PLAYBOOK, env={"ip": ip}, request_timeout=60)
+        task = resp.get("task_id") if isinstance(resp, dict) else resp.task_id
+        mi, run_pk = None, None
+        deadline = time.time() + 90
+        while time.time() < deadline and mi is None:
+            time.sleep(3)
+            rows = pending()
+            if rows:
+                mi = rows[0]["id"]
+                full = c.manual_input.retrieve(mi)
+                fd = full if isinstance(full, dict) else full.model_dump(by_alias=True)
+                run_pk = fd.get("workflow")
+        if mi is None:
+            raise SystemExit(json.dumps({"error": f"approval '{title}' did not appear within 90s"}))
+        print(json.dumps({"task_id": task, "mi_id": mi, "run_pk": run_pk}))
+        return
+
+    if cmd == "verify":
+        run_pk, mi_id = str(sys.argv[3]), int(sys.argv[4])
+        gone, status = False, None
+        deadline = time.time() + 120
+        while time.time() < deadline:
+            if not any(d["id"] == mi_id for d in pending()):
+                gone = True
+                break
+            time.sleep(4)
+        if gone:
+            deadline = time.time() + 90
+            while time.time() < deadline and status is None:
+                for run in c.playbooks.execution_history(playbook=PLAYBOOK, limit=10):
+                    if str(getattr(run, "pk", "")) == run_pk:
+                        st = getattr(run, "status", None)
+                        if st in ("finished", "failed"):
+                            status = st
+                            break
+                if status is None:
+                    time.sleep(4)
+        res = c.records("threat_intel_feeds").filter(Query().eq("value", ip), fields=["value"], summary=False)
+        mem = res["members"] if isinstance(res, dict) else getattr(res, "members", [])
+        feeds = [m.get("value") for m in (mem or [])]
+        print(json.dumps({"pending_gone": gone, "run_status": status, "feeds": feeds}))
+        return
+
+    raise SystemExit(f"unknown cmd {cmd}")
+
+main()
 `;

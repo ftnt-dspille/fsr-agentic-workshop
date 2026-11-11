@@ -159,7 +159,7 @@ schedule.
 <!-- step: fsa10-07-schedule-and-prove -->
 
 <!-- capture: fsa10-07-schedule-and-prove -->
-![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png?height=600px)
+![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png)
 
 **You are done when:** `diagnose_schedule` reports that the schedule has fired, its runs finish, and it has no problems. The schedule is gone afterwards.
 
@@ -312,6 +312,9 @@ playbooks:
 Each run pauses at **Approve Containment**. Open the alert in FortiSOAR (or the **Awaiting Action** / **Approvals** queue) and you will see an approval assigned to the SOC Team, titled with the IP. Reject the first, approve the second. The run resumes down the branch you chose, the block step only runs on approve.
 
 <!-- step: fsa10-11-approval-gate manual: a human decides the approval in the UI; live-verified over the API -->
+
+<!-- capture: fsa10-11-approval-gate -->
+![fsa10-11-approval-gate](fsa10-11-approval-gate.png?height=600px)
 
 {{% notice note %}}
 The approval is a `manual_input` step with `is_approval: true`, not the legacy standalone Approval step type. Only the `manual_input` form creates an answerable item an agent or the API can resume; the legacy Approval step records an entry but cannot be resumed programmatically.
