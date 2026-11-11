@@ -70,6 +70,9 @@ The assistant never writes on its own. It looks for an action that can do the jo
 
 <!-- step: fsa03-23-agentic-assistant-approval manual: needs a connected containment connector; spends tokens -->
 
+<!-- capture: fsa03-23-agentic-assistant-approval -->
+![fsa03-23-agentic-assistant-approval](fsa03-23-agentic-assistant-approval.png?height=600px)
+
 Reject is always safe: a rejected card writes nothing. Check the effect on the box afterwards instead of trusting the card. Lab 8 in chapter 10 shows the same principle as a playbook approval.
 
 ## 5. Watch the assistant as a lead

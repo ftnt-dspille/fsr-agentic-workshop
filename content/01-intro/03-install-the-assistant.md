@@ -58,7 +58,13 @@ Then install it with the **Import Wizard** (**Application Editor** > **Import Wi
 
 Upload the zip, review the summary, and start the import. The connector's dependencies install during the import; this is the longest step. If the connector's status stays **In-Progress** for a long time, see the troubleshooting note at the end of this page.
 
+<!-- capture: fsa01-20-import-upload -->
+![fsa01-20-import-upload](fsa01-20-import-upload.png?height=600px)
+
 <!-- step: fsa01-22-import-installed manual: performed on a clean box -->
+
+<!-- capture: fsa01-22-import-installed -->
+![fsa01-22-import-installed](fsa01-22-import-installed.png?height=600px)
 
 ## 5. Publish the widgets
 
