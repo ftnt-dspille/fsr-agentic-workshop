@@ -10,7 +10,13 @@
 // visible. On-screen dates are legitimate UI content, so the backstop scan skips
 // the date-or-time category (scrubSkip); it still refuses a real lab IP/hostname.
 //
-// Verify on a box with `docubot run --chapter 02-agentic-foundations`.
+// Live-only (needs the box). Verify one spec at a time through Playwright
+// (never `docubot run`, which starts every spec):
+//   DOCUBOT_TARGET=<repo> FSR_ENV_FILE=<repo>/.env.lab \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/02-agentic-foundations/chapter.spec.ts
+// The tour is free and read-only; only fsa02-05's in-product assistant turn
+// needs SPEND_AI=1.
 import { expect, test, skipStep } from 'docubot';
 import { BUILT_IN_MCP_SERVERS, askFortiSOARAssistant, escapeRe, fillRecordForm, findAlert, fsrRecordKind, fsrScratchHandlers, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openAiFeaturesSetup, openAiPrompts, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep, SCRUB, ScratchRun } from 'docubot';
