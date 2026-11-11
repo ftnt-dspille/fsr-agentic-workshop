@@ -302,12 +302,11 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
     // entry of the same name cannot win), then its config panel.
     await openCanvasStep(soar, 'Invoke AI Agent');
     // Checked before the capture: the two values the page tells the student to set.
-    // The designer panel renders them without <label> elements (Agent Name is a
-    // combobox — a search input plus the selected agent as text — and the payload
-    // is an ACE editor), so readFieldAfterLabel has no field to read here: assert
-    // on the rendered values instead. Both load asynchronously after the panel
-    // opens, hence the visibility waits.
-    await expect(soar.getByText('workshop_hello_agent', { exact: true }).first(), 'Agent Name is the hello agent').toBeVisible({ timeout: 20_000 });
+    // Agent Name is a typeahead input named agent_name (no <label>; the selected
+    // agent only flashes as dropdown text, so text lookups race) — assert its
+    // value. The payload is an ACE code editor: its content renders as text.
+    // Both load asynchronously after the panel opens, hence the retrying waits.
+    await expect(soar.locator('#csForm-agent_name, input[name="agent_name"]').first(), 'Agent Name is the hello agent').toHaveValue('workshop_hello_agent', { timeout: 20_000 });
     await expect(soar.getByText('"entity": "host-01.example.com"').first(), 'Agent Payload holds the entity JSON').toBeVisible({ timeout: 20_000 });
     await capture.shot(soar, 'fsa04-04-invoke-step-config', SKIP_RECORD);
     // Leave without saving: nothing was changed.
