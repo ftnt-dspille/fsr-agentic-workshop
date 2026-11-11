@@ -6,8 +6,15 @@
 // captures an investigation that already finished on the lab alert (the common
 // case after one paid run), and skips the rest with a log line, never a fake pass.
 //
-// Migrated from tools/e2e/captures/ch03.spec.js. Verify on a box with
-// `docubot run --chapter 03-investigation-insights`.
+// Migrated from tools/e2e/captures/ch03.spec.js. Live-only (needs the box).
+// Verify one spec at a time through Playwright (never `docubot run`, which
+// starts every spec):
+//   DOCUBOT_TARGET=<repo> FSR_ENV_FILE=<repo>/.env.lab \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/03-investigation-insights/chapter.spec.ts
+// Add SPEND_AI=1 for the paid investigation/insight steps; without it the spec
+// captures the investigation that already finished and skips the rest with a
+// log line. DOCUBOT_SEED=1 seeds the lab alert data the steps read.
 import type { Page } from '@playwright/test';
 import { expect, test, skipStep } from 'docubot';
 import { executeInsight, findAlert, goToModuleList, openInsightBuilder, openTracePanel, openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, selectDetailTab, waitForRecordSettled, addCardCountWidget, addChartWidget, addRow, enterEditMode, gotoDashboards, openOrCreateDashboard, saveDashboard, selectDashboard, type ChartWidgetSpec, type CardCountWidgetSpec, fillChartWidget, fillCardCountWidget, cancelBuilder, openOrgContextRecord, listRecords, readVerdictText, widgetTitles, finishedInvestigationOnAlert } from 'docubot/products/fortisoar';
