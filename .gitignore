@@ -26,4 +26,7 @@ tools/agent-shots/__pycache__/
 # docubot agent SPEND runs: holds .mcp.json with box creds
 .agent-lab/
 .docubot/step-results.json
+# docubot run staging: pictures and fingerprints waiting for `docubot publish`
+.docubot/staging/
+.docubot/*.log
 docs/plans/

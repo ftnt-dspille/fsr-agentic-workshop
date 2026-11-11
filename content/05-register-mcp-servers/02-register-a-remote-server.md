@@ -66,14 +66,26 @@ Do not leave **SOC Framework** out. Alert Investigation uses it to write its ver
 
 The AI Assistant answers security questions only, and it declines other questions. It already has FortiSOAR's built-in SOC Framework server, whose `enrich_indicator` tool looks up an indicator in threat intelligence. So this check uses that tool, not DeepWiki. This question uses FortiAI credits.
 
+### Before you start: configure the VirusTotal connector
+
+The enrichment playbooks the box ships answer IP questions with VirusTotal, and the VirusTotal connector needs an API key. The key is free.
+
+1. Create a free account at [virustotal.com](https://www.virustotal.com) and copy the API key from your profile.
+2. Open **Content Hub**, search **VirusTotal**, open the connector, and select **CONFIGURE**.
+3. Paste your API key, leave the server URL as offered, and save. The health check turns **Available**.
+
+<!-- step: fsa05-04b-virustotal-config -->
+<!-- capture: fsa05-04b-virustotal-config -->
+![fsa05-04b-virustotal-config](fsa05-04b-virustotal-config.png?height=600px)
+
 {{% notice note %}}
-Live indicators age out. If the answer says "no reputation available", pick an IP that your FortiGuard feed rates now. Use the Fortinet FortiGuard Threat Intelligence connector, action Fetch Threat Intel Feeds.
+Live verdicts age out. If the answer says "no reputation available", pick an IP that VirusTotal currently rates as malicious, for example a known command-and-control address.
 {{% /notice %}}
 
 1. Open any alert's detail page.
 2. Open the **AI Assistant**.
-3. Ask: `What is the reputation of the IP <ip>? Use your tools to enrich this indicator.` Replace `<ip>` with a rated IP, for example one tagged Malware CnC.
-4. Read the answer. It names FortiGuard and gives a verdict.
+3. Ask: `What is the reputation of the IP <ip>? Use your tools to enrich this indicator.` Replace `<ip>` with a rated IP, for example a known command-and-control address.
+4. Read the answer. It names VirusTotal and gives a verdict.
 5. Open the trace for the answer. Find the `enrich_indicator` tool call.
 
 <!-- capture: fsa05-05-chat-runs-tool-answer -->
@@ -81,7 +93,7 @@ Live indicators age out. If the answer says "no reputation available", pick an I
 
 **You are done when**
 
-- The answer names FortiGuard and gives the indicator's verdict.
+- The answer names VirusTotal and gives the indicator's verdict.
 - The trace shows a `TOOL` call to `enrich_indicator` on the SOC Framework server, and the answer uses its result.
 
 ## Troubleshooting

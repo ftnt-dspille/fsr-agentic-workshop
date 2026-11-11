@@ -27,8 +27,8 @@
 //                          the enrich_indicator tool fired (spends FortiAI credits).
 //                          Uses the built-in SOC Framework server the chat already
 //                          has, so it does NOT need the DeepWiki grant. Point
-//                          REPUTATION_IP at an IP your FortiGuard feed currently
-//                          rates (default 204.168.212.68 - live IPs age out).
+//                          REPUTATION_IP at an IP VirusTotal currently rates
+//                          (default 204.168.212.68 - live verdicts age out).
 //
 // Authored offline from the pre-docubot spec tools/e2e/captures/ch05.spec.js;
 // verify on a box with `docubot run --chapter 05-register-mcp-servers`.
@@ -43,6 +43,7 @@ import { SCRUB } from 'docubot';
 import { labSeed } from 'docubot/products/fortisoar';
 import { anyStepSelected, pollUntil, shouldRunStep } from 'docubot';
 import { openAlertRecord } from 'docubot/products/fortisoar';
+import { openConnector, openConnectorTab, configOptions, selectConfig, checkConnectorHealth, addConfiguration } from 'docubot/products/fortisoar';
 import { pageMd, ScratchRun } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
@@ -60,7 +61,7 @@ const AGENT = process.env.DOCUBOT_CH05_AGENT || 'Alert Investigation';
 // fsa05-05 proves a granted tool runs, in-domain, through the chat. The chat is
 // domain-guarded, so it will not ask an off-domain remote server (DeepWiki); it
 // WILL enrich an indicator with the built-in SOC Framework enrich_indicator tool.
-// REPUTATION_IP must be an IP FortiGuard currently rates (live IPs de-list).
+// REPUTATION_IP must be an IP VirusTotal currently rates (live IPs de-list).
 const REPUTATION_IP = process.env.REPUTATION_IP || '204.168.212.68';
 const QUESTION = `What is the reputation of the IP ${REPUTATION_IP}? Use your tools to enrich this indicator.`;
 
@@ -213,6 +214,35 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       expect(JSON.stringify(cfg?.config?.mcp_server || []), 'SOC Framework stays granted (it writes the investigation verdict)').toContain(String(soc));
     });
 
+    // The stock VirusTotal enrichment playbooks (IP Address > VirusTotal >
+    // Enrichment, tag IP_Enrichment) are what enrich_indicator routes IP
+    // questions to; they need a VirusTotal API key. The page has the student
+    // create the free key and configure the connector; this step drives that
+    // same configuration through the UI when the lab env carries the key
+    // (FSR_VT_API_KEY), and stays a read-only look once a configuration exists.
+    if (shouldRunStep('fsa05-04b-virustotal-config')) await test.step('fsa05-04b-virustotal-config', async () => {
+      await openConnector(soar, 'VirusTotal');
+      await openConnectorTab(soar, 'Configurations');
+      const existing = (await configOptions(soar)).filter((o) => o && !/select/i.test(o));
+      if (!existing.length) {
+        const key = process.env.FSR_VT_API_KEY || '';
+        if (!key) {
+          skipStep('fsa05-04b-virustotal-config', 'the VirusTotal connector has no configuration (create the free key per the book, or set FSR_VT_API_KEY to configure it here)');
+          return;
+        }
+        await addConfiguration(soar, {
+          name: 'Lab',
+          fields: { 'Server URL': 'https://www.virustotal.com', 'API Key': key, 'Verify SSL': false },
+          makeDefault: true,
+        });
+      } else {
+        await selectConfig(soar, existing[0]);
+      }
+      const health = await checkConnectorHealth(soar, existing.length ? existing[0] : 'Lab');
+      expect(health.status, 'the VirusTotal configuration health-checks').toBe('Available');
+      await capture.shot(soar, 'fsa05-04b-virustotal-config', SKIP);
+    });
+
     if (shouldRunStep('fsa05-05-chat-runs-tool')) await test.step('fsa05-05-chat-runs-tool', async () => {
       // Spends FortiAI credits. Uses the built-in SOC Framework server the chat
       // already carries, so it does NOT need the DeepWiki grant from fsa05-04.
@@ -226,13 +256,18 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
       const { answer } = await askFortiSOARAssistant(soar, QUESTION);
       // The answer must name the intelligence source and a verdict, not just echo
       // the question. If this fails with "no reputation", the IP has de-listed -
-      // refresh REPUTATION_IP from the FortiGuard feed (see the chapter note).
+      // refresh REPUTATION_IP to one VirusTotal currently rates malicious.
       // Assert on the ANSWER bubble; the question itself says "reputation".
-      expect(answer).toMatch(/fortiguard|malicious|phishing|command-and-control|malware|categor/i);
-      // The answer names the PUBLIC threat IP being enriched; the scan can't tell a
-      // public IP from a lab one, so skip ip-address here. The lab box address is
-      // still guarded by the sensitive-term category (the base-URL host).
-      await capture.shot(soar, 'fsa05-05-chat-runs-tool-answer', { scrubSkip: ['ip-address', 'date-or-time'] });
+      expect(answer).toMatch(/virustotal|fortiguard|malicious|phishing|command-and-control|malware|categor/i);
+      // The PUBLIC threat IP is deliberately on screen: the question bubble is the
+      // page's own example question with <ip> filled in. The scan can't tell a
+      // public IP from a lab one, so allow exactly this IP (scrubSkip's categories
+      // govern the secret scan, not the OCR gate). The lab box address is still
+      // guarded by the sensitive-term category (the base-URL host).
+      await capture.shot(soar, 'fsa05-05-chat-runs-tool-answer', {
+        scrubSkip: ['ip-address', 'date-or-time'],
+        ocrAllow: [new RegExp(REPUTATION_IP.replace(/\./g, '\\.'))],
+      });
 
       // Prove the tool actually fired: the latest Chat Assistant trace must carry a
       // TOOL span for enrich_indicator. Read through the app's own session.
