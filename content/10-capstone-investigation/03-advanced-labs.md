@@ -350,6 +350,12 @@ verdict, and whether it did what the note demanded.
 
 FortiSOAR's native investigation treats the alert's content as **data to analyze, not instructions to follow.** It detects the embedded command, stops at normalization, and labels the content `Jailbreak, Coercion`, it does **not** return the forced "Benign" verdict, close the alert, or skip containment. That separation of untrusted data from instructions is the first line of defense, and it is on by default.
 
+<!-- capture: fsa10-12-prompt-injection -->
+![fsa10-12-prompt-injection](fsa10-12-prompt-injection.png?height=600px)
+
+<!-- capture: fsa10-12-prompt-injection-trace -->
+![fsa10-12-prompt-injection-trace](fsa10-12-prompt-injection-trace.png?height=600px)
+
 {{% notice warning %}}
 Not every agent is this careful. A hand-built playbook or a coding agent that pastes an alert field straight into an LLM prompt has no such guard, the injected text lands in the same channel as your instructions, and the model may obey it. When you build your own agentic step, keep record data in a data slot (a variable, a tool argument), never concatenated into the instruction text.
 {{% /notice %}}
