@@ -117,6 +117,8 @@ Check it: open **Settings** with the gear at the bottom of the sidebar. The **Fo
 
 <!-- step: fsa06-14-fortiagent-ready -->
 <!-- capture: fsa06-14-fortiagent-ready -->
+![fsa06-14-fortiagent-ready](fsa06-14-fortiagent-ready.png?height=600px)
+
 {{% /tab %}}
 {{% /tabs %}}
 

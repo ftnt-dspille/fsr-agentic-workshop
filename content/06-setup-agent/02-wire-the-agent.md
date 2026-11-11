@@ -146,6 +146,7 @@ FortiAgent keeps its MCP servers in its own settings. You add the toolkit in the
 
 <!-- step: fsa06-15-fortiagent-add-mcp-form -->
 <!-- capture: fsa06-15-fortiagent-add-mcp-form -->
+![fsa06-15-fortiagent-add-mcp-form](fsa06-15-fortiagent-add-mcp-form.png?height=600px)
 
 From a shell, the same thing is:
 
@@ -163,6 +164,7 @@ fortiagent mcp add FortiSOAR \
 
 <!-- step: fsa06-16-fortiagent-mcp-list -->
 <!-- capture: fsa06-16-fortiagent-mcp-list -->
+![fsa06-16-fortiagent-mcp-list](fsa06-16-fortiagent-mcp-list.png?height=600px)
 
 For the status dots and reloading, see the **MCP Servers** chapter of the FortiAgent workshop.
 {{% /tab %}}
@@ -224,6 +226,7 @@ FortiAgent picks the `whoami` tool on its own and answers with your login id and
 
 <!-- step: fsa06-17-fortiagent-whoami -->
 <!-- capture: fsa06-17-fortiagent-whoami -->
+![fsa06-17-fortiagent-whoami](fsa06-17-fortiagent-whoami.png?height=600px)
 
 OpenCode works the same way:
 

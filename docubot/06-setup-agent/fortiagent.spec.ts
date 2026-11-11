@@ -16,7 +16,7 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { expect, test, shouldRunStep, promptFor } from 'docubot';
 import { withFortiagentLock, waitForFortiagentLock } from 'docubot/agents';
-import { alertsNamed, boxHost, labSeed, writeClaudeMcpJson } from 'docubot/products/fortisoar';
+import { alertsNamed, boxHost, boxIdentity, labSeed, toolkitVenvMasks, writeClaudeMcpJson } from 'docubot/products/fortisoar';
 import { FortiagentApp, withFortiagentApp } from 'docubot/agents';
 
 const FA = process.env.FORTIAGENT_BIN || '/Applications/FortiAgent.app/Contents/Resources/bin/fortiagent';
@@ -63,7 +63,20 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
   test.skip(!IDS.some((id) => shouldRunStep(id)), 'no FortiAgent step selected');
   test.setTimeout(40 * 60_000);
   const host = boxHost();
-  const showAs = { [os.homedir()]: '/Users/student', [host]: 'fortisoar.example.com' };
+  const who = boxIdentity();
+  // The host label is masked too: the model's prose may shorten the host to its
+  // first dot-label (seen in a live whoami answer). Same guard as the kit's mask
+  // builders -- a short generic label ("soar") must never become a mask, or the
+  // product name disappears from every capture.
+  const hostLabel = host.split('.')[0];
+  const labelMask = hostLabel !== host && (hostLabel.includes('-') ? hostLabel.length >= 6 : hostLabel.length >= 8)
+    ? { [hostLabel]: 'fortisoar.example.com' } : {};
+  // The venv pair goes FIRST: the venv dir sits under the home dir, and rewriteText
+  // applies pairs in insertion order -- the home rewrite would destroy the venv match.
+  // The mcp-list row then reads /your/venv/bin/fsr-agentic-toolkit, the placeholder the
+  // page's own snippet teaches.
+  const showAs = { ...Object.fromEntries(toolkitVenvMasks()), [os.homedir()]: '/Users/student',
+    [host]: 'fortisoar.example.com', ...labelMask, [who.loginid]: 'agentlab', [who.name]: 'Agent Lab' };
   const shot = (app: FortiagentApp, id: string, o: Record<string, unknown> = {}) =>
     capture.shot(app.page, id, { showAs, scrubSkip: ['date-or-time'], ...o });
 
@@ -111,7 +124,11 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
         const state = await app.turn(WHOAMI, { decision: 'decline', timeoutMs: 6 * 60_000 });
         expect(state).toBe('idle');
         const text = await app.windowText();
-        expect(text, 'FortiAgent picked the whoami tool').toMatch(/whoami/i);
+        // Effect, not the tool's name: FortiAgent's transcript shows "Ran 1
+        // Fortisoar call" and never the tool name, so a /whoami/ word match can
+        // never pass. The page promises the login id and the version, which only
+        // the whoami call returns.
+        expect(text, 'the answer names the box login').toContain(who.loginid);
         expect(text, 'a read never asks').not.toMatch(/Allow FortiAgent to run/i);
         expect(await app.lastReply(), 'the answer names the box version').toMatch(/8\.\d+\.\d+/);
         await shot(app, 'fsa06-17-fortiagent-whoami');
@@ -120,9 +137,14 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
       if (shouldRunStep('fsa06-16-fortiagent-mcp-list')) await test.step('fsa06-16-fortiagent-mcp-list', async () => {
         expect(fa(['mcp', 'list']), 'the engine reads the server connected').toMatch(/FortiSOAR[^\n]*connected/i);
         await app.settings('MCP servers');
-        const row = app.page.getByRole('listitem').filter({ has: app.page.getByRole('button', { name: 'Remove MCP server' }) }).filter({ hasText: NAME }).first();
+        // Our row is the one running the toolkit binary (the operator's own rows
+        // carry their endpoints and home paths -- barred: a public capture shows
+        // the app's shape, not this machine's servers).
+        const rows = app.page.getByRole('listitem').filter({ has: app.page.getByRole('button', { name: 'Remove MCP server' }) });
+        const row = rows.filter({ hasText: 'fsr-agentic-toolkit' }).first();
         await row.waitFor({ timeout: 120_000 });
-        await shot(app, 'fsa06-16-fortiagent-mcp-list', { highlight: [row] });
+        const others = await rows.filter({ hasText: /\/Users\/|https?:\/\// }).filter({ hasNotText: 'fsr-agentic-toolkit' }).all();
+        await shot(app, 'fsa06-16-fortiagent-mcp-list', { highlight: [row], mask: others });
         await app.closeSettings();
       });
     } finally {
