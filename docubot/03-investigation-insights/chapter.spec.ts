@@ -25,6 +25,9 @@ const ALERT_RE = /Agent Lab - beaconing/i;
 // On-screen dates are legitimate content, so the scan skips date-or-time; it still
 // refuses a real lab IP, hostname, key or sensitive term.
 const SKIP = SCRUB.dates;
+// The trace panels label and show the trace/task id as bare UUIDs (separate
+// elements, plus a "Task Id <uuid>" chip). Box-internal metadata — masked.
+const UUID_TEXT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 // Speed: start every chapter 3 investigation that has none at once (the box runs
 // up to three in parallel), so each test below finds its run done or nearly done
@@ -120,7 +123,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
     const steps = await openTracePanel(soar, { timeout: 60_000 });
     expect(steps.length, 'the trace panel lists steps').toBeGreaterThan(0);
     await expect(soar.getByText('Alert Investigation', { exact: true }).first()).toBeVisible();
-    await capture.shot(soar, 'fsa03-04-trace-steps', SKIP);
+    await capture.shot(soar, 'fsa03-04-trace-steps', { ...SKIP, maskText: [/Trace ID/, UUID_TEXT] });
   });
 });
 
@@ -317,7 +320,7 @@ test('chapter 3 - hypothesis question', async ({ gui, capture }) => {
     const tr = await openQuestionTrace(soar);
     expect(tr.steps, 'the question trace has steps').toBeGreaterThan(0);
     await expect(soar.getByText(`${panel} Trace Flow`).first(), 'the trace is the answering agent\'s own').toBeVisible();
-    await capture.shot(soar, 'fsa03-13-question-trace', SKIP);
+    await capture.shot(soar, 'fsa03-13-question-trace', { ...SKIP, maskText: [/Trace ID/, UUID_TEXT] });
   });
 });
 
