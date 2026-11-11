@@ -16,8 +16,19 @@
 //   * DOCUBOT_SEED=1: CONFIGURE step seeds the page-1 playbook from the shipped
 //     artifact (static/examples/playbooks) when the agent is NOT building it.
 //
-// Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG).
-// Run: DOCUBOT_SEED=1 SPEND_AI=1 docubot run --chapter 08-playbook
+// Live-only (needs the box; agent steps also need DOCUBOT_MCP_CONFIG). Verify
+// one spec at a time through Playwright (never `docubot run`, which starts
+// every spec):
+//   DOCUBOT_TARGET=<repo> SPEND_AI=1 FSR_ENV_FILE=<repo>/.env.lab \
+//   FSR_PYTHON=<python with the toolkit> DOCUBOT_MCP_CONFIG=<repo>/.agent-lab/.mcp.json \
+//   PATH=<claude 2.1.321 pin dir>:$PATH ENABLE_TOOL_SEARCH=false \
+//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*" \
+//   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
+//   --tsconfig=<kit>/tsconfig.json <repo>/docubot/08-playbook/chapter.spec.ts
+// With SPEND_AI=1 the agent builds the playbook, so DOCUBOT_SEED is not needed
+// (it only seeds page 1 when the agent is NOT building it). fsa08-01 and
+// fsa08-02 share one agent session (02's prompt says "you just compiled") --
+// run both ids together via DOCUBOT_ONLY_STEPS; 03/04/05 each start fresh.
 import { expect, skipStep, test, SCRUB } from 'docubot';
 import { openPlaybook, openPlaybookLogs, openRecord, waitCanvasStep, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
