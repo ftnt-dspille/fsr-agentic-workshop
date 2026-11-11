@@ -24,6 +24,7 @@ Sign in to FortiSOAR and open **Content Hub** > **Manage**, filtered to **Widget
 
 <!-- step: fsa01-05-assistant-present -->
 <!-- capture: fsa01-05-assistant-present -->
+![fsa01-05-assistant-present](fsa01-05-assistant-present.png?height=600px)
 
 ## 2. Let the connector reach PyPI
 
@@ -43,6 +44,7 @@ The pack's connector and widgets are custom content, which a locked-down box ref
 
 <!-- step: fsa01-15-dev-features -->
 <!-- capture: fsa01-15-dev-features -->
+![fsa01-15-dev-features](fsa01-15-dev-features.png?height=600px)
 
 ## 4. Download and import the pack
 
@@ -64,6 +66,7 @@ Widgets import as **drafts**. In **Content Hub** > **Manage** (filtered to **Wid
 
 <!-- step: fsa01-25-widgets-published -->
 <!-- capture: fsa01-25-widgets-published -->
+![fsa01-25-widgets-published](fsa01-25-widgets-published.png?height=600px)
 
 ## 6. Configure the connector
 
@@ -73,11 +76,13 @@ The lab box uses FortiAI as the provider, so the assistant spends FortiAI tokens
 
 <!-- step: fsa01-30-connector-config -->
 <!-- capture: fsa01-30-connector-config -->
+![fsa01-30-connector-config](fsa01-30-connector-config.png?height=600px)
 
 Run the connector's **health check** and wait for green.
 
 <!-- step: fsa01-35-connector-health -->
 <!-- capture: fsa01-35-connector-health -->
+![fsa01-35-connector-health](fsa01-35-connector-health.png?height=600px)
 
 ## Verify
 
@@ -85,11 +90,13 @@ Open any alert: the **Agentic Assistant** launcher appears on the record page, a
 
 <!-- step: fsa01-40-record-launcher -->
 <!-- capture: fsa01-40-record-launcher -->
+![fsa01-40-record-launcher](fsa01-40-record-launcher.png?height=600px)
 
 Open the **Agentic Assistant Monitor** dashboard: usage, sessions and the autonomy policy render.
 
 <!-- step: fsa01-45-monitor-dashboard -->
 <!-- capture: fsa01-45-monitor-dashboard -->
+![fsa01-45-monitor-dashboard](fsa01-45-monitor-dashboard.png?height=600px)
 
 ## Troubleshooting
 
