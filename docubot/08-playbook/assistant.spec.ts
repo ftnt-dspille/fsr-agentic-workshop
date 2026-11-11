@@ -14,7 +14,7 @@ import { expect, skipStep, test } from 'docubot';
 import { ScratchRun, anyStepSelected, shouldRunStep, SCRUB } from 'docubot';
 import {
   FSR_WORKFLOW_KIND, buildPlaybookWithAgentic, followUpWithAgentic, fsrScratchHandlers, minimizeAgentic,
-  openOrCreatePlaybook, savePlaybook,
+  openOrCreatePlaybook, savePlaybook, savedPlaybook,
 } from 'docubot/products/fortisoar';
 
 test.describe.configure({ mode: 'serial' });
@@ -47,6 +47,15 @@ test('chapter 8 - build with the assistant', async ({ gui, capture }) => {
   // playbook keeps the run's writes deletable.
   const state = await openOrCreatePlaybook(soar, { collection: 'Agent Lab', playbook: 'Agent Lab Assistant Build' });
   expect(state, 'a scratch playbook is open on the designer').toMatch(/opened|created/);
+  // Register the scratch playbook for teardown. The collection stays (it is
+  // standing lab infrastructure other chapters use); only the playbook is
+  // scratch. openOrCreatePlaybook tracks nothing on either path, and the run
+  // after a save leaves a REAL saved record behind -- found live: a pass run's
+  // teardown deleted nothing and the playbook survived on the box.
+  const saved = await savedPlaybook(soar, 'Agent Lab', 'Agent Lab Assistant Build');
+  const wfId = saved?.['@id'] ? String(saved['@id']).split('/').pop() : null;
+  expect(wfId, 'the scratch playbook resolved for teardown').toBeTruthy();
+  if (wfId) scratch.track({ kind: FSR_WORKFLOW_KIND, id: wfId, label: 'Agent Lab Assistant Build' });
 
   if (shouldRunStep('fsa08-60-designer-assistant')) await test.step('fsa08-60-designer-assistant', async () => {
     await expect(soar.locator('img[title="Agentic Assistant"]').first()).toBeVisible({ timeout: 60_000 });
