@@ -177,8 +177,10 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
       expect(alert, 'seed the Agent Lab alerts first: tools/lab_setup.py seed').toBeTruthy();
       await openAlertAiInvestigation(soar, alert!.id);
       // A finished investigation is read, not run again (ensureInvestigation reuses
-      // done runs free, waits out a running one, starts only when not-run).
-      const inv = await ensureInvestigation(soar, { spend: true, label: 'fsa04-03', timeoutMs: 60_000 });
+      // done runs free, waits out a running one, starts only when not-run). The
+      // wait covers a fresh start too: a FortiAI investigation runs ~6 min, so the
+      // 15 min here is the value the live end-to-end run used, not 60s.
+      const inv = await ensureInvestigation(soar, { spend: true, label: 'fsa04-03', timeoutMs: 15 * 60_000 });
       expect(inv.state).toBe('done');
       return openTracePanel(soar);
     };
