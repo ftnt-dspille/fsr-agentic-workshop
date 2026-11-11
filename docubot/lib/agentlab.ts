@@ -15,12 +15,24 @@ export const SHOWN_BOX_URL = 'https://fortisoar.example.com';
 /** Replace the box's real URL, host, login and display name with the page's placeholders. */
 export const boxMasks = () => boxMasksFor({ login: SHOWN_LOGIN, name: 'Agent Lab', url: SHOWN_BOX_URL });
 
+/**
+ * Claude Code keeps per-session scratch under /tmp/claude-<uid>/<cwd with slashes swapped for dashes>
+ * and shows that path when the agent diffs its own edits (the pages ask it to). The run's folder
+ * rewrite cannot reach it: swaps apply per line and the path wraps across two rows. Rewrite the
+ * fragments per line instead — the session uuid (what the OCR gate calls a secret) first, then the
+ * tmp/encoded prefix; on an unwrapped path both hit and the result reads as one continuous path.
+ */
+const claudeTmpMasks = () => [
+  [/[\w-]*workshop-[\w-]+-agent-lab\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, 'agent-lab/<session>'],
+  [/(?:\/private)?\/tmp\/claude-\d+\/[\w-]+/g, '~/claude-tmp/'],
+];
+
 // The agent lab: this workshop's temp folder name, box masks, and how the toolkit's skills install.
 // Terminal shots (docubot's shellShot) get the lab env, the toolkit venv as /your/venv, and the box masks.
 const lab = createAgentLab({
   name: 'fsa-workshop',
-  masks: boxMasks,
+  masks: () => [...claudeTmpMasks(), ...boxMasks()],
   skills: toolkitSkills,
-  shot: () => ({ baseEnv: pyfsrEnv(), replaceFirst: toolkitVenvMasks(), masks: boxMasks() }),
+  shot: () => ({ baseEnv: pyfsrEnv(), replaceFirst: toolkitVenvMasks(), masks: [...claudeTmpMasks(), ...boxMasks()] }),
 });
 export const { AGENT_CWD, CODEX_HOME, agentScreen, codexScreen, startAgent, agentTurn, startCodex, startCodexApproval, startClaudeApproval, codexShell, shellShot } = lab;
