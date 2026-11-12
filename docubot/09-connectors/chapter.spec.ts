@@ -39,14 +39,19 @@ const hubInstalled = (): boolean =>
 
 test.describe.configure({ mode: 'serial' });
 
-// The only shell commands the deploy step allows: the page's package command (the agent may add `2>&1`, a pipe to
-// tail/head to keep the output short, and a trailing `ls` to find the .tgz), and a plain `ls` of a path. Each must
-// fit as a whole; anything else is denied. The tail/head tolerance is not hypothetical: a live run's agent packaged
-// with `pyfsr connector package agentlab-dadjoke 2>&1 | tail -20; ls` and the narrower rule denied it, which left
-// the turn with nothing to install.
-const LS = String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*`;
-const TAIL = String.raw`(?: 2>&1)?(?: \| (?:tail|head)(?: -n \d+| -\d+)?(?: \d+)?)?`;
-const PACKAGE_SHELL = [`pyfsr connector package ${DADJOKE}${TAIL}(?:; ${LS}${TAIL})?`, `${LS}${TAIL}`];
+// The only shell commands the deploy step allows: the page's package command and a plain `ls`, in
+// ANY joining — each segment optionally decorated (`2>&1`, a tail/head pipe, optional parens), the
+// segments joined by `&&`, `;` or `|`, at most four. Whole-command shapes were whack-a-mole with the
+// agent's formatting: live runs packaged as `pkg 2>&1 | tail -20; ls` and `ls && pkg`, each novel
+// shape was denied, and a denied package leaves the turn nothing to install. Every escape lives in
+// a String.raw piece on purpose — a plain template literal turns `\s` into `s` and `\|` into `|`,
+// silently corrupting the rule (an empty joiner alternative that admits glued segments).
+const DEC = String.raw`(?: 2>&1)?(?: \| (?:tail|head)(?: -n \d+| -\d+)?(?: \d+)?)?`;
+const PKG = String.raw`pyfsr connector package ${DADJOKE}${DEC}`;
+const LS = String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*${DEC}`;
+const SEG = String.raw`[(]?\s*(?:${PKG}|${LS})\s*[)]?`;
+const JOIN = String.raw`\s*(?:&&|;|\|)\s*`;
+const PACKAGE_SHELL = [`${SEG}(?:${JOIN}${SEG}){0,3}`];
 
 // The calls that save a connector's configuration. Each is a write Claude's own prompt asks about; the hook denies any other.
 const configTools = (connector: string): Allowed[] =>
