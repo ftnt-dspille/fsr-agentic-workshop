@@ -139,7 +139,10 @@ test('chapter 6 - set up the agent', async ({ gui, capture, page }) => {
       ],
     });
     try {
-      await capture.agent('fsa06-07-opencode-approval', shot.real);
+      // The turn keeps running behind the dialog (the call row spins, thought counters
+      // tick): judge stability with digits and spinner glyphs ignored, like every other
+      // mid-turn dialog picture.
+      await capture.agent('fsa06-07-opencode-approval', shot.real, { ticking: true });
     } finally {
       shot.kill();
     }
