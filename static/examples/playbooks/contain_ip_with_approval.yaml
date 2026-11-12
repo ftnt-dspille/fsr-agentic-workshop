@@ -7,7 +7,7 @@
 # to different ends, so there is no path to the block step without an approval.
 #
 # Import under AI Configurations / Playbooks (or Automation > Playbooks), then run
-# it from an alert's Execute menu (or let the capstone agent reference it) with the
+# it from an alert's Execute menu (or let the chapter-10 agent reference it) with the
 # investigated IP.
 collection: Agent Lab
 visible: true

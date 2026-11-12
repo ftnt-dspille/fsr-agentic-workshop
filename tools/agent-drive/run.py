@@ -172,16 +172,16 @@ MANIFEST: dict[str, dict] = {
         "answer": ["joke"],
         "effect": ("09-connectors.spec.js", ["fsa09-05-run-own-connector"]),
     },
-    "10-capstone-investigation/01-capstone#1": {
+    "10-agent-led-investigation/01-investigation#1": {
         "calls": ["create_record"], "confirm_ok": [],
         "answer": ["beaconing"],
-        "effect": ("10-capstone-investigation.spec.js", ["fsa10-01-stage-alert"]),
+        "effect": ("10-agent-led-investigation.spec.js", ["fsa10-01-stage-alert"]),
     },
-    "10-capstone-investigation/01-capstone#2": {
+    "10-agent-led-investigation/01-investigation#2": {
         "calls": ["search_records", "update_record"], "confirm_ok": [],
         "forbid": ["close"],
         "answer": ["verdict", "confidence"],
-        "effect": ("10-capstone-investigation.spec.js", ["fsa10-02-investigate"]),
+        "effect": ("10-agent-led-investigation.spec.js", ["fsa10-02-investigate"]),
     },
 }
 
@@ -649,7 +649,7 @@ def reset_lab_before_run(env_file: str | None) -> None:
 
     _run("reset_lab.py", ["--yes"], "reset")
     # Reset removes the demo fixture alerts too; re-seed them so the triage and
-    # capstone chapters have the Open "Agent Lab" alerts they expect. Idempotent.
+    # agent-led chapters have the Open "Agent Lab" alerts they expect. Idempotent.
     _run("lab_setup.py", ["seed"], "seed")
 
 

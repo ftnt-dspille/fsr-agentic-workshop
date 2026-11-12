@@ -214,7 +214,7 @@ class BashAndEffectTests(unittest.TestCase):
             return mock.Mock(returncode=0)
 
         with mock.patch.object(run.subprocess, "run", side_effect=fake_run):
-            self.assertEqual(run.check_effect("10-capstone-investigation/01-capstone#2"), [])
+            self.assertEqual(run.check_effect("10-agent-led-investigation/01-investigation#2"), [])
         self.assertEqual(seen["env"]["FSR_ONLY_STEPS"], "fsa10-02-investigate")
         self.assertEqual(seen["env"]["FSR_WORKDIR"], str(run.WORK))
 

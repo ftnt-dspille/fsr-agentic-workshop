@@ -1,4 +1,4 @@
-// Chapter 10 - capstone investigation: stage an alert, have the agent investigate
+// Chapter 10 - agent-led investigation: stage an alert, have the agent investigate
 // it, and prove the findings were written BACK to the alert.
 //
 // Spend gate: both agent turns spend model credits. They run only with
@@ -9,15 +9,15 @@
 //
 // Gates (all opt-in; a bare run is read-only and spends nothing):
 //   DOCUBOT_SEED=1  CONFIGURE step: lab_setup.py seed (demo alerts) + org-context.
-//                   The capstone alert itself is staged below (agent prompt under
+//                   The investigation alert itself is staged below (agent prompt under
 //                   SPEND_AI, else the free toolkit), never by the seeder.
 //   SPEND_AI=1      agent-TUI turns (stage prompt + investigation). PRIMARY capture.
 //
 // Needs the ch07 module (agentlab_assets), ch08 playbook ("Tag Agent Lab
 // Alerts"), and the ch10 §8 approval playbook ("Agent Lab - Contain IP (with
 // Approval)", deployed from static/examples/playbooks/). Ported from
-// tools/e2e/10-capstone-investigation.spec.js.
-// Verify live with `docubot run --chapter 10-capstone-investigation`.
+// tools/e2e/10-agent-led-investigation.spec.js.
+// Verify live with `docubot run --chapter 10-agent-led-investigation`.
 import { expect, skipStep, test, SCRUB } from 'docubot';
 import { closeModals, ensureInvestigation, findAlert, forgetModuleCache, openAlertAiInvestigation, openRecord, openTracePanel, pyfsrEnv, readVerdictTab, readVerdictText, recordDetailText } from 'docubot/products/fortisoar';
 import { execFileSync } from 'child_process';
@@ -64,12 +64,12 @@ const TOOL_ROW = /Called fortisoar-lab/;
 const DONE_ROW = /for (?:\d+h )?(?:\d+m )?\d+s.*\bdone\b/i;
 const snapOutcome = (run: ClaudeRun) =>
   run.real.snap({ startAt: TOOL_ROW, lastMatch: true, endAt: DONE_ROW, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
-const CHAPTER = '10-capstone-investigation';
-const PAGE = '01-capstone';
+const CHAPTER = '10-agent-led-investigation';
+const PAGE = '01-investigation';
 
 interface StagedAlert { uuid?: string; name?: string; severity?: unknown; description?: string }
 
-/** Every staged capstone alert, read back through the toolkit (not the card). */
+/** Every staged investigation alert, read back through the toolkit (not the card). */
 function stagedAlerts(): StagedAlert[] {
   const out = toolkit('search_records', {
     module: 'alerts',
@@ -96,13 +96,13 @@ function hasFindings(a: StagedAlert): boolean {
   return !/^Triaged automatically/.test(text) && /verdict/i.test(text) && /confidence/i.test(text);
 }
 
-/** The staged capstone alert's uuids, for a check that a call acts on the capstone alert and nothing else. */
-const capstoneRefCheck = (what: string): NonNullable<Allowed['check']> => {
+/** The staged investigation alert's uuids, for a check that a call acts on the investigation alert and nothing else. */
+const investigationRefCheck = (what: string): NonNullable<Allowed['check']> => {
   const uuids = stagedAlerts().map((a) => a.uuid).filter((u): u is string => !!u);
-  return (a) => (uuids.some((u) => String(a.ref ?? '').includes(u)) ? undefined : `${what} must act on the capstone alert (${uuids.length} staged)`);
+  return (a) => (uuids.some((u) => String(a.ref ?? '').includes(u)) ? undefined : `${what} must act on the investigation alert (${uuids.length} staged)`);
 };
 
-test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }) => {
+test('chapter 10 - agent-led investigation', async ({ gui, local, capture, page }) => {
   test.setTimeout(45 * 60 * 1000);
 
   // CONFIGURE: repeatable seed (idempotent, create-if-absent) of the box state
@@ -143,7 +143,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
       }
     }
     // Effect-check: the alert exists, and the chapter 8 playbook picked it up.
-    expect(stagedAlerts().length, 'the capstone alert was not staged').toBeGreaterThan(0);
+    expect(stagedAlerts().length, 'the investigation alert was not staged').toBeGreaterThan(0);
     // Only a freshly staged alert triggers the ch08 playbook; a reused alert has
     // no new run to wait for, so that check is reported as not run.
     if (staged) {
@@ -162,8 +162,8 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
   if (shouldRunStep('fsa10-02-investigate')) await test.step('fsa10-02-investigate', async () => {
     let held: Awaited<ReturnType<typeof snapFrom>> | undefined;
     if (SPEND) {
-      // The write-back is one update_record on the capstone alert; Claude's own prompt asks before it. Any other write is denied.
-      const refCheck = capstoneRefCheck('the write-back');
+      // The write-back is one update_record on the investigation alert; Claude's own prompt asks before it. Any other write is denied.
+      const refCheck = investigationRefCheck('the write-back');
       ({ held } = await approvedTurnOnce(page, promptFor(CHAPTER, PAGE, 2), [{
         tool: 'update_record', args: { module: 'alerts' }, required: true,
         check: (a) => refCheck(a) ?? (/closed/i.test(JSON.stringify(a.data?.status ?? '')) ? 'the page says never close the alert' : undefined),
@@ -172,11 +172,11 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
       console.log('[ch10] fsa10-02-investigate: agent run skipped (spends credits); set SPEND_AI=1');
     }
 
-    // Always-on proof: the findings were written BACK to a capstone alert. This
+    // Always-on proof: the findings were written BACK to a investigation alert. This
     // proves the write-back is present, not that the verdict is right. The title
     // is not unique across reruns, so any staged alert carrying findings counts.
     const written = stagedAlerts().filter(hasFindings);
-    expect(written.length, 'no capstone alert carries the agent findings; run with SPEND_AI=1').toBeGreaterThan(0);
+    expect(written.length, 'no investigation alert carries the agent findings; run with SPEND_AI=1').toBeGreaterThan(0);
     // The prompt says never close the alert: severity must still be a real value.
     expect(written.some((a) => a.severity != null)).toBe(true);
     if (held) await capture.agent('fsa10-02-investigate', held);
@@ -188,7 +188,7 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
     let alertId = written.find((a) => a.uuid)?.uuid;
     if (!alertId) {
       const alert = await findAlert(soar, ALERT_RE, { search: 'Agent Lab - beaconing' });
-      expect(alert, 'capstone alert not found in the UI: stage it (fsa10-01) first').toBeTruthy();
+      expect(alert, 'investigation alert not found in the UI: stage it (fsa10-01) first').toBeTruthy();
       alertId = alert!.id;
     }
     // Open the Alert Details tab, not whatever tab the record last showed: the
@@ -212,14 +212,14 @@ test('chapter 10 - capstone investigation', async ({ gui, local, capture, page }
       console.log('[ch10] fsa10-03-native-compare skipped (spends credits); set SPEND_AI=1');
       return;
     }
-    // Starting the native investigation is one write (run_fortiai_investigation on the capstone alert); Claude's own prompt asks.
+    // Starting the native investigation is one write (run_fortiai_investigation on the investigation alert); Claude's own prompt asks.
     const prompt = promptFor(CHAPTER, PAGE, 3);
     const run = await startClaude(page, { writeFiles: false });
     let held: Awaited<ReturnType<typeof snapFrom>>;
     let screen = '';
     try {
       await approvedTurn(run, prompt, [
-        { tool: 'run_fortiai_investigation', anyTarget: true, required: true, check: capstoneRefCheck('the investigation') },
+        { tool: 'run_fortiai_investigation', anyTarget: true, required: true, check: investigationRefCheck('the investigation') },
       ], { nudge: 'Yes, go ahead.', timeoutMs: 25 * 60 * 1000 });
       // The agent may end its turn while the native run is still going. The condition to wait on is the screen itself: only a turn
       // that reports a verdict and a comparison is the picture. Until then ask the way a student would; each follow-up is a read.
@@ -253,7 +253,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   // The read-only labs (3, 6, 7): nothing to approve, so the plain agent turn.
   const run = async (n: number) => {
       const agent = await laptopAgent(local);
-      return agentTurn(agent, promptFor('10-capstone-investigation', PAGE, n), { timeoutMs: 10 * 60 * 1000 });
+      return agentTurn(agent, promptFor('10-agent-led-investigation', PAGE, n), { timeoutMs: 10 * 60 * 1000 });
   };
   // The labs that write: the calls the page lets the agent make, each asked by Claude's own prompt.
   // The YAML and alert-name checks are the shared ones (lib/fsr-lab.ts).
@@ -264,7 +264,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     expect(listed.tools?.length, 'agentlab-deepwiki is not registered: run chapter 5 page 2 first').toBeGreaterThan(0);
     // The page: calling a registered tool needs the student's go-ahead. Claude's own prompt asks before call_registered_mcp_tool,
     // for this server and its question tool only.
-    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 1), [
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-agent-led-investigation', PAGE, 1), [
       { tool: 'call_registered_mcp_tool', args: { server: 'agentlab-deepwiki', tool: 'ask_wiki_question', confirm: true }, required: true },
     ], { nudge: 'Yes, go ahead and call it.', timeoutMs: 10 * 60 * 1000 });
     // The answer must come from the registered server's own tool, not memory.
@@ -276,7 +276,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
 
   if (shouldRunStep('fsa10-05-repair-playbook')) await test.step('fsa10-05-repair-playbook', async () => {
     // Save the YAML, publish it, trigger it with a test alert, repair it, publish the repair, trigger again.
-    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 2), [
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-agent-led-investigation', PAGE, 2), [
       { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Repair Practice') },
       alertNamed('Agent Lab repair'),
     ], { writeFiles: true, timeoutMs: 10 * 60 * 1000 });
@@ -319,8 +319,8 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     // Two turns, as on the page: schedule it, let beat fire it and record the fire
     // (beat saves its counters minutes after firing), then diagnose and delete. One session, so the second prompt keeps its context.
     const run = await startClaude(page, { writeFiles: true });
-    const createPrompt = promptFor('10-capstone-investigation', PAGE, 4);
-    const deletePrompt = promptFor('10-capstone-investigation', PAGE, 5);
+    const createPrompt = promptFor('10-agent-led-investigation', PAGE, 4);
+    const deletePrompt = promptFor('10-agent-led-investigation', PAGE, 5);
     let createdShot: Awaited<ReturnType<typeof snapOutcome>>;
     let created: string;
     let deletedShot: Awaited<ReturnType<typeof snapOutcome>>;
@@ -381,7 +381,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     // The build is a module (provision_module, or create_module and publish_module_changes), the playbook on it and a test record.
     // Each write is asked by Claude's own prompt; the page's alert is raised by the playbook, so no alert write is declared.
     const recordIn = (tool: string): Allowed => ({ tool, args: { module: 'agentlab_lost_devices' }, required: 'record' });
-    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-capstone-investigation', PAGE, 6), [
+    const { held, plain: screen } = await approvedTurnOnce(page, promptFor('10-agent-led-investigation', PAGE, 6), [
       { tool: 'provision_module', args: { module: 'agentlab_lost_devices', confirm: true }, required: 'module' },
       { tool: 'create_module', args: { module: 'agentlab_lost_devices' }, required: 'module' },
       { tool: 'publish_module_changes', args: { confirm: true }, anyTarget: true },
@@ -408,8 +408,8 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   });
 
   if (shouldRunStep('fsa10-09-record-forensics')) await test.step('fsa10-09-record-forensics', async () => {
-    // Precondition: the capstone alert (page 1) with its history.
-    expect(stagedAlerts().length, 'stage the capstone alert first (fsa10-01)').toBeGreaterThan(0);
+    // Precondition: the investigation alert (page 1) with its history.
+    expect(stagedAlerts().length, 'stage the investigation alert first (fsa10-01)').toBeGreaterThan(0);
     const screen = await run(7);
     await capture.screen('fsa10-09-record-forensics', screen, agentScreen());
     expect(screen).toMatch(/Tag Agent Lab Alerts|playbook/i);
@@ -430,7 +430,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
     const out = execFileSync(py, ['-c', INSTANCES_PY, path.resolve(stagingEnv), alias], { encoding: 'utf8' });
     const { file, urls } = JSON.parse(out);
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40, mcpEnv: { PYFSR_INSTANCES: file } });
-    const screen = await agentTurn(agent, promptFor('10-capstone-investigation', PAGE, 8), { timeoutMs: 15 * 60 * 1000 });
+    const screen = await agentTurn(agent, promptFor('10-agent-led-investigation', PAGE, 8), { timeoutMs: 15 * 60 * 1000 });
     const shown = agentScreen();
     // The real box addresses never reach the picture.
     shown.replace.push(...(urls as string[]).flatMap((u, i) => {

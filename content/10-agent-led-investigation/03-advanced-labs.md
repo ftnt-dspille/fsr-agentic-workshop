@@ -3,11 +3,12 @@ title: Advanced Agentic Labs
 linkTitle: Advanced Labs
 weight: 30
 description: "Four more agent jobs with proof: call a FortiSOAR-registered MCP server, let the agent repair a playbook, security-review your connector, and schedule automation that proves it fires."
+aliases: [/10-capstone-investigation/03-advanced-labs/]
 ---
 
 These labs give the agent larger jobs. Each job ends with evidence you can check. Each lab uses the same agent and `.mcp.json` you set up earlier.
 
-Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapter 9. Lab 6 needs the capstone alert from page 1.
+Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapter 9. Lab 6 needs the investigation alert from page 1.
 
 ## 1. Call a tool on an MCP server registered in FortiSOAR
 
@@ -249,7 +250,7 @@ Give your agent this prompt:
 
 ```text
 Save this playbook to ./contain-with-approval.yaml and publish it. Then run it
-twice from the capstone alert's IP: once that you expect me to reject, and once
+twice from the investigation alert's IP: once that you expect me to reject, and once
 that you expect me to approve. After each run, tell me whether the IP reached
 the SOAR block list (threat_intel_feeds). Do not approve on my behalf.
 

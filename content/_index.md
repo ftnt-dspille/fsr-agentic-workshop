@@ -18,7 +18,7 @@ The workshop has two parts that share one idea: an agent is only as useful as th
 
 **Do chapter 1 first.** Then:
 - **Part 1 is optional** and its chapters stand alone: take the ones that interest you.
-- **Part 2 chapters are sequential** (6 then 7 then 8 then 9 then 10). The capstone in chapter 10 builds on the module from chapter 7, the playbook from chapter 8, and the connector from chapter 9, so do them in order.
+- **Part 2 chapters are sequential** (6 then 7 then 8 then 9 then 10). Chapter 10 builds on the module from chapter 7, the playbook from chapter 8, and the connector from chapter 9, so do them in order.
 
 ## Before you start
 

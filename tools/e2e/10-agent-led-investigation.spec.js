@@ -8,7 +8,7 @@ const { apiContext, apiPost, pyfsrTool, wanted } = require("./lib/harness");
 
 test.setTimeout(5 * 60 * 1000);
 
-test("10-capstone-investigation", async ({ playwright }) => {
+test("10-agent-led-investigation", async ({ playwright }) => {
   if (wanted("fsa10-01-stage-alert")) await test.step("fsa10-01-stage-alert", async () => {
     const since = new Date().toISOString();
     const created = pyfsrTool("create_record", {
@@ -39,16 +39,16 @@ test("10-capstone-investigation", async ({ playwright }) => {
         logic: "AND",
         filters: [{ field: "name", operator: "like", value: "Agent Lab - beaconing%" }],
       });
-      // The capstone title is not unique (repeated runs stage duplicates), so the
+      // The investigation alert title is not unique (repeated runs stage duplicates), so the
       // proof is: some staged beaconing alert carries the write-back. Matching the
       // newest duplicate would test the wrong record when the agent picked another.
       const staged = found["hydra:member"] || [];
-      expect(staged.length, "stage the capstone alert first (fsa10-01)").toBeGreaterThan(0);
+      expect(staged.length, "stage the investigation alert first (fsa10-01)").toBeGreaterThan(0);
       const written = staged.filter((a) => {
         const text = a.description || "";
         return !/^Triaged automatically/.test(text) && /verdict/i.test(text) && /confidence/i.test(text);
       });
-      expect(written.length, "the agent has not written findings to any capstone alert").toBeGreaterThan(0);
+      expect(written.length, "the agent has not written findings to any investigation alert").toBeGreaterThan(0);
     } finally {
       await api.dispose();
     }

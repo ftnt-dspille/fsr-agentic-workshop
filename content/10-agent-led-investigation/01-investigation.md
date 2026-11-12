@@ -1,9 +1,10 @@
 ---
-title: "Capstone: Agent-Led Investigation"
-linkTitle: Capstone
+title: "Run the Investigation"
+linkTitle: Run the investigation
 weight: 10
 description: "One prompt, a full investigation: enrich, correlate, conclude, write the findings back -- then contain the threat across every gateway at once."
 tags: ["fabric"]
+aliases: [/10-capstone-investigation/01-capstone/]
 ---
 
 In this investigation the agent takes an alert, gathers evidence with the tools from earlier chapters, reaches a verdict, and writes the findings back to the alert. The next analyst then sees the findings on the record.
@@ -84,7 +85,7 @@ Give your agent this prompt:
 Contain the destination from the investigation. Add 203.0.113.99 to our
 FortiSOAR block list so the firewalls drop it: create a threat_intel_feeds
 record with value 203.0.113.99, type of feed "IP Address", reputation
-"Malicious", and confidence 90, sourced "Agent Lab capstone". Then confirm
+"Malicious", and confidence 90, sourced "Agent Lab investigation". Then confirm
 it is being served on the Block List (IP Address) TAXII collection.
 ```
 
@@ -133,7 +134,7 @@ Starting the native investigation is a write, so your coding agent's approval pr
 
 The box has a third investigator: the **Agentic Assistant** you installed in
 chapter 1, and watched triage this same scenario in chapter 3 ("Chat with the
-Assistants"). It investigates on the record itself. Open the capstone alert,
+Assistants"). It investigates on the record itself. Open the investigation alert,
 launch the assistant, and hold it to the same bar you held your coding agent:
 
 ```text
@@ -157,7 +158,7 @@ SOC team has about how much to trust each surface.
 Chapter 8 built playbooks from an investigation two ways: your coding agent
 wrote the YAML outside FortiSOAR and published it (pages 1-5), and the
 Agentic Assistant compiled a plain-English request into steps on the
-Playbook Designer (page 6). As a take-home exercise, do the capstone both
+Playbook Designer (page 6). As a take-home exercise, do the investigation both
 ways: ask the agent to build and publish a playbook that repeats the
 investigation steps above for any "Agent Lab" alert. Then open the designer,
 launch the Agentic Assistant, and ask it for the same playbook. Compare the

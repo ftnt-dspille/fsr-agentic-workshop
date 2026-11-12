@@ -1,5 +1,5 @@
 // Shared pieces for the chapters whose agent writes to the box (08-playbook,
-// 09-connectors, 10-capstone): the declared-call checks two chapters state for
+// 09-connectors, 10-agent-led): the declared-call checks two chapters state for
 // the same shapes, the screen regex for an agent that fell back to doing the
 // work by hand, and the standard laptop agent session.
 import { startAgent } from './agentlab';

@@ -10,7 +10,7 @@ investigations that work into playbooks that run on their own.
 - Part 1 (chapters 2-5): agentic foundations, investigation insights, building your
   own agent, registering MCP servers.
 - Part 2 (chapters 6-11): setting up the agent, alerts, modules and records,
-  playbooks, connectors, a capstone investigation, and reference.
+  playbooks, connectors, an agent-led investigation, and reference.
 
 This repo is a standalone Hugo site built from the TEC builder template
 (`hugo-builder/`, with the `hugo-theme-relearn` theme vendored under `themes/`).

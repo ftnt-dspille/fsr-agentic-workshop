@@ -3,6 +3,7 @@ title: What You Built
 linkTitle: What You Built
 weight: 20
 description: "A wrap-up of Part 2: the artifacts you created, and where to go next."
+aliases: [/10-capstone-investigation/02-what-you-built/]
 ---
 
 Working from plain-English prompts, your coding agent made these changes on the box:
