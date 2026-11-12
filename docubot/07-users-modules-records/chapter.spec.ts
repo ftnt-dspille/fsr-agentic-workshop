@@ -32,7 +32,7 @@
 // Prerequisites: the read-only guard is OFF in DOCUBOT_MCP_CONFIG (no
 // FSR_MCP_READONLY); the chapter 2 "Agent Lab" alerts exist and are Open for
 // fsa07-01 (the spec resets the Agent Lab alerts to the seeded demo set first).
-import { expect, test, SCRUB } from 'docubot';
+import { env, expect, test, SCRUB } from 'docubot';
 import { clearGridFilter, filterGridRow, goToModuleList } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurn, snapFrom, startClaude } from '../lib/approve';
@@ -50,7 +50,7 @@ test.describe.configure({ mode: 'serial' });
 
 const CHAPTER = '07-users-modules-records';
 const MODULE = 'agentlab_assets';
-const RUN_AGENT = process.env.SPEND_AI === '1';
+const RUN_AGENT = env.flag('SPEND_AI');
 
 const text = (v: unknown) => JSON.stringify(v ?? '');
 const query = queryRows;
@@ -67,7 +67,7 @@ test('chapter 7 - users, modules and records', async ({ gui, local, capture, pag
   // CONFIGURE: gated so a plain capture run never mutates the box. Seeds the
   // five "Agent Lab" demo alerts that fsa07-01 triages (idempotent). The custom
   // module and its records are built by the agent itself in 02/03.
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => {
     labSeed('seed');
   });
   if (!RUN_AGENT) console.log('[ch07] agent-TUI captures skipped: set SPEND_AI=1 (spends credits); effect checks still run');

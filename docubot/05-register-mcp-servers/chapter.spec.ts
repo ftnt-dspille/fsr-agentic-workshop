@@ -38,7 +38,7 @@
 //   --tsconfig=<kit>/tsconfig.json <repo>/docubot/05-register-mcp-servers/chapter.spec.ts
 // Free by default (cleanup leaves the box as found); the opt-ins above
 // (DOCUBOT_SEED, DOCUBOT_CH05_GRANT, SPEND_AI, DOCUBOT_KEEP_LAB) decide the rest.
-import { expect, test, skipStep } from 'docubot';
+import { env, expect, test, skipStep } from 'docubot';
 import { askFortiSOARAssistant, clearMcpServerFilter, BUILT_IN_MCP_SERVERS, FSR_MCP_SERVER_KIND, fsrScratchHandlers, fillAgentConfig, fillConnectMcpServer, findAlert, findMcpServerRow, lastChatToolSpans, mcpServerListRow, mcpServerTools, mcpStatus, openMcpServers, openRecord, readAgentConfig, saveAgentConfig, saveMcpServer, testMcpServerConnection, closeMcpServerModal } from 'docubot/products/fortisoar';
 import { shellShot } from '../lib/agentlab';
 import { execFileSync, spawn } from 'child_process';
@@ -88,7 +88,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
   const scratch = new ScratchRun(fsrScratchHandlers(soar));
 
   try {
-    if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+    if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => {
       // fsa05-01 builds the server by hand; only seed it for runs that skip that step.
       if (!shouldRunStep('fsa05-01-validate-register')) labSeed('mcp-server');
     });
@@ -252,7 +252,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
     if (shouldRunStep('fsa05-05-chat-runs-tool')) await test.step('fsa05-05-chat-runs-tool', async () => {
       // Spends FortiAI credits. Uses the built-in SOC Framework server the chat
       // already carries, so it does NOT need the DeepWiki grant from fsa05-04.
-      if (process.env.SPEND_AI !== '1') {
+      if (!env.flag('SPEND_AI')) {
         skipStep('fsa05-05-chat-runs-tool', 'set SPEND_AI=1 (spends FortiAI credits)');
         return;
       }
@@ -288,7 +288,7 @@ test('chapter 5 - register MCP servers', async ({ gui, capture }) => {
   } finally {
     // Leave the box as found, even when a step failed.
     // A delete that does not take fails the run. DOCUBOT_KEEP_LAB=1 keeps it; the next run's sweep removes it.
-    if (ownsLab && process.env.DOCUBOT_KEEP_LAB !== '1') await scratch.teardown();
+    if (ownsLab && !env.flag('DOCUBOT_KEEP_LAB')) await scratch.teardown();
   }
 });
 

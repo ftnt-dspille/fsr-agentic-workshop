@@ -20,7 +20,7 @@
 //   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
 //   --tsconfig=<kit>/tsconfig.json <repo>/docubot/04-build-your-own-agent/chapter.spec.ts
 // The opt-in gates above decide what runs; the default pass is read-only.
-import { expect, test, skipStep } from 'docubot';
+import { env, expect, test, skipStep } from 'docubot';
 import { agentInCatalog, agentUploadAvailable, findAlert, openAgentDetail, openAgentUploadPanel, openPlaybookLogs, openRecord, openAlertAiInvestigation, openOrgContextRecord, openPlaybook, openTracePanel, selectTraceStep, triggerAgent, uploadAgentBundle, openConnector, installedConnectorLabels, selectConfig, readFieldAfterLabel, leaveDesigner, openUploadConnector, openSystemConfigSection, openCanvasStep, sectionBarAction, ensureInvestigation, openRunStep, openConnectorTab, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
@@ -50,7 +50,7 @@ const DEFAULT_TOOL_ROWS = [
   'Asset criticality', 'Identity status', 'IOC reputation', 'Prior disposition', 'Endpoint behavior',
 ];
 
-const build = () => process.env.DOCUBOT_AGENT_BUILD === '1';
+const build = () => env.flag('DOCUBOT_AGENT_BUILD');
 
 /** Trigger the hello agent and check the documented async shape (task_id first, then the answer). */
 async function triggerHello(soar: Page, entity: string): Promise<any> {
@@ -106,7 +106,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // seeder (tools/lab_setup.py), the same artifacts students download from
   // static/examples. Idempotent (create-if-absent), gated so a plain read-only
   // capture run never mutates the box. Set DOCUBOT_SEED=1 to seed.
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => {
     labSeed('org-context');          // the TOOL_LIST record fsa04-02 reads
     if (build()) labSeed('install-agent'); // the hello agent fsa04-01 checks
     publishPlaybookIfAbsent();       // the page-03 playbook, from the shipped "working version" YAML
@@ -168,7 +168,7 @@ test('chapter 4 - build your own agent', async ({ gui, capture }) => {
   // Page 02 s5: a real investigation, then the trace shows a question answered by
   // the custom agent. Spends FortiAI credits, so it is opt-in.
   if (shouldRunStep('fsa04-03-route-check')) await test.step('fsa04-03-route-check', async () => {
-    if (process.env.SPEND_AI !== '1') {
+    if (!env.flag('SPEND_AI')) {
       skipStep('fsa04-03-route-check', 'set SPEND_AI=1 to run a FortiAI investigation');
       return;
     }
@@ -290,7 +290,7 @@ test('chapter 4 - invoke step config', async ({ gui, capture }) => {
   if (!shouldRunStep('fsa04-04-invoke-step-config')) return;
   const soar = await gui('soar');
 
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => {
     publishPlaybookIfAbsent();
   });
 

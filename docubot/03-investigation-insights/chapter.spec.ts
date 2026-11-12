@@ -16,7 +16,7 @@
 // captures the investigation that already finished and skips the rest with a
 // log line. DOCUBOT_SEED=1 seeds the lab alert data the steps read.
 import type { Page } from '@playwright/test';
-import { expect, test, skipStep } from 'docubot';
+import { env, expect, test, skipStep } from 'docubot';
 import { executeInsight, findAlert, goToModuleList, openInsightBuilder, openTracePanel, openHypothesisQuestion, openQuestionTrace, readInvestigation, readVerdictTab, reinvestigate, selectDetailTab, waitForRecordSettled, addCardCountWidget, addChartWidget, addRow, enterEditMode, gotoDashboards, openOrCreateDashboard, saveDashboard, selectDashboard, type ChartWidgetSpec, type CardCountWidgetSpec, fillChartWidget, fillCardCountWidget, cancelBuilder, openOrgContextRecord, listRecords, readVerdictText, widgetTitles, finishedInvestigationOnAlert } from 'docubot/products/fortisoar';
 import { pageVisibleText, discardDashboardEdits } from 'docubot/products/fortisoar';
 import { timed, SCRUB } from 'docubot';
@@ -26,7 +26,7 @@ import { anyStepSelected, shouldRunStep } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
-const SPEND = process.env.SPEND_AI === '1';
+const SPEND = env.flag('SPEND_AI');
 const ALERT_RE = /Agent Lab - beaconing/i;
 // Mask only truly sensitive values (the lab URL is caught by the scrub backstop).
 // On-screen dates are legitimate content, so the scan skips date-or-time; it still
@@ -58,7 +58,7 @@ test('chapter 3 - investigation', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
   // CONFIGURE: seed the demo alerts (incl. "Agent Lab - beaconing from
   // web-server-01", this chapter's subject) when asked. Idempotent.
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('seed'); });
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => { labSeed('seed'); });
   // Skip the whole test (and its paid run) when --only selects none of its steps.
   if (!anyStepSelected(['fsa03-01-investigation-tab', 'fsa03-02-hypotheses', 'fsa03-02b-next-steps', 'fsa03-03-alert-ai-fields', 'fsa03-04-trace-steps'])) return;
   const soar = await gui('soar');
@@ -217,7 +217,7 @@ const AFTER_RESULT = /CHG-2041|approved (scheduled )?backup/i;
 // is started only when the state on the box cannot produce the shot.
 test('chapter 3 - benign verdict', async ({ gui, capture }) => {
   test.setTimeout(30 * 60 * 1000);
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
   if (!anyStepSelected(['fsa03-08-benign-rerun', 'fsa03-08a-approved-backup-record', 'fsa03-08b-approved-rerun'])) return;
   const soar = await gui('soar');
   const alert = await findAlert(soar, BENIGN_RE, { search: 'nightly backup push', oldest: true });
@@ -282,7 +282,7 @@ const SOURCE_IOC = /updater\.exe|203\.0\.113\.121/;
 
 test('chapter 3 - source data check', async ({ gui, capture }) => {
   test.setTimeout(45 * 60 * 1000);
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => { labSeed('investigation-alerts'); });
   if (!shouldRunStep('fsa03-09-sourcedata-check')) return;
   const soar = await gui('soar');
 

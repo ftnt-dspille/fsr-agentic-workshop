@@ -17,7 +17,7 @@
 //   --tsconfig=<kit>/tsconfig.json <repo>/docubot/02-agentic-foundations/chapter.spec.ts
 // The tour is free and read-only; only fsa02-05's in-product assistant turn
 // needs SPEND_AI=1.
-import { expect, test, skipStep } from 'docubot';
+import { env, expect, test, skipStep } from 'docubot';
 import { BUILT_IN_MCP_SERVERS, askFortiSOARAssistant, escapeRe, fillRecordForm, findAlert, fsrRecordKind, fsrScratchHandlers, goToModuleList, ngGo, openAgentDetail, openAgentDetailTab, openAiFeaturesSetup, openAiPrompts, openDiscover, openMcpServer, openMcpServers, openNewRecordForm, openOrgContextRecord, openRecord, orgContextRow, selectDetailTab, submitForm, waitForAlert, waitForRecordSettled } from 'docubot/products/fortisoar';
 import { anyStepSelected, shouldRunStep, SCRUB, ScratchRun } from 'docubot';
 
@@ -52,7 +52,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   await tags.sweep();
 
   if (shouldRunStep('fsa02-00-create-alert')) await test.step('fsa02-00-create-alert', async () => {
-    if (process.env.DOCUBOT_CREATE_ALERT !== '1') {
+    if (!env.flag('DOCUBOT_CREATE_ALERT')) {
       skipStep('fsa02-00-create-alert', 'set DOCUBOT_CREATE_ALERT=1 to create an alert in the UI');
       return;
     }
@@ -162,7 +162,7 @@ test('chapter 2 - agentic foundations', async ({ gui, capture }) => {
   if (shouldRunStep('fsa02-05-assistant-readonly')) await test.step('fsa02-05-assistant-readonly', async () => {
     // FortiAI spend is opt-in. The page keeps this as a manual exercise unless
     // SPEND_AI=1 explicitly authorizes a real assistant turn and its capture.
-    if (process.env.SPEND_AI !== '1') {
+    if (!env.flag('SPEND_AI')) {
       skipStep('fsa02-05-assistant-readonly', 'set SPEND_AI=1 to spend FortiAI tokens');
       return;
     }

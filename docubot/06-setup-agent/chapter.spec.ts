@@ -23,7 +23,7 @@
 //   - DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*": a plain agentTurn has no permission driver, so an MCP tool
 //     prompt would just sit until the timeout; the write-approval prompts themselves are captured on page 03
 //     through the governed drivers, which answer their own prompts.
-import { expect, skipStep, test } from 'docubot';
+import { env, expect, skipStep, test } from 'docubot';
 import { startOpencodeTui } from 'docubot/agents';
 import { buildExpect, type Expect } from 'docubot/agents';
 import { openPeopleList } from 'docubot/products/fortisoar';
@@ -42,7 +42,7 @@ test.describe.configure({ mode: 'serial' });
 // shot run needs no extra env), its interpreter, and the documented prompt the student
 // runs (pulled from the page, not a spec-only copy).
 const STUB = process.env.AGENT_SHOTS_STUB || path.join(process.env.DOCUBOT_TARGET ?? process.cwd(), 'tools', 'agent-shots', 'stub_fortisoar_mcp.py');
-const agentShotsOn = process.env.DOCUBOT_AGENT_SHOTS === '1';
+const agentShotsOn = env.flag('DOCUBOT_AGENT_SHOTS');
 const prompt = (): string => promptFor('06-setup-agent', '03-approve-every-write');
 
 /** A .mcp.json pointing claude at the stub server (strict scoping: it loads nothing else). */
@@ -167,7 +167,7 @@ test('chapter 6 - set up the agent', async ({ gui, capture, page }) => {
 // but it spends model credits, so it rides SPEND_AI.
 test('chapter 6 - map the box', async ({ local, capture }) => {
   test.setTimeout(15 * 60 * 1000);
-  test.skip(process.env.SPEND_AI !== '1', 'agent turn: set SPEND_AI=1');
+  test.skip(!env.flag('SPEND_AI'), 'agent turn: set SPEND_AI=1');
   if (shouldRunStep('fsa06-11-map-the-box')) await test.step('fsa06-11-map-the-box', async () => {
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
     const screen = await agentTurn(agent, promptFor('06-setup-agent', '04-map-the-box'), { timeoutMs: 5 * 60 * 1000 });
@@ -183,7 +183,7 @@ test('chapter 6 - map the box', async ({ local, capture }) => {
 // Page 02 s5: first contact in Claude Code, the same prompt the Codex step uses.
 test('chapter 6 - claude whoami', async ({ local, capture }) => {
   test.setTimeout(8 * 60 * 1000);
-  test.skip(process.env.SPEND_AI !== '1', 'agent turn: set SPEND_AI=1');
+  test.skip(!env.flag('SPEND_AI'), 'agent turn: set SPEND_AI=1');
   if (shouldRunStep('fsa06-04-whoami-claude')) await test.step('fsa06-04-whoami-claude', async () => {
     const who = boxIdentity();
     const agent = await startAgent(local, 'laptop', { cols: 100, rows: 40 });
@@ -338,7 +338,7 @@ const CODEX_PROMPT = /Allow the \S+ MCP server to run tool/;
 const APPROVAL_CALL: Omit<Expect, 'decision'> = { tool: 'create_record', args: { module: 'alerts' } };
 
 test.describe('chapter 6 - codex', () => {
-  test.skip(process.env.SPEND_AI !== '1', 'codex turns: set SPEND_AI=1');
+  test.skip(!env.flag('SPEND_AI'), 'codex turns: set SPEND_AI=1');
   test.setTimeout(20 * 60 * 1000);
 
   test('chapter 6 - codex first contact', async ({ capture }) => {

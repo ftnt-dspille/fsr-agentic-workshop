@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { expect, test, shouldRunStep, promptFor } from 'docubot';
+import { env, expect, test, shouldRunStep, promptFor } from 'docubot';
 import { withFortiagentLock, waitForFortiagentLock } from 'docubot/agents';
 import { alertsNamed, boxHost, boxIdentity, labSeed, toolkitVenvMasks, writeClaudeMcpJson } from 'docubot/products/fortisoar';
 import { FortiagentApp, withFortiagentApp } from 'docubot/agents';
@@ -59,7 +59,7 @@ function clearOurServer(): void {
 test.describe.configure({ mode: 'serial' });
 
 test('chapter 6 - fortiagent', async ({ capture }) => {
-  test.skip(process.env.SPEND_AI !== '1', 'FortiAgent turns: set SPEND_AI=1');
+  test.skip(!env.flag('SPEND_AI'), 'FortiAgent turns: set SPEND_AI=1');
   test.skip(!IDS.some((id) => shouldRunStep(id)), 'no FortiAgent step selected');
   test.setTimeout(40 * 60_000);
   const host = boxHost();

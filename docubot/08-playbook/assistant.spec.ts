@@ -10,7 +10,7 @@
 //
 // Verify on a box with
 //   DOCUBOT_TARGET=<repo> node_modules/.bin/playwright test --config=playwright.config.ts 08-playbook/assistant
-import { expect, skipStep, test } from 'docubot';
+import { env, expect, skipStep, test } from 'docubot';
 import { ScratchRun, anyStepSelected, shouldRunStep, SCRUB } from 'docubot';
 import {
   FSR_WORKFLOW_KIND, buildPlaybookWithAgentic, followUpWithAgentic, fsrScratchHandlers, minimizeAgentic,
@@ -19,7 +19,7 @@ import {
 
 test.describe.configure({ mode: 'serial' });
 
-const SPEND = process.env.SPEND_AI === '1';
+const SPEND = env.flag('SPEND_AI');
 // The designer and the assistant's transcript show dates and record ids as
 // legitimate content; the scan still refuses a real lab IP or hostname.
 const SKIP = SCRUB.dates;

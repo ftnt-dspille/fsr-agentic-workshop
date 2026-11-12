@@ -29,7 +29,7 @@
 // (it only seeds page 1 when the agent is NOT building it). fsa08-01 and
 // fsa08-02 share one agent session (02's prompt says "you just compiled") --
 // run both ids together via DOCUBOT_ONLY_STEPS; 03/04/05 each start fresh.
-import { expect, skipStep, test, SCRUB } from 'docubot';
+import { env, expect, skipStep, test, SCRUB } from 'docubot';
 import { openPlaybook, openPlaybookLogs, openRecord, waitCanvasStep, playbookLogsSideNav } from 'docubot/products/fortisoar';
 import { agentScreen, agentTurn, startAgent } from '../lib/agentlab';
 import { approvedTurnOnce, type Allowed } from '../lib/approve';
@@ -47,7 +47,7 @@ const SKIP_RECORD = SCRUB.record;
 test.describe.configure({ mode: 'serial' });
 
 const CHAPTER = '08-playbook';
-const AGENT = process.env.SPEND_AI === '1';
+const AGENT = env.flag('SPEND_AI');
 
 const TAG_PLAYBOOK = 'Tag Agent Lab Alerts';
 const COLLECTION = 'Agent Lab';
@@ -94,7 +94,7 @@ test('chapter 8 - playbook', async ({ gui, local, capture, page }) => {
   // CONFIGURE: seed prerequisites (read-only run without the flag). When the agent
   // builds the playbook (SPEND_AI=1) nothing is pre-seeded, so its publish is the
   // real first publish; otherwise the shipped page-1 playbook is installed.
-  if (process.env.DOCUBOT_SEED === '1') await test.step('configure: seed prerequisites', async () => {
+  if (env.flag('DOCUBOT_SEED')) await test.step('configure: seed prerequisites', async () => {
     if (!AGENT) ensureTagPlaybook(); // publishes the page-1 playbook from its YAML (lab_setup.py has no playbooks subcommand)
   });
 

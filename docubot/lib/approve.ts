@@ -8,6 +8,7 @@ import * as path from 'path';
 import type { Page } from '@playwright/test';
 import { buildExpect, type Expect, type PendingCall } from 'docubot/agents';
 import { escapeRe, toolkitSkills } from 'docubot/products/fortisoar';
+import { env } from 'docubot';
 import { AGENT_CWD, startClaudeApproval } from './agentlab';
 
 /** Argument names that name a target on the FortiSOAR toolkit, beside `module` and `instance`. */
@@ -55,7 +56,7 @@ export async function startClaude(page: Page, o: { bash?: Array<string | { match
   fs.mkdirSync(cwd, { recursive: true, mode: 0o700 });
   const skills = path.join(cwd, '.claude', 'skills');
   fs.rmSync(skills, { recursive: true, force: true });
-  if (process.env.DOCUBOT_NO_SKILLS !== '1') toolkitSkills.claude?.(skills);
+  if (!env.flag('DOCUBOT_NO_SKILLS')) toolkitSkills.claude?.(skills);
   let config = path.resolve(mcp);
   if (o.mcpEnv) {
     const conf = JSON.parse(fs.readFileSync(config, 'utf8'));
