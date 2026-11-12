@@ -59,7 +59,7 @@ Turning on AI features is an administrator task. If the banner appears, ask your
 
 1. Open **Content Hub**, then **Discover**.
 2. Under **Content Type**, tick **AI Agent**.
-3. Under **Tags**, find the agents tagged `Triage` (used by investigations) and `Insight` (used by insights).
+3. Under **Tags**, find the agents tagged **Triage** (used by investigations) and **Insight** (used by insights).
 
 <!-- capture: fsa02-02-agent-catalog -->
 ![fsa02-02-agent-catalog](fsa02-02-agent-catalog.png?height=600px)

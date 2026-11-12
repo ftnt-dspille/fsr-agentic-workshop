@@ -56,7 +56,7 @@ The call the agent makes looks like this. There is no key in it:
 **You are done when:**
 
 - The `check_only` call says the configuration is ready to create, and one secret resolved. It names the environment variable as the source, never the value.
-- The write reports that the configuration was created, and the healthcheck says `Available`.
+- The write reports that the configuration was created, and the healthcheck says **Available**.
 - Nothing in the reply, the findings or the transcript contains the key.
 
 <!-- step: fsa09-08-configure-safely -->
@@ -78,14 +78,14 @@ Run these once to see the guards work:
 | Put the key in `fields` as a plain value | Refused. The reply says it is a secret field and shows how to pass a reference. The value is not repeated. |
 | Use `{"env": "HOME"}`, or any name without the `FSR_SECRET_` prefix | Refused, with the prefix rule. |
 | Use another connector's key, such as `FSR_SECRET_JIRA__TOKEN` for virustotal | Refused. The key is not bound to that connector. |
-| Configure with a wrong key | The configuration is saved, the healthcheck reports `Disconnected` with the service's message, and the status is `partial`. The wrong key is not shown. |
+| Configure with a wrong key | The configuration is saved, the healthcheck reports **Disconnected** with the service's message, and the status is **partial**. The wrong key is not shown. |
 
 ## 4. Standing rules for your agent
 
 1. Never ask a user for a key. Ask which environment variable holds it.
 2. Run `check_only` first. It checks the references without writing anything.
 3. Do not use `create_connector_configuration`, `update_connector_configuration` or `upsert_connector_configuration` for credentials. They accept raw values. Use `setup_connector`.
-4. Treat `partial` as not done. A saved configuration that fails its healthcheck is not working.
+4. Treat **partial** as not done. A saved configuration that fails its healthcheck is not working.
 
 ## Troubleshooting
 
@@ -96,4 +96,4 @@ Run these once to see the guards work:
 | "is not bound to 'virustotal'" | The variable is named for a different connector | Rename it to `FSR_SECRET_VIRUSTOTAL__<FIELD>` |
 | "needs confirm_install=true" | The connector is not installed, and the call did not confirm the install | Agree to the install, then have the agent repeat the call with `confirm_install: true` |
 | "could not read the configuration schema" | The appliance was busy, or that connector version is not installed | Retry in a moment. Add `install: true` if the connector is missing |
-| Healthcheck `Disconnected` | Wrong URL, wrong key, or no network path to the service | Fix the value at its source, then run the healthcheck again. The key never has to be retyped into the chat |
+| Healthcheck **Disconnected** | Wrong URL, wrong key, or no network path to the service | Fix the value at its source, then run the healthcheck again. The key never has to be retyped into the chat |

@@ -28,7 +28,7 @@ criticality High, and show me that record.
 <!-- capture: fsa07-02-create-module -->
 ![fsa07-02-create-module](fsa07-02-create-module.png?height=600px)
 
-The agent makes one workflow call, `provision_module`. The first call has no `confirm`, returns `confirmation_required` and changes nothing. The agent then shows you what will change. It calls again with `confirm: true`, and that call is the one your coding agent's approval prompt asks you about. Approve it. The workflow then does these steps in order:
+The agent makes one workflow call, `provision_module`. The first call has no `confirm`, returns **confirmation_required** and changes nothing. The agent then shows you what will change. It calls again with `confirm: true`, and that call is the one your coding agent's approval prompt asks you about. Approve it. The workflow then does these steps in order:
 
 1. **Create** the module with its fields. The module lands in staging.
 2. **Check staging.** The workflow publishes only when your change is the only one staged. If other changes are staged, it stops and tells you.
@@ -45,7 +45,7 @@ The publish ships all staged schema changes on the box, not only yours. On a sha
 ## 2. You are done when
 
 - The workflow reports that the publish finished, and lists each step it checked.
-- `describe_module` lists the five fields with the right types. The test record has `hostname` `build-server-01` and `criticality` `High`.
+- `describe_module` lists the five fields with the right types. The test record has `hostname` `build-server-01` and `criticality` **High**.
 - The login can read `agentlab_assets` after the role grant.
 
 **Verify in the UI:** the new module appears in the left navigation. Open it. The test record is there.

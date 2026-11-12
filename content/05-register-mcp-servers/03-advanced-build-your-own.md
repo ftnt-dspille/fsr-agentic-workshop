@@ -105,13 +105,13 @@ curl -s -X POST http://localhost:8000/mcp \
 Register the server as you did the DeepWiki server. On the MCP Servers page, click **Connect MCP Server** and fill in the form:
 
 - **Server Name:** `weather-lab`
-- **Transport Type:** `http`
+- **Transport Type:** **http**
 - **URL:** `http://localhost:8000/mcp`
-- **Authentication > Type:** `None`
+- **Authentication > Type:** **None**
 
 Click **Test Connection**. It must list `get_forecast`. Then click **Save** and check the status.
 
-Use `None` for this lab server only. A server on your laptop is not reachable from the box. That is why this lab runs the server on the appliance. If your class gives you a shared host instead, check that the box can reach it and that its certificate is trusted before you test.
+Use **None** for this lab server only. A server on your laptop is not reachable from the box. That is why this lab runs the server on the appliance. If your class gives you a shared host instead, check that the box can reach it and that its certificate is trusted before you test.
 
 Grant the server to one agent, as on the previous page. To limit the agent to `get_forecast`, add an allowlist with only that tool to the agent's bundle. Then ask the agent: `What is the forecast for Sunnyvale? Use your tools.` Check the trace for the `get_forecast` call.
 
@@ -119,7 +119,7 @@ Grant the server to one agent, as on the previous page. To limit the agent to `g
 
 Only do this on a throwaway box that you own. Never do it on a shared class box.
 
-The `authentication` field must be sent as a JSON string, not as a JSON object. If you send an object, the platform stores the text `Array` in its place. Then the status route fails for every registered MCP server, not just the one you got wrong.
+The `authentication` field must be sent as a JSON string, not as a JSON object. If you send an object, the platform stores the text **Array** in its place. Then the status route fails for every registered MCP server, not just the one you got wrong.
 
 Wrong, because the value is an object:
 

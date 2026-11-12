@@ -15,8 +15,8 @@ The three kinds are the built-in FortiSOAR servers, external servers that you re
 
 ## 2. Choose the transport and authentication
 
-- **Transport Type:** `http`. It is the only option on this build.
-- **Authentication Type:** `None` for DeepWiki, a public server with no credentials. Other types are for servers that need a token or an OAuth login. Pick the type your server documents.
+- **Transport Type:** **http**. It is the only option on this build.
+- **Authentication Type:** **None** for DeepWiki, a public server with no credentials. Other types are for servers that need a token or an OAuth login. Pick the type your server documents.
 
 If a server needs a token, paste it into the form only. Never put a token in a file you commit.
 
@@ -28,9 +28,9 @@ Open **AI Configurations** > **MCP Servers**, then click **Connect MCP Server**.
 
 - **Server Name:** `agentlab-deepwiki`
 - **Description:** `Lab: DeepWiki remote server (public, no credentials)`
-- **Transport Type:** `http`
+- **Transport Type:** **http**
 - **URL:** `https://mcp.deepwiki.com/mcp`
-- **Authentication > Type:** `None`
+- **Authentication > Type:** **None**
 
 Leave **Verify SSL** unchecked, as in the picture.
 

@@ -45,7 +45,7 @@ Tell me the status, each step's result, and whether anything was left on the box
 
 **You are done when:**
 
-- `status: answered`.
+- **status: answered**.
 - Each stage shows a finding: the check passed, the playbook was published, the run completed, and cleanup removed what the call created.
 - All three steps are listed with a status and a duration, and `probe_marker` appears in the Capture step's result.
 
@@ -57,11 +57,11 @@ The result has `findings`, `unknowns` and `next`. The status summarizes them.
 
 | Status | Meaning | What you do |
 |---|---|---|
-| `answered` | Every stage ran and nothing is unresolved | Done. Read the step results. |
-| `partial` | It ran, but something needs you: a timeout, a failed run, or a green run that did nothing | Read `unknowns` and take the first `next` |
-| `blocked` | It stopped before running anything | Fix what the findings name and call again |
+| **answered** | Every stage ran and nothing is unresolved | Done. Read the step results. |
+| **partial** | It ran, but something needs you: a timeout, a failed run, or a green run that did nothing | Read `unknowns` and take the first `next` |
+| **blocked** | It stopped before running anything | Fix what the findings name and call again |
 
-**Treat `partial` as not done.**
+**Treat **partial** as not done.**
 
 ## 3. Optional: try the failure cases
 
@@ -69,10 +69,10 @@ The tool reports these failures and says what to do about each one.
 
 | You give it | What comes back | What to do |
 |---|---|---|
-| YAML that does not parse | `blocked`, with the parser's message and line. Nothing was published. | Fix the YAML and call again |
-| A step type or connector that does not exist | `blocked`, with the step path and a suggested name | Use the suggested name, or an installed connector |
-| A `manual_input` or approval step | `partial` after the timeout. The playbook is kept. | Call again with `answers={"<prompt title>": "<button label>"}` |
-| A run that fails | `partial`, with the failing step, the error and a ready `repair_playbook` call | Apply the repair, then call again |
+| YAML that does not parse | **blocked**, with the parser's message and line. Nothing was published. | Fix the YAML and call again |
+| A step type or connector that does not exist | **blocked**, with the step path and a suggested name | Use the suggested name, or an installed connector |
+| A `manual_input` or approval step | **partial** after the timeout. The playbook is kept. | Call again with `answers={"<prompt title>": "<button label>"}` |
+| A run that fails | **partial**, with the failing step, the error and a ready `repair_playbook` call | Apply the repair, then call again |
 
 Try two of these on purpose:
 
@@ -94,4 +94,4 @@ Put these in your agent's standing instructions so they hold across sessions:
 |---|---|---|
 | The agent chains `compile_playbook_yaml`, `publish_playbook` and `wait_for_playbook_run` anyway | It did not use the workflow | Name `run_playbook_yaml` in the prompt, and check it appears in the tool list |
 | `run_playbook_yaml` is not in the tool list | The MCP server predates the tool | Update `fsr-agentic-toolkit` where the MCP server runs, then restart the agent |
-| `partial`: no terminal state within the timeout | A `manual_input` or approval step is waiting, or the playbook is slow | Read the named prompt and pass `answers`, or raise `timeout` |
+| **partial**: no terminal state within the timeout | A `manual_input` or approval step is waiting, or the playbook is slow | Read the named prompt and pass `answers`, or raise `timeout` |

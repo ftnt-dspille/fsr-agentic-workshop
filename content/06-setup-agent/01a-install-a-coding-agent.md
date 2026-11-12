@@ -128,7 +128,7 @@ Check it: open **Settings** with the gear at the bottom of the sidebar. The **Fo
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `command not found` after install | The install folder is not on your `PATH` | Open a new terminal, or add the folder that the installer printed to `PATH` |
+| **command not found** after install | The install folder is not on your `PATH` | Open a new terminal, or add the folder that the installer printed to `PATH` |
 | The installer fails on a corporate network | A proxy or TLS inspection blocks the download | Use your package manager (npm, Homebrew, WinGet), or see the vendor's troubleshooting page linked in your agent's tab |
 | The agent starts but sign-in fails | No subscription or API key on the account | Follow the vendor's sign-in steps; the links are at the end of each tab |
 

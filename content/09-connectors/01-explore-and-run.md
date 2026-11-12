@@ -21,7 +21,7 @@ then name one that is configured and healthy (confirm it is healthy).
 <!-- capture: fsa09-01-discover-connectors -->
 ![fsa09-01-discover-connectors](fsa09-01-discover-connectors.png?height=600px)
 
-The agent lists the connectors. A configured connector shows a config count. It then runs a health check on the one it picks. `Available` means healthy.
+The agent lists the connectors. A configured connector shows a config count. It then runs a health check on the one it picks. **Available** means healthy.
 
 **Verify the count in the UI:** open **Connectors** in the left navigation. The total shown there matches the number the agent reported.
 

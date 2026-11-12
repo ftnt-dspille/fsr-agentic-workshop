@@ -52,7 +52,7 @@ alerts you create starting with "Agent Lab".
 <!-- capture: fsa08-07-ioc-extract -->
 ![fsa08-07-ioc-extract](fsa08-07-ioc-extract.png?height=600px)
 
-**You are done when:** the test alert's **Host IP Address** reads `198.51.100.23`.
+**You are done when:** the test alert's **Host IP Address** reads **198.51.100.23**.
 
 ## 3. Sweep a batch of records
 

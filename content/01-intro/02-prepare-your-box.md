@@ -33,6 +33,6 @@ The labs work on alerts and settings that you do not build yourself: the **Agent
 
    It is safe to run again: it skips anything that already exists. It ends with a check.
 
-**You are done when** the check prints `demo alerts: 6/6 present`, `custom code execution: on` and `code-snippet configuration: present`.
+**You are done when** the check prints **demo alerts: 6/6 present**, **custom code execution: on** and **code-snippet configuration: present**.
 
 To start over later, `python3 tools/reset_lab.py` removes everything the labs create (it asks you to type `RESET`), then run `prepare` again.

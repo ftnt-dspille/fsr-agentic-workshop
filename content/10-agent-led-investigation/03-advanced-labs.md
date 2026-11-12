@@ -15,7 +15,7 @@ Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapte
 In chapter 5 you registered `agentlab-deepwiki` with FortiSOAR. Your coding agent can use the same registration. The toolkit reads the server's URL and login from FortiSOAR and calls the tool.
 
 {{% notice note %}}
-This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If you skipped it, point the prompt at a built-in server instead, for example `Utility Tools` and its `get_current_datetime` tool.
+This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If you skipped it, point the prompt at a built-in server instead, for example **Utility Tools** and its `get_current_datetime` tool.
 {{% /notice %}}
 
 Give your agent this prompt:
@@ -38,7 +38,7 @@ The agent lists the registrations, lists the server's tools, and then calls the 
 
 ## 2. Let the agent repair a playbook on its own
 
-In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. It saves the alert's `@id` in a variable, then builds the record reference as `/api/3/alerts/` plus that variable. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with `No route found`. The publish check catches this mistake when `@id` is written in the reference itself. Through a variable it cannot see it, so the error only shows when the playbook runs.
+In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. It saves the alert's `@id` in a variable, then builds the record reference as `/api/3/alerts/` plus that variable. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with **No route found**. The publish check catches this mistake when `@id` is written in the reference itself. Through a variable it cannot see it, so the error only shows when the playbook runs.
 
 Give your agent this prompt:
 
@@ -88,7 +88,7 @@ playbooks:
 
 `debug_playbook_run` names the failing step and the doubled reference. `repair_playbook` removes the extra `/api/3/alerts/` prefix and checks the result. It applies only fixes it can make mechanically. Anything else, it reports as a change for you to make by hand.
 
-**You are done when:** the first run is `failed` at Tag Alert, the second run is `finished`, and the change shown is the one `repair_playbook` made.
+**You are done when:** the first run is **failed** at Tag Alert, the second run is **finished**, and the change shown is the one `repair_playbook` made.
 
 ## 3. Security-review the connector you built
 
@@ -349,7 +349,7 @@ verdict, and whether it did what the note demanded.
 
 <!-- step: fsa10-12-prompt-injection manual: a FortiAI investigation turn; spends tokens; live-verified -->
 
-FortiSOAR's native investigation treats the alert's content as **data to analyze, not instructions to follow.** It detects the embedded command, stops at normalization, and labels the content `Jailbreak, Coercion`, it does **not** return the forced "Benign" verdict, close the alert, or skip containment. That separation of untrusted data from instructions is the first line of defense, and it is on by default.
+FortiSOAR's native investigation treats the alert's content as **data to analyze, not instructions to follow.** It detects the embedded command, stops at normalization, and labels the content **Jailbreak, Coercion**, it does **not** return the forced "Benign" verdict, close the alert, or skip containment. That separation of untrusted data from instructions is the first line of defense, and it is on by default.
 
 <!-- capture: fsa10-12-prompt-injection -->
 ![fsa10-12-prompt-injection](fsa10-12-prompt-injection.png?height=600px)

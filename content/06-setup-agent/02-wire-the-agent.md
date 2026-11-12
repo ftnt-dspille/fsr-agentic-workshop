@@ -58,7 +58,7 @@ connected: agentlab <admin@example.com> @ fortisoar.example.com
 
 It also prints safety notes and a short guide for the agent. You only need the JSON block. The snippet holds your password, so keep the file out of shared folders and version control.
 
-The `connected:` line names the login the agent signs in as. If that line does not appear, check the URL and the login. No snippet is printed.
+The **connected:** line names the login the agent signs in as. If that line does not appear, check the URL and the login. No snippet is printed.
 
 ## 3. Add the snippet to your agent
 
@@ -69,7 +69,7 @@ You do not start the toolkit yourself. The snippet tells your agent how to: `com
 Claude Code reads its MCP servers from `.mcp.json` in the folder where you start `claude`.
 
 1. In the folder you made on the previous page, save the printed JSON block as `.mcp.json`. To print it again, run the section 2 command with `--claude-code` added.
-2. Still in your shell, run `claude mcp list`. It also checks the file: if the JSON is broken, it prints `[Failed to parse]` with the file name. A good file shows `fortisoar` as `Pending approval`.
+2. Still in your shell, run `claude mcp list`. It also checks the file: if the JSON is broken, it prints **[Failed to parse]** with the file name. A good file shows `fortisoar` as **Pending approval**.
 
    <!-- step: fsa06-03-claude-mcp-list -->
    <!-- capture: fsa06-03-claude-mcp-list -->
@@ -109,14 +109,14 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
    ```
 
    Copy both tables into `~/.codex/config.toml`, creating the file if it does not exist. `startup_timeout_sec = 60` is there because a first start can take longer than Codex's 10-second default. The file holds your password, so do not share it or commit it.
-2. Still in your shell, not inside Codex, run `codex mcp list`. It also checks the file: if the TOML is broken, it prints the line and column to fix instead of the table. The `fortisoar` row should read `enabled`. For a full check of the Codex setup, run `codex doctor` and look for `✓ config loaded`.
+2. Still in your shell, not inside Codex, run `codex mcp list`. It also checks the file: if the TOML is broken, it prints the line and column to fix instead of the table. The `fortisoar` row should read `enabled`. For a full check of the Codex setup, run `codex doctor` and look for **✓ config loaded**.
 
 <!-- step: fsa06-12-codex-mcp-list -->
 <!-- capture: fsa06-12-codex-mcp-list -->
 ![fsa06-12-codex-mcp-list](fsa06-12-codex-mcp-list.png)
 
 3. In the lab folder, start `codex`. If it shows an update prompt, press **Esc** to skip it. Do not press Enter there. Its first choice is "Update now".
-4. In Codex, type `/mcp`. Wait for `fortisoar: connected (N tools)`. Then type `/new` to start a fresh chat. Codex gives a chat the server's tools only when that chat starts.
+4. In Codex, type `/mcp`. Wait for **fortisoar: connected (N tools)**. Then type `/new` to start a fresh chat. Codex gives a chat the server's tools only when that chat starts.
 
    <!-- step: fsa06-12b-codex-mcp-connected -->
    <!-- capture: fsa06-12b-codex-mcp-connected -->
@@ -160,7 +160,7 @@ fortiagent mcp add FortiSOAR \
   -- /your/venv/bin/fsr-agentic-toolkit mcp
 ```
 
-8. Open a **New chat**, so the engine starts the server. Back in **Settings > MCP servers**, the `FortiSOAR` row shows a green dot when it is connected. Hover over a dot that is not green for the reason. In a shell, `fortiagent mcp list` shows `connected`.
+8. Open a **New chat**, so the engine starts the server. Back in **Settings > MCP servers**, the `FortiSOAR` row shows a green dot when it is connected. Hover over a dot that is not green for the reason. In a shell, `fortiagent mcp list` shows **connected**.
 
 <!-- step: fsa06-16-fortiagent-mcp-list -->
 <!-- capture: fsa06-16-fortiagent-mcp-list -->
@@ -249,4 +249,4 @@ The agent calls `list_modules`, reads the newest alerts, and gives a short summa
 |---|---|
 | The agent says it has no `fortisoar` tools | The MCP config is not loaded. In Claude Code, `.mcp.json` must be in the folder where you started `claude`. Run `/mcp` to check. |
 | Tools are listed, but every call fails to connect | Your workstation cannot reach the box. Run `curl -k https://fortisoar.example.com` from the same machine. |
-| Codex says the `fortisoar` tools are not available | Codex started the chat before the server connected. Type `/mcp` and wait for `fortisoar: connected`. Then type `/new` and ask again. |
+| Codex says the `fortisoar` tools are not available | Codex started the chat before the server connected. Type `/mcp` and wait for **fortisoar: connected**. Then type `/new` and ask again. |

@@ -18,7 +18,7 @@ Think of a run as a small experiment: the hypotheses are the claims, the questio
 | Insufficient-data check | A code check. An unknown type with no indicators ends as Inconclusive. | No | No |
 | Context enrichment | Linked indicators, alerts and assets are pulled in | No | Yes |
 | Hypothesis | Several hypotheses, each with supporting and weakening questions | Yes | No |
-| Investigation plan | One question per active row of the tool table, each sent to a `Triage` agent | Yes | No |
+| Investigation plan | One question per active row of the tool table, each sent to a **Triage** agent | Yes | No |
 | Evidence gathering | The assigned agents answer in parallel, each through its allowed tools | Yes | Yes |
 | Evidence evaluation | Each answer is scored as supporting or weakening each hypothesis | Yes | No |
 | Verdict | The verdict, key findings and next actions are written back | Yes | Write-back only |

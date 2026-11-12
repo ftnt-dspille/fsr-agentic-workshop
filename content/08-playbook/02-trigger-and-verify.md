@@ -28,7 +28,7 @@ The agent creates the alert, waits for the playbook run, and reads the alert bac
 
 ## 2. You are done when
 
-- The run reaches `finished` within a few seconds.
+- The run reaches **finished** within a few seconds.
 - The alert's description has changed. Check the alert itself, not only the run status.
 
 **Verify in the UI:** open the alert. Its description shows the playbook's text. Then open the **Playbook Logs** panel from the header bar and select the **Tag Agent Lab Alerts** run.

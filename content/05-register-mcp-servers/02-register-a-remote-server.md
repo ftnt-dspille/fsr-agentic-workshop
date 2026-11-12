@@ -20,14 +20,14 @@ You can register a different remote server, such as a FortiSIEM MCP endpoint, th
 You saved the server on the previous page. Now check the connection a second time, in a dialog with a different name. The name `agentlab-deepwiki` is already taken.
 
 1. Click **Connect MCP Server**.
-2. Enter the name `agentlab-deepwiki-validate`. Use the same URL, Transport Type `http` and Authentication > Type `None`.
+2. Enter the name `agentlab-deepwiki-validate`. Use the same URL, Transport Type **http** and Authentication > Type **None**.
 3. Click **Test Connection**. Wait until **Save** turns on.
 4. Click **Cancel**. Do not click **Save**.
 
 <!-- capture: fsa05-03-register-remote-validate -->
 ![fsa05-03-register-remote-validate](fsa05-03-register-remote-validate.png?height=600px)
 
-Open the MCP Servers list. Find `agentlab-deepwiki`. Its Transport column shows `http`. The validation name does not appear in the list.
+Open the MCP Servers list. Find `agentlab-deepwiki`. Its Transport column shows **http**. The validation name does not appear in the list.
 
 <!-- capture: fsa05-03-register-remote-saved -->
 ![fsa05-03-register-remote-saved](fsa05-03-register-remote-saved.png?height=600px)
@@ -46,9 +46,9 @@ Click `agentlab-deepwiki` to open it. Under **Discovered Capabilities**, the pan
 2. Open the agent's detail panel and click the **Configurations** tab.
 3. Set **Configuration Type** to **Custom Configuration**. Then set:
    - **Name:** `Agent Lab DeepWiki`
-   - **LLM Provider:** the profile that answers for this agent, for example `Low Reasoning`.
+   - **LLM Provider:** the profile that answers for this agent, for example **Low Reasoning**.
    - **MCP Server:** keep the four built-in servers selected (**FortiSOAR Module Management**, **FortiSOAR Playbook Management**, **Utility Tools** and **SOC Framework**), and add `agentlab-deepwiki`. A custom configuration replaces the agent's default server list, and the agent can use only the servers selected here.
-   - **Masking Agent** (optional): for example `IOC Masking`, which hides indicators before data goes to the LLM.
+   - **Masking Agent** (optional): for example **IOC Masking**, which hides indicators before data goes to the LLM.
 4. Click **Save**.
 
 The grant gives the agent every tool that the server offers. For anything beyond the lab, pin a tool allowlist in the agent's bundle.
@@ -94,7 +94,7 @@ Live verdicts age out. If the answer says "no reputation available", pick an IP 
 **You are done when**
 
 - The answer names VirusTotal and gives the indicator's verdict.
-- The trace shows a `TOOL` call to `enrich_indicator` on the SOC Framework server, and the answer uses its result.
+- The trace shows a **TOOL** call to `enrich_indicator` on the SOC Framework server, and the answer uses its result.
 
 ## Troubleshooting
 

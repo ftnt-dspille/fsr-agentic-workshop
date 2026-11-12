@@ -30,5 +30,5 @@ The agent calls `survey_box` first. That one call returns the version, the Forti
 ## 2. You are done when
 
 - The version and the FortiAI state match **Settings** > **System** on the box.
-- Each "looks wrong" item names the tool result behind it, such as a health check that returned `Disconnected`.
+- Each "looks wrong" item names the tool result behind it, such as a health check that returned **Disconnected**.
 - The agent asked for no approvals. Nothing on the box changed.

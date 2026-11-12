@@ -48,7 +48,7 @@ which fields it wants rather than guessing.
 
 The agent reads the expected configuration, saves a `default` configuration, and runs the health check. A connector that needs credentials reports unhealthy until you give it valid ones. That is the correct result, not an agent failure.
 
-**You are done when:** the agent names the connector and version it installed, shows the configuration fields, and reports the health result. The result is `Available`, or a list of the credentials it still needs.
+**You are done when:** the agent names the connector and version it installed, shows the configuration fields, and reports the health result. The result is **Available**, or a list of the credentials it still needs.
 
 **Verify in the UI:** open **Connectors**. The connector shows as installed, with its `default` configuration and health state.
 

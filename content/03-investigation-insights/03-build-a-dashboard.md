@@ -61,7 +61,7 @@ Count the seeded `Agent Lab - ` alerts by hand, grouped by verdict and severity.
 
 - Every cell of the verdict-by-severity table matches your hand count.
 - The verdict list's counts match your hand count for each verdict.
-- The first funnel card equals the number of open lab alerts you seeded. The later cards read `NONE 0` until an investigation writes a verdict.
+- The first funnel card equals the number of open lab alerts you seeded. The later cards read **NONE 0** until an investigation writes a verdict.
 
 If a count is off, check the widget's filter first. A filter that drops alerts without source data is the most common cause, and so is a Record Assignment still set to Only Me.
 
@@ -81,6 +81,6 @@ Token totals live in the trace. Whether a dashboard can show them depends on whe
 | Widget shows no data | Filter excludes all seed alerts | Widen the filter, then narrow it again |
 | Counts do not match your hand count | Filter or grouping is on the wrong field | Check which field each widget groups by |
 | Card Count will not save | Time Range is empty | Enter a number of days |
-| Funnel card reads `NONE 0` | No alert has reached that stage yet | Expected until an investigation writes a verdict |
+| Funnel card reads **NONE 0** | No alert has reached that stage yet | Expected until an investigation writes a verdict |
 | Verdict values look odd | Verdict names differ on your build | Compare the values in the alert record and use those names |
 

@@ -98,7 +98,7 @@ An investigation plans one question for each row of the `TOOL_LIST` record. It s
    - **Avenue**: a short name for the row, such as `Workshop hello`.
    - **Source**: the source the agent reads. For the hello agent, use `Workshop Hello Agent`.
    - **Required field**: the field the agent needs from the alert. For the hello agent, use `host`.
-   - **Active**: `Yes`.
+   - **Active**: **Yes**.
 
 4. Click **Save**.
 
@@ -135,7 +135,7 @@ If the question goes to a built-in agent instead, make your row's **Avenue** and
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| The upload fails with `CS-AI-AGENT-11` | An agent with the same name exists | Tick **Replace existing version**, then upload again |
+| The upload fails with **CS-AI-AGENT-11** | An agent with the same name exists | Tick **Replace existing version**, then upload again |
 | Every later upload fails with "File exists" | A failed upload left its folder on the box | Delete the leftover agent folder on the box, then upload again |
 | The agent runs, but no investigation question reaches it | No `TOOL_LIST` row, or the row is set to No | Add the row, and keep the nine default rows |
 | The investigation stops asking its default questions | `TOOL_LIST` was replaced with a short table | Restore all nine default rows |

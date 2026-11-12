@@ -39,5 +39,5 @@ Each update is a write, so your agent asks you to approve it, as on the approval
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `ToolDisabled: read-only mode` | `FSR_MCP_READONLY=1` is set in the agent's MCP config | Remove it from the `env` block, then restart the agent |
+| **ToolDisabled: read-only mode** | `FSR_MCP_READONLY=1` is set in the agent's MCP config | Remove it from the `env` block, then restart the agent |
 | The agent updated zero alerts | No Open alert starts with "Agent Lab" | Seed the lab alerts from the earlier chapters, or check that they are Open |

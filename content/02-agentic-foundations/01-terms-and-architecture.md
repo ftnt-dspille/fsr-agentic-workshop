@@ -18,7 +18,7 @@ Four building blocks carry most of the vocabulary: the agents that do the work, 
 | FortiSOAR Agentic AI | The whole feature: agents, MCP servers, LLM routing and investigations | The settings sometimes say "FortiAI". Both names mean the same feature. |
 | AI features enablement | A system-level switch. Until it is on, the AI services refuse work. | An administrator turns it on. Chapter 2's tour checks that it is on. |
 | Agent | A packaged unit: a manifest, a Python class, prompts and an optional tool allowlist | Agents are code bundles, not a point-and-click designer. Chapter 4 covers them. |
-| Agent tag | A routing gate. `Triage` lets the investigation planner use an agent. `Insight` lets insight planning use it. `Assistant` is reserved for designer widgets. | An agent with no matching tag is never used by the planner. |
+| Agent tag | A routing gate. **Triage** lets the investigation planner use an agent. **Insight** lets insight planning use it. **Assistant** is reserved for designer widgets. | An agent with no matching tag is never used by the planner. |
 | MCP server | A server that exposes tools to agents over the Model Context Protocol | Built-in servers come with FortiSOAR. You register external ones in chapter 5. |
 | LLM profile | A named model configuration that agents point to | Profile names can differ on your build. |
 | Prompt | A named record (system instruction, user instruction, response format) that an agent calls by UUID | Prompts that ship in code are re-imported on upgrade, which reverts your edits. |

@@ -64,21 +64,21 @@ If you get stuck, the finished playbook is in [`invoke_hello_agent.yaml`](/examp
 <!-- capture: fsa04-04-playbook-branch-decision -->
 ![fsa04-04-playbook-branch-decision](fsa04-04-playbook-branch-decision.png?height=600px)
 
-**Run it.** Create an alert named `Agent Lab hello test` in the Alerts module. The playbook starts on its own. The hello agent always returns `low`, so the run takes the **Low confidence** branch and skips **Auto Close**.
+**Run it.** Create an alert named `Agent Lab hello test` in the Alerts module. The playbook starts on its own. The hello agent always returns **low**, so the run takes the **Low confidence** branch and skips **Auto Close**.
 
 Open the alert's **Executed Playbook Logs**, and select the run of **Agent Lab - Invoke Hello Agent**. The log shows the branch the run took.
 
 <!-- capture: fsa04-04-playbook-branch-run -->
 ![fsa04-04-playbook-branch-run](fsa04-04-playbook-branch-run.png?height=600px)
 
-Click the **Invoke AI Agent** step to see its output. The agent's answer and its `confidence` are under `data`. The step's `status` shows `Success`.
+Click the **Invoke AI Agent** step to see its output. The agent's answer and its `confidence` are under `data`. The step's `status` shows **Success**.
 
 <!-- capture: fsa04-04-playbook-branch-step-output -->
 ![fsa04-04-playbook-branch-step-output](fsa04-04-playbook-branch-step-output.png?height=600px)
 
 **You are done when**
 
-- The Invoke AI Agent step returns the agent's answer under `data`, with a `status` of `Success`.
+- The Invoke AI Agent step returns the agent's answer under `data`, with a `status` of **Success**.
 - The Decision step takes the branch that matches the `confidence` value.
 - The connection uses a user login.
 

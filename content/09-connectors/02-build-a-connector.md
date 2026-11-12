@@ -90,7 +90,7 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 ```
 
 
-**Package, install and configure.** It packaged the connector, installed the `.tgz` with `confirm` set to true, saved a `default` configuration with the server URL, and ran the health check. The health check reported `Available`.
+**Package, install and configure.** It packaged the connector, installed the `.tgz` with `confirm` set to true, saved a `default` configuration with the server URL, and ran the health check. The health check reported **Available**.
 
 ```text
 > Bash {"command": "pyfsr connector package agentlab-dadjoke 2>&1 | tail -20; ls"}
@@ -100,7 +100,7 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 ```
 
 
-**Run it.** It called `get_joke`, and the operation returned a joke with status `Success`.
+**Run it.** It called `get_joke`, and the operation returned a joke with status **Success**.
 
 ```text
 > run_connector_operation {"connector": "agentlab-dadjoke", "operation": "get_joke"}
@@ -111,7 +111,7 @@ These are the calls from a recorded run of the prompts above. Your agent's calls
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `pyfsr: command not found` | The CLI is in a virtual environment the agent's shell does not see | `pip install "fsr-agentic-toolkit==0.2.3"` into the active environment |
+| **pyfsr: command not found** | The CLI is in a virtual environment the agent's shell does not see | `pip install "fsr-agentic-toolkit==0.2.3"` into the active environment |
 | Package fails: missing required file | A core file was renamed or deleted | `info.json`, `connector.py`, `operations.py` and `requirements.txt` must all exist |
 | Install succeeds, operation unknown | `info.json` and `operations.py` disagree | The operation name must match in both. Repackage and install again |
 | `get_joke` or the health check still runs the old code after a reinstall | The appliance's connector workers still serve the previous version | Wait a few minutes and run it again. The workers pick up the new code on their own |
