@@ -738,11 +738,77 @@ def cmd_code_snippet(client) -> int:
     return 0
 
 
+# The chapter 3 approve lab's shadow autonomy policy: it makes the Monitor's
+# autonomy tab list the containment action the analyst approves (with its
+# one-click Undo) instead of staying empty. Shadow mode never acts on its own;
+# it only records what it WOULD have done next to the human's decision.
+AUTONOMY_POLICY = {
+    "version": 1,
+    "enabled": True,
+    "mode": "shadow",
+    "rules": [
+        {
+            "id": "contain-block-ip",
+            "action": {"connector": "fortigate-firewall", "op": "block_ip_new"},
+            "when": {
+                "verdict": {"disposition": ["true_positive"], "min_confidence": 0.0},
+                "target": {"kind": "ip", "external_only": True},
+            },
+        }
+    ],
+}
+
+AGENTIC_CONNECTORS = ("connector-fsr-agentic-assistant", "fsr-agentic-assistant")
+
+
+def cmd_autonomy_policy(client) -> int:
+    """Seed the ch03 lab's autonomy policy, idempotently.
+
+    The Monitor's autonomy tab only lists action cards that an autonomy policy
+    evaluated, so without a policy the one-click Undo never appears. This sets
+    the connector's ``reviewer_roles`` if empty (policy edits are reviewer-gated)
+    and writes the shadow containment rule through the connector's own
+    ``set_autonomy_policy`` (which validates against the framework's parser).
+    """
+    conn = None
+    for name in AGENTIC_CONNECTORS:
+        try:
+            cfgs = client.connectors.list_configurations(connector=name)
+        except Exception:  # noqa: BLE001 - not installed reads the same as absent
+            continue
+        if cfgs:
+            conn = name
+            break
+    if not conn:
+        print("autonomy-policy: agentic assistant connector not found (install it first)")
+        return 1
+    rec = cfgs[0].model_dump()
+    cfg = dict(rec.get("config") or {})
+    if not (cfg.get("reviewer_roles") or "").strip():
+        cfg["reviewer_roles"] = "Full App Permissions"
+        client.connectors.update_configuration(conn, rec["id"], cfg, name=rec.get("name"))
+        print("autonomy-policy: reviewer_roles set to 'Full App Permissions'")
+    g = client.connectors.execute(conn, "get_autonomy_policy",
+                                  config=rec.get("name"), params={})
+    current = (g.data or {}).get("policy") if getattr(g, "ok", False) else None
+    if current == AUTONOMY_POLICY:
+        print("autonomy-policy: shadow containment rule already present")
+        return 0
+    s = client.connectors.execute(conn, "set_autonomy_policy",
+                                  config=rec.get("name"), params={"policy": AUTONOMY_POLICY})
+    if not getattr(s, "ok", False):
+        print(f"autonomy-policy FAILED: {json.dumps(getattr(s, 'data', s), default=str)[:200]}")
+        return 1
+    print("autonomy-policy: shadow containment rule written (rule contain-block-ip)")
+    return 0
+
+
 def cmd_prepare(client) -> int:
     """One command for a student's own box: everything the labs expect but do not build."""
     rc = cmd_seed(client)
     rc |= cmd_seed(client, INVESTIGATION_ALERTS)
     rc |= cmd_code_snippet(client)
+    rc |= cmd_autonomy_policy(client)
     print()
     cmd_check(client)
     return rc
@@ -831,6 +897,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("mcp-server", help="register the shipped external MCP servers (idempotent)")
     sub.add_parser("records", help="seed records from static/examples/records (idempotent)")
     sub.add_parser("code-snippet", help="turn on Custom Code Execution and give code-snippet a default configuration (idempotent)")
+    sub.add_parser("autonomy-policy", help="seed the ch03 shadow autonomy policy so the Monitor's autonomy tab lists approved actions (idempotent)")
     sub.add_parser("grant", help="union workshop rights onto the key's role (needs admin creds)")
     sub.add_parser("reset-alerts", help="return the Agent Lab alerts to the demo set, all Open")
     ab = sub.add_parser("approved-backup", help="fill the APPROVED_BACKUP_SYSTEM org-context record for the chapter 3 re-run (idempotent)")
@@ -878,6 +945,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_seed(client, INVESTIGATION_ALERTS)
     if args.cmd == "code-snippet":
         return cmd_code_snippet(client)
+    if args.cmd == "autonomy-policy":
+        return cmd_autonomy_policy(client)
     if args.cmd == "reset-connector":
         return cmd_reset_connector(client, args.name)
     return cmd_check(client)

@@ -75,7 +75,35 @@ The assistant never writes on its own. It looks for an action that can do the jo
 
 Reject is always safe: a rejected card writes nothing. Check the effect on the box afterwards instead of trusting the card. Lab 8 in chapter 10 shows the same principle as a playbook approval.
 
-## 5. Watch the assistant as a lead
+## 5. Approve the action, then verify and undo it
+
+In the last section you rejected the card. This time approve one, and then hold the assistant to its effect. The same three beats a real containment has: approve, verify, undo.
+
+1. Open the **Agentic Assistant** on the alert again and click **New** to start a fresh conversation. Ask for a triage first: `Triage this alert. Give me a verdict and the evidence behind it.` A containment ask that arrives cold gets deferred: the assistant's evidence guard wants investigation in the conversation before it stages a write.
+2. Then ask: `Contain this: block 203.0.113.99 now.` If the assistant answers with another verdict card instead of staging the action, nudge it: reply `Go ahead.` A person would.
+3. Read the card before you touch the buttons. The operation line names the exact action that will run: `fortigate-firewall.block_ip_new`, method *Quarantine Based*, with the alert's source IP `203.0.113.99` as the target and a time to live. The title is the assistant's words; the operation line is the truth. Approving the wrong action is a real incident.
+4. Click **Approve**. The action runs on the connector while the turn finishes.
+
+<!-- step: fsa03-25-agentic-assistant-approve manual: spends tokens; approves a live containment -->
+
+<!-- capture: fsa03-25-agentic-assistant-approve -->
+![fsa03-25-agentic-assistant-approve](fsa03-25-agentic-assistant-approve.png?height=600px)
+
+Do not take the chat's word for the result. The block's effect is the FortiGate's **ban list**, and you can read it through the same connector the action used, from your workstation:
+
+```python
+from pyfsr import FortiSOAR
+
+c = FortiSOAR.from_env()   # reads FSR_BASE_URL / FSR_USERNAME / FSR_PASSWORD
+r = c.connectors.execute("fortigate-firewall", "get_blocked_ip",
+                         config="Enterprise_Core",
+                         params={"method": "Quarantine Based"})
+print(r.data["result"][0]["results"])   # the ban list
+```
+
+The IP is on the list, with an expiry one hour out. If the card had staged the wrong arguments, the operation would still report success, but with an empty list. That is why the check reads the gate, not the chat.
+
+## 6. Watch the assistant as a lead
 
 The **Agentic Assistant Monitor** dashboard shows the assistant's turns, tokens and cost, and everything waiting on an analyst. Its tabs list sessions, pending approvals, users, scheduled tasks, an audit trail of every model call, and the autonomy policy.
 
@@ -84,8 +112,24 @@ The **Agentic Assistant Monitor** dashboard shows the assistant's turns, tokens 
 <!-- capture: fsa03-24-agentic-assistant-monitor -->
 ![fsa03-24-agentic-assistant-monitor](fsa03-24-agentic-assistant-monitor.png?height=600px)
 
+Open the **Autonomy** tab. The lab's shadow autonomy policy (seeded by `tools/lab_setup.py prepare`) evaluates every containment action and records what it would have done next to what you actually decided. For an approved action that ran, it offers a one-click **Undo** that runs the paired unblock on the FortiGate.
+
+<!-- step: fsa03-26-agentic-assistant-executed -->
+
+<!-- capture: fsa03-26-agentic-assistant-executed -->
+![fsa03-26-agentic-assistant-executed](fsa03-26-agentic-assistant-executed.png?height=600px)
+
+Click **Undo** on the row. The monitor calls the connector's undo, the row reads **Undone by** you, and the ban list is empty again: the same pyfsr check from the last section now prints `[]`.
+
+<!-- step: fsa03-27-agentic-assistant-undo -->
+
+<!-- capture: fsa03-27-agentic-assistant-undo -->
+![fsa03-27-agentic-assistant-undo](fsa03-27-agentic-assistant-undo.png?height=600px)
+
 **You are done when**
 
 - You can tell the two launchers apart by their titles.
 - The Agentic Assistant drew a verdict card for the alert, and you can name one finding, its evidence chip, and one item under **Not verified**.
+- You approved a containment card, read the operation line before clicking, and saw the IP on the FortiGate's ban list.
+- You undid the block from the Monitor's **Autonomy** tab and saw the ban list empty again.
 - The Monitor's **Pending** tab is empty, or every item on it is one you decided.
