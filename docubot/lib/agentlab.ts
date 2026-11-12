@@ -1,7 +1,7 @@
 // Workshop-local helpers layered on docubot's device modules. Everything product-generic (the toolkit CLI, the
 // lab seeder, the agent launcher, login, nav, capture, pty) comes from docubot; this file holds only what is
 // specific to THIS workshop: the persona the shots show and the connector the ch09 lab builds.
-import { createAgentLab } from 'docubot/agents';
+import { claudeTmpMasks, createAgentLab } from 'docubot/agents';
 import { boxMasks as boxMasksFor, pyfsrEnv, toolkitSkills, toolkitVenvMasks } from 'docubot/products/fortisoar';
 
 /** The connector the ch09 build lab produces (one source of truth). */
@@ -15,23 +15,12 @@ export const SHOWN_BOX_URL = 'https://fortisoar.example.com';
 /** Replace the box's real URL, host, login and display name with the page's placeholders. */
 export const boxMasks = () => boxMasksFor({ login: SHOWN_LOGIN, name: 'Agent Lab', url: SHOWN_BOX_URL });
 
-/**
- * Claude Code keeps per-session scratch under /tmp/claude-<uid>/<cwd with slashes swapped for dashes>
- * and shows that path when the agent diffs its own edits (the pages ask it to). The run's folder
- * rewrite cannot reach it: swaps apply per line and the path wraps across two rows. Rewrite the
- * fragments per line instead — the session uuid (what the OCR gate calls a secret) first, then the
- * tmp/encoded prefix; on an unwrapped path both hit and the result reads as one continuous path.
- */
-const claudeTmpMasks = () => [
-  [/[\w-]*workshop-[\w-]+-agent-lab\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, 'agent-lab/<session>'],
-  [/(?:\/private)?\/tmp\/claude-\d+\/[\w-]+/g, '~/claude-tmp/'],
-];
-
 // The agent lab: this workshop's temp folder name, box masks, and how the toolkit's skills install.
-// Terminal shots (docubot's shellShot) get the lab env, the toolkit venv as /your/venv, and the box masks.
+// Terminal shots (docubot's shellShot) get the lab env, the toolkit venv as /your/venv, the kit's
+// claude tmp scratch masks (agent screens apply them automatically), and the box masks.
 const lab = createAgentLab({
   name: 'fsa-workshop',
-  masks: () => [...claudeTmpMasks(), ...boxMasks()],
+  masks: boxMasks,
   skills: toolkitSkills,
   shot: () => ({ baseEnv: pyfsrEnv(), replaceFirst: toolkitVenvMasks(), masks: [...claudeTmpMasks(), ...boxMasks()] }),
 });
