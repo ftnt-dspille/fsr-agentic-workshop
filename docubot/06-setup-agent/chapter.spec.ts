@@ -2,14 +2,15 @@
 // the agent authenticates as) plus the coding-agent TUI pages (the write-approval
 // prompt in Claude Code, Codex and OpenCode). Both kinds of shot go through the one
 // `capture` fixture -- `capture.shot(soar, ...)` for a browser page, and
-// `capture.agentShot(id, run)` / `capture.agent(id, real)` for a real Terminal screenshot of the agent -- so a
+// `capture.agent(id, real)` for a real Terminal screenshot of the agent -- so a
 // SOAR page and a TUI page read the same way and interleave in one spec.
 //
-// The TUI shots are headless: capture.agentShot streams the real agent (claude, codex)
-// in a node-pty into an xterm.js in headless Chromium and screenshots that -- no GUI, no
-// macOS permissions, no popped window, CI-capable. The agent talks to a stub FortiSOAR
-// MCP (AGENT_SHOTS_STUB), so no box is touched by the agent; only the one UI shot needs
-// the live box. These shots spend tokens, so they are gated behind DOCUBOT_AGENT_SHOTS=1.
+// The TUI shots run in a real terminal (the kit's RealTerminal: ttyd + Playwright -- no
+// GUI, no macOS permissions, no popped window, CI-capable), and the claude shot goes
+// through the governed driver (ClaudeApproval's hook). The agent talks to a stub FortiSOAR
+// MCP (AGENT_SHOTS_STUB, default tools/agent-shots/stub_fortisoar_mcp.py), so no box is
+// touched by the agent; only the one UI shot needs the live box. These shots spend tokens,
+// so they are gated behind DOCUBOT_AGENT_SHOTS=1.
 //
 // Verify one spec at a time through Playwright (never `docubot run`, which starts every spec):
 //   DOCUBOT_TARGET=<repo> node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
@@ -22,31 +23,41 @@
 //   - DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*": a plain agentTurn has no permission driver, so an MCP tool
 //     prompt would just sit until the timeout; the write-approval prompts themselves are captured on page 03
 //     through the governed drivers, which answer their own prompts.
-import { expect, skipStep, test, type AgentShotRun } from 'docubot';
+import { expect, skipStep, test } from 'docubot';
+import { startOpencodeTui } from 'docubot/agents';
 import { buildExpect, type Expect } from 'docubot/agents';
 import { openPeopleList } from 'docubot/products/fortisoar';
-import { SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex, startCodexApproval } from '../lib/agentlab';
+import { AGENT_CWD, SHOWN_LOGIN, agentScreen, agentTurn, codexScreen, codexShell, shellShot, startAgent, startCodex, startClaudeApproval, startCodexApproval } from '../lib/agentlab';
+import { READ_BUILTINS } from '../lib/approve';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { alertsNamed, boxHost, boxIdentity, writeClaudeMcpJson, labSeed, pyfsrEnv } from 'docubot/products/fortisoar';
+import { alertsNamed, boxHost, boxIdentity, escapeRe, writeClaudeMcpJson, labSeed, pyfsrEnv } from 'docubot/products/fortisoar';
 import { shouldRunStep } from 'docubot';
 import { promptFor } from 'docubot';
 
 test.describe.configure({ mode: 'serial' });
 
-// Shared inputs for every agent shot: the stub MCP server, its interpreter, and
-// the documented prompt the student runs (pulled from the page, not a spec-only copy).
-const STUB = process.env.AGENT_SHOTS_STUB || '';
+// Shared inputs for every agent shot: the stub MCP server (default: this repo's, so a
+// shot run needs no extra env), its interpreter, and the documented prompt the student
+// runs (pulled from the page, not a spec-only copy).
+const STUB = process.env.AGENT_SHOTS_STUB || path.join(process.env.DOCUBOT_TARGET ?? process.cwd(), 'tools', 'agent-shots', 'stub_fortisoar_mcp.py');
 const agentShotsOn = process.env.DOCUBOT_AGENT_SHOTS === '1';
 const prompt = (): string => promptFor('06-setup-agent', '03-approve-every-write');
 
-/** One agent's write-approval run, minus the id. waitFor is that agent's approval wording. */
-function approvalRun(tool: AgentShotRun['tool'], waitFor: RegExp): AgentShotRun {
-  return { tool, prompt: prompt(), waitFor, stub: STUB };
+/** A .mcp.json pointing claude at the stub server (strict scoping: it loads nothing else). */
+function stubMcpJson(): string {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fsa06-stub-')), '.mcp.json');
+  fs.writeFileSync(file, JSON.stringify({
+    mcpServers: { fortisoar: { command: process.env.FSR_PYTHON || 'python3', args: [STUB], env: { FSR_BASE_URL: 'https://fortisoar.example.com' } } },
+  }));
+  return file;
 }
 
-test('chapter 6 - set up the agent', async ({ gui, capture }) => {
+/** The real paths under the shot's feet (the lab folder), boxed in the PNG like every governed shot. */
+const agentTerms = (): string[] => [path.dirname(AGENT_CWD), AGENT_CWD];
+
+test('chapter 6 - set up the agent', async ({ gui, capture, page }) => {
   test.setTimeout(15 * 60 * 1000);
 
   // --- SOAR page: the Users list, where the agent's login is created (System > IAM
@@ -64,27 +75,52 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
   });
 
   // --- TUI pages: the write-approval prompt in each agent (real screenshots). ---
-  // Same `capture` object, same chapter dir -- just capture.agentShot instead of .shot.
+  // Same `capture` object, same chapter dir -- capture.agent for the terminal shots.
   if (!agentShotsOn) {
-    console.log('[ch06] agent TUI shots skipped: set DOCUBOT_AGENT_SHOTS=1 (and AGENT_SHOTS_STUB, FSR_PYTHON) to capture them');
+    console.log('[ch06] agent TUI shots skipped: set DOCUBOT_AGENT_SHOTS=1 (and FSR_PYTHON) to capture them');
     return;
   }
 
   // claude captures the write-approval card and, from the SAME session, the declined
-  // state after Esc (declineWaitFor/declineId). Codex is captured below, through its
-  // own driver. opencode's MCP tools did not surface reliably headlessly, so it gets
-  // a SETUP shot (a benign no-tool question), not a write-approval.
+  // state after the student's "No" (one governed session, two shots). Codex is
+  // captured below, through its own driver. opencode's MCP tools did not surface
+  // reliably headlessly, so it gets a SETUP shot (a benign no-tool question), not a
+  // write-approval -- its approval shot only waits for the dialog, unanswered.
   const DECLINED = /Interrupted|What should Claude do instead|not completed|was not created|declin|not approve/i;
 
   if (shouldRunStep('fsa06-05-claude-approval')) await test.step('fsa06-05-claude-approval', async () => {
-    await capture.agentShot('fsa06-05-claude-approval', {
-      ...approvalRun('claude', /requests your input|Do you want to proceed/i),
-      declineWaitFor: DECLINED, declineId: 'fsa06-09-claude-declined',
+    // The governed claude path: ClaudeApproval's hook holds the ask on screen
+    // (quietDialog: false -- the dialog is visible and the answer is the student's own
+    // keys), the step photographs it, answers "No" by keys and photographs the declined
+    // state. The stub MCP server means the call never touches a box; the expect makes
+    // THIS the one call the turn may ask about.
+    const run = await startClaudeApproval(page, {
+      mcpConfig: stubMcpJson(), cwd: AGENT_CWD, quietDialog: false, cols: 100, rows: 90,
+      policyExtra: { noConfirm: true, builtins: READ_BUILTINS },
     });
+    try {
+      const expected = buildExpect(run.policy, { ...APPROVAL_CALL, decision: 'decline' });
+      run.approval.setExpect(expected);
+      await run.session.send(prompt());
+      const call = await run.approval.pendingOrNudge(run.session, expected, { timeoutMs: 4 * 60 * 1000 });
+      // The dialog as the student sees it (checked to be THIS call's), held until the step's checks pass.
+      const dialog = await run.approval.snapDialog(call, run.real, {
+        terms: agentTerms(), startAt: new RegExp(`^\\s*[>❯]\\s+${escapeRe(prompt().split('\n')[0].trim().slice(0, 24))}`),
+      });
+      await capture.agent('fsa06-05-claude-approval', dialog);
+      await run.approval.answer(call, 'decline');   // the "No" row, by keys -- the student's decline
+      await run.approval.turnDone(4 * 60 * 1000);
+      await run.approval.settled(DECLINED);
+      await capture.agent('fsa06-09-claude-declined', run.real, { terms: agentTerms() });
+    } finally {
+      run.session.kill();
+    }
   });
 
   // OpenCode's write-approval prompt, one try: its MCP tools did not reliably surface
-  // headless before, so a miss here is reported, not worked around.
+  // headless before, so a miss here is reported, not worked around. The TUI runs on a
+  // private server with the shot's own config (the kit's startOpencodeTui); nothing
+  // answers the ask, the shot is OF the pending dialog.
   if (shouldRunStep('fsa06-07-opencode-approval')) await test.step('fsa06-07-opencode-approval', async () => {
     // Same pinned model as fsa06-08: the user's default tier thinks longer and varies.
     // The ask rule is explicit: a global V1 `permission` block normalizes unspecified
@@ -93,21 +129,34 @@ test('chapter 6 - set up the agent', async ({ gui, capture }) => {
     // never ask". Allow every fortisoar tool, then ask for the write (last match wins).
     // This build's dialog reads "Permission required" (older ones said "is requesting
     // input"), so the wait accepts both wordings.
-    await capture.agentShot('fsa06-07-opencode-approval', {
-      ...approvalRun('opencode', /permission required|is requesting input/i), model: 'frank/coding-b200/eco', timeoutMs: 180_000,
+    const shot = await startOpencodeTui(page, {
+      id: 'fsa06-07-opencode-approval', stub: STUB, model: 'frank/coding-b200/eco', timeoutMs: 180_000,
+      prompt: prompt(),
+      waitFor: /permission required|is requesting input/i,
       permissions: [
         { action: 'fortisoar_*', resource: '*', effect: 'allow' },
         { action: 'fortisoar_create_record', resource: '*', effect: 'ask' },
       ],
     });
+    try {
+      await capture.agent('fsa06-07-opencode-approval', shot.real);
+    } finally {
+      shot.kill();
+    }
   });
 
   if (shouldRunStep('fsa06-08-opencode-setup')) await test.step('fsa06-08-opencode-setup', async () => {
-    await capture.agentShot('fsa06-08-opencode-setup', {
-      tool: 'opencode', stub: STUB, model: 'frank/coding-b200/eco', rows: 40,
+    const shot = await startOpencodeTui(page, {
+      id: 'fsa06-08-opencode-setup', stub: STUB, model: 'frank/coding-b200/eco', rows: 40,
       prompt: 'In one short paragraph, who are you and what can you help me do with this FortiSOAR box?',
       waitFor: /tok\/s/i,
     });
+    try {
+      // The tok/s counter is the turn's own live figure; it is left out of the stability key.
+      await capture.agent('fsa06-08-opencode-setup', shot.real, { volatile: /tok\/s/i });
+    } finally {
+      shot.kill();
+    }
   });
 });
 

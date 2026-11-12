@@ -13,7 +13,7 @@ import { AGENT_CWD, startClaudeApproval } from './agentlab';
 /** Argument names that name a target on the FortiSOAR toolkit, beside `module` and `instance`. */
 const TOOLKIT_TARGET_KEYS = ['module', 'connector', 'server', 'name'];
 /** Claude's own tools that never change anything on the box or the machine; every other built-in is denied unless the step lists it. */
-const READ_BUILTINS = ['Read', 'Glob', 'Grep', 'TodoWrite', 'ToolSearch', 'Skill'];
+export const READ_BUILTINS = ['Read', 'Glob', 'Grep', 'TodoWrite', 'ToolSearch', 'Skill'];
 
 export type Args = Record<string, any>;
 
