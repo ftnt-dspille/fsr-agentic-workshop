@@ -144,7 +144,7 @@ playbooks:
 ```
 
 <!-- capture: fsa10-07-schedule-and-prove-create -->
-![fsa10-07-schedule-and-prove-create](fsa10-07-schedule-and-prove-create.png?height=600px)
+![fsa10-07-schedule-and-prove-create](fsa10-07-schedule-and-prove-create.png)
 
 Now wait about three minutes. The scheduler fires the playbook on the minute, but it records the fire a little later. If the next prompt says the schedule has not fired yet, wait a few more minutes and run it again.
 
@@ -159,7 +159,7 @@ schedule.
 <!-- step: fsa10-07-schedule-and-prove -->
 
 <!-- capture: fsa10-07-schedule-and-prove -->
-![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png)
+![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png?height=600px)
 
 **You are done when:** `diagnose_schedule` reports that the schedule has fired, its runs finish, and it has no problems. The schedule is gone afterwards.
 

@@ -23,7 +23,7 @@ import { closeModals, ensureInvestigation, findAlert, forgetModuleCache, openAle
 import { execFileSync } from 'child_process';
 import * as path from 'path';
 import { AGENT_CWD, agentScreen, startAgent, agentTurn } from '../lib/agentlab';
-import { approvedTurn, approvedTurnOnce, snapFrom, startClaude, type Allowed } from '../lib/approve';
+import { approvedTurn, approvedTurnOnce, snapFrom, startClaude, type Allowed, type ClaudeRun } from '../lib/approve';
 import { alertNamed, FELL_BACK_TO_HANDS, laptopAgent, yamlNames } from '../lib/fsr-lab';
 import { labSeed, rows, toolkit } from 'docubot/products/fortisoar';
 import { pollUntil, shouldRunStep } from 'docubot';
@@ -49,6 +49,21 @@ const INJECTION_ALERT = 'Agent Lab injection drill';
 // The trace modal labels and shows each step's trace id as a bare UUID.
 // Box-internal metadata — masked, like ch03's trace shots.
 const UUID_TEXT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+// The fsa10-07 prompts embed the playbook's YAML as a fenced code block, and
+// claude's TUI draws a fenced block inside the prompt box with a LIGHT
+// background. The snapshot renders the screen faithfully, so a clip from the
+// prompt row leads with a tall near-white panel — the "white picture" (seen on
+// claude 2.1.318 and 2.1.322, both turns, every run; only this step's prompts
+// carry YAML). The page shows the prompt and its YAML right above the figure,
+// so the clip starts at the collapsed tool row ("Called fortisoar-lab N times
+// (ctrl+o to expand)") instead: tool evidence, the answer, and the done row,
+// all on the dark theme. The step pre-asserts the row on the screen so a
+// claude-chrome drift fails loudly instead of the snap silently falling back
+// to the full buffer.
+const TOOL_ROW = /Called fortisoar-lab/;
+const DONE_ROW = /for (?:\d+h )?(?:\d+m )?\d+s.*\bdone\b/i;
+const snapOutcome = (run: ClaudeRun) =>
+  run.real.snap({ startAt: TOOL_ROW, lastMatch: true, endAt: DONE_ROW, terms: [path.dirname(AGENT_CWD), AGENT_CWD] });
 const CHAPTER = '10-capstone-investigation';
 const PAGE = '01-capstone';
 
@@ -285,27 +300,39 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
 
   if (shouldRunStep('fsa10-07-schedule-and-prove')) await test.step('fsa10-07-schedule-and-prove', async () => {
     // Start from no schedule so "it fired on its own" is this run's evidence.
+    // A silent leftover flips the story — the agent then reports reusing an
+    // existing schedule ("created nothing new", live 2026-11-12) and the
+    // figure documents a reuse, not the page's create — so the absence is
+    // verified over pyfsr after the delete, not assumed. The delete's own
+    // failure modes are caught by that check.
     try {
       toolkit('delete_schedule', { name: 'Agent Lab heartbeat', confirm: true });
     } catch {
-      // absent already: the state this step wants
+      // absent already is the wanted state; anything else trips the check below
     }
+    const schedCheck: { absent: boolean; row: string | null } = JSON.parse(execFileSync(
+      process.env.FSR_PYTHON || 'python3', ['-c', SCHED_ABSENT_PY, 'Agent Lab heartbeat'],
+      { encoding: 'utf8', env: pyfsrEnv(), stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 },
+    ));
+    expect(schedCheck.absent, `the heartbeat schedule is still on the box (${schedCheck.row ?? 'unknown shape'}): `
+      + 'a leftover makes the agent document a reuse instead of the create').toBe(true);
     // Two turns, as on the page: schedule it, let beat fire it and record the fire
     // (beat saves its counters minutes after firing), then diagnose and delete. One session, so the second prompt keeps its context.
     const run = await startClaude(page, { writeFiles: true });
     const createPrompt = promptFor('10-capstone-investigation', PAGE, 4);
     const deletePrompt = promptFor('10-capstone-investigation', PAGE, 5);
-    let createdShot: Awaited<ReturnType<typeof snapFrom>>;
+    let createdShot: Awaited<ReturnType<typeof snapOutcome>>;
     let created: string;
-    let deletedShot: Awaited<ReturnType<typeof snapFrom>>;
+    let deletedShot: Awaited<ReturnType<typeof snapOutcome>>;
     try {
       // Turn 1: publish the heartbeat playbook and schedule it. trigger_schedule_now is never declared, so a manual fire is denied.
       await approvedTurn(run, createPrompt, [
         { tool: 'publish_playbook', anyTarget: true, required: true, check: yamlNames('Agent Lab Heartbeat') },
         { tool: 'schedule_playbook', args: { name: 'Agent Lab heartbeat' }, required: true },
       ], { nudge: 'Yes, go ahead.' });
-      createdShot = await snapFrom(run, createPrompt);
       created = run.real.term.plainScreen();
+      expect(created, 'claude no longer shows the collapsed tool row ("Called fortisoar-lab ...") after the turn; the outcome clip has no anchor').toMatch(TOOL_ROW);
+      createdShot = await snapOutcome(run);
       expect(created).toMatch(/schedule/i);
       // Only an admission counts: an agent often says it did NOT call trigger_schedule_now.
       expect(created).not.toMatch(/(?<!not |n't )\b(fired|triggered|ran) it (by hand|manually|now)\b/i);
@@ -317,7 +344,8 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
       await approvedTurn(run, deletePrompt, [
         { tool: 'delete_schedule', args: { name: 'Agent Lab heartbeat', confirm: true }, required: true },
       ], { nudge: 'Yes, delete it.', timeoutMs: 10 * 60 * 1000 });
-      deletedShot = await snapFrom(run, deletePrompt);
+      expect(run.real.term.plainScreen(), 'claude no longer shows the collapsed tool row ("Called fortisoar-lab ...") after the turn; the outcome clip has no anchor').toMatch(TOOL_ROW);
+      deletedShot = await snapOutcome(run);
     } finally {
       run.session.kill();
     }
@@ -714,4 +742,17 @@ def main():
     raise SystemExit(f"unknown cmd {cmd}")
 
 main()
+`;
+
+// Prints {"absent": bool, "row": ...} for a schedule name — the cleanup check
+// the fsa10-07 step runs before its agent turn (a leftover schedule flips the
+// capture's story from create to reuse). pyfsr schedules.get returns None
+// when the name is absent.
+const SCHED_ABSENT_PY = String.raw`
+import json, os, sys
+from pyfsr import FortiSOAR
+c = FortiSOAR.from_env_file(os.environ["FSR_ENV_FILE"])
+s = c.schedules.get(sys.argv[1])
+row = None if s is None else json.dumps(s, default=str)[:160]
+print(json.dumps({"absent": s is None, "row": row}))
 `;
