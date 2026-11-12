@@ -46,7 +46,7 @@ The assistant answers with its plan and compiles the steps. When it finishes, th
 <!-- capture: fsa08-62-built-canvas -->
 ![fsa08-62-built-canvas](fsa08-62-built-canvas.png?height=600px)
 
-**You are done when:** the canvas shows a manual trigger, a **Set Variable** step for `greeting`, and a comment step, in that order.
+**You are done when:** the canvas shows a manual trigger, a **Set Variable** step for **greeting**, and a comment step, in that order.
 
 ## 3. Change it by conversation
 

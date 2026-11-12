@@ -43,6 +43,6 @@ The agent creates the alert, waits for the playbook run, and reads the alert bac
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `wait_for_playbook_run` times out | The alert name does not match the trigger filter | The alert name must start with "Agent Lab". Ask the agent to check the playbook's trigger filter |
-| Run failed at Tag Alert | The record reference in the update step is wrong | `diagnose_playbook_run` names the failing step and error. A common cause is a broken Jinja reference |
+| wait_for_playbook_run times out | The alert name does not match the trigger filter | The alert name must start with "Agent Lab". Ask the agent to check the playbook's trigger filter |
+| Run failed at Tag Alert | The record reference in the update step is wrong | diagnose_playbook_run names the failing step and error. A common cause is a broken Jinja reference |
 | Nothing in Playbook Logs | The playbook is not active, or the alert was created before it | Activate the playbook, then create a new alert. Triggers do not fire for old records |

@@ -17,7 +17,7 @@ You can register a different remote server, such as a FortiSIEM MCP endpoint, th
 
 <!-- step: fsa05-03-register-remote -->
 
-You saved the server on the previous page. Now check the connection a second time, in a dialog with a different name. The name `agentlab-deepwiki` is already taken.
+You saved the server on the previous page. Now check the connection a second time, in a dialog with a different name. The name **agentlab-deepwiki** is already taken.
 
 1. Click **Connect MCP Server**.
 2. Enter the name `agentlab-deepwiki-validate`. Use the same URL, Transport Type **http** and Authentication > Type **None**.
@@ -27,12 +27,12 @@ You saved the server on the previous page. Now check the connection a second tim
 <!-- capture: fsa05-03-register-remote-validate -->
 ![fsa05-03-register-remote-validate](fsa05-03-register-remote-validate.png?height=600px)
 
-Open the MCP Servers list. Find `agentlab-deepwiki`. Its Transport column shows **http**. The validation name does not appear in the list.
+Open the MCP Servers list. Find **agentlab-deepwiki**. Its Transport column shows **http**. The validation name does not appear in the list.
 
 <!-- capture: fsa05-03-register-remote-saved -->
 ![fsa05-03-register-remote-saved](fsa05-03-register-remote-saved.png?height=600px)
 
-Click `agentlab-deepwiki` to open it. Under **Discovered Capabilities**, the panel lists the tools the server returned. For DeepWiki these include `read_wiki_structure`, `read_wiki_contents` and `ask_wiki_question`. You grant the server to an agent in the next section.
+Click **agentlab-deepwiki** to open it. Under **Discovered Capabilities**, the panel lists the tools the server returned. For DeepWiki these include **read_wiki_structure**, **read_wiki_contents** and **ask_wiki_question**. You grant the server to an agent in the next section.
 
 <!-- step: fsa05-03-register-remote-tools -->
 <!-- capture: fsa05-03-register-remote-tools -->
@@ -47,7 +47,7 @@ Click `agentlab-deepwiki` to open it. Under **Discovered Capabilities**, the pan
 3. Set **Configuration Type** to **Custom Configuration**. Then set:
    - **Name:** `Agent Lab DeepWiki`
    - **LLM Provider:** the profile that answers for this agent, for example **Low Reasoning**.
-   - **MCP Server:** keep the four built-in servers selected (**FortiSOAR Module Management**, **FortiSOAR Playbook Management**, **Utility Tools** and **SOC Framework**), and add `agentlab-deepwiki`. A custom configuration replaces the agent's default server list, and the agent can use only the servers selected here.
+   - **MCP Server:** keep the four built-in servers selected (**FortiSOAR Module Management**, **FortiSOAR Playbook Management**, **Utility Tools** and **SOC Framework**), and add **agentlab-deepwiki**. A custom configuration replaces the agent's default server list, and the agent can use only the servers selected here.
    - **Masking Agent** (optional): for example **IOC Masking**, which hides indicators before data goes to the LLM.
 4. Click **Save**.
 
@@ -64,7 +64,7 @@ Do not leave **SOC Framework** out. Alert Investigation uses it to write its ver
 
 <!-- step: fsa05-05-chat-runs-tool -->
 
-The AI Assistant answers security questions only, and it declines other questions. It already has FortiSOAR's built-in SOC Framework server, whose `enrich_indicator` tool looks up an indicator in threat intelligence. So this check uses that tool, not DeepWiki. This question uses FortiAI credits.
+The AI Assistant answers security questions only, and it declines other questions. It already has FortiSOAR's built-in SOC Framework server, whose enrich_indicator tool looks up an indicator in threat intelligence. So this check uses that tool, not DeepWiki. This question uses FortiAI credits.
 
 ### Before you start: configure the VirusTotal connector
 
@@ -86,7 +86,7 @@ Live verdicts age out. If the answer says "no reputation available", pick an IP 
 2. Open the **AI Assistant**.
 3. Ask: `What is the reputation of the IP <ip>? Use your tools to enrich this indicator.` Replace `<ip>` with a rated IP, for example a known command-and-control address.
 4. Read the answer. It names VirusTotal and gives a verdict.
-5. Open the trace for the answer. Find the `enrich_indicator` tool call.
+5. Open the trace for the answer. Find the **enrich_indicator** tool call.
 
 <!-- capture: fsa05-05-chat-runs-tool-answer -->
 ![fsa05-05-chat-runs-tool-answer](fsa05-05-chat-runs-tool-answer.png?height=600px)
@@ -94,7 +94,7 @@ Live verdicts age out. If the answer says "no reputation available", pick an IP 
 **You are done when**
 
 - The answer names VirusTotal and gives the indicator's verdict.
-- The trace shows a **TOOL** call to `enrich_indicator` on the SOC Framework server, and the answer uses its result.
+- The trace shows a **TOOL** call to **enrich_indicator** on the SOC Framework server, and the answer uses its result.
 
 ## Troubleshooting
 

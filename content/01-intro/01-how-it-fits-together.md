@@ -17,7 +17,7 @@ FortiSOAR sits between your data sources and the products you act on. Alerts and
 
 ## What MCP is
 
-MCP (Model Context Protocol) is the standard plug between agents and tools. A server lists its tools with typed inputs. The agent reads that list, picks a tool, sends arguments and gets a result. The agent product (Claude Code, OpenCode or Copilot) does not need to know anything about FortiSOAR. It sees tools such as `search_records` and reads their descriptions.
+MCP (Model Context Protocol) is the standard plug between agents and tools. A server lists its tools with typed inputs. The agent reads that list, picks a tool, sends arguments and gets a result. The agent product (Claude Code, OpenCode or Copilot) does not need to know anything about FortiSOAR. It sees tools such as search_records and reads their descriptions.
 
 Whichever surface it runs on, an agent follows the same loop: you give it a goal, it plans the questions, it looks up what it knows about your environment, it acts through its tools, and it writes down its reasoning.
 
@@ -26,7 +26,7 @@ Whichever surface it runs on, an agent follows the same loop: you give it a goal
 An MCP connection has a caller and a thing being called. This workshop uses both directions:
 
 - In **Part 1, chapter 5**, FortiSOAR is the caller. You register an outside MCP server, and FortiSOAR's agents call it.
-- In **Part 2**, FortiSOAR is the thing being called. A program on your laptop (`fsr-agentic-toolkit`) lets your coding agent call into FortiSOAR.
+- In **Part 2**, FortiSOAR is the thing being called. A program on your laptop (fsr-agentic-toolkit) lets your coding agent call into FortiSOAR.
 
 ## The FortiSOAR objects you will use
 
@@ -40,7 +40,7 @@ The glossary in chapter 11 defines the rest of the terms.
 
 **Part 1: inside FortiSOAR.** FortiSOAR 8.0.1 includes its own agent layer. FortiAI agents run on the platform, reason with the LLM you configure, and reach the platform's MCP servers. They can also reach any external MCP server you register. You drive all of this from the FortiSOAR UI.
 
-**Part 2: outside FortiSOAR.** Your coding agent runs on your workstation. It connects to the box through the `fsr-agentic-toolkit` MCP server, which is built on the open-source pyfsr SDK. You need the box URL and a user login. The toolkit gives the agent the REST API and a set of higher-level workflows, such as orienting on a box, debugging a playbook run and building a playbook.
+**Part 2: outside FortiSOAR.** Your coding agent runs on your workstation. It connects to the box through the fsr-agentic-toolkit MCP server, which is built on the open-source pyfsr SDK. You need the box URL and a user login. The toolkit gives the agent the REST API and a set of higher-level workflows, such as orienting on a box, debugging a playbook run and building a playbook.
 
 {{% notice note %}}
 Part 1 features run on the appliance. They need AI features turned on and an LLM configured. Part 2 needs only network access to the box and a user login.

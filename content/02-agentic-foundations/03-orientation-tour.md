@@ -14,7 +14,7 @@ This tour creates one practice alert and asks the AI Assistant one read-only que
 1. Open the **Alerts** module and choose **Add**.
 2. In **Name**, enter a name you will recognize. Use `Agent Lab - orientation` and add a unique number at the end.
 3. In **Source**, enter `edr-sensor-01`. In **Source ID**, enter `203.0.113.42`.
-4. In **Description**, paste the JSON below. Chapter 3 reads the raw event from the alert. An alert with no event data gets only the generic `DEFAULT` SOP.
+4. In **Description**, paste the JSON below. Chapter 3 reads the raw event from the alert. An alert with no event data gets only the generic DEFAULT SOP.
 
    ```json
    {
@@ -96,7 +96,7 @@ Turning on AI features is an administrator task. If the banner appears, ask your
 
 <!-- step: fsa02-03-mcp-server-detail -->
 
-3. Click **SOC Framework**. Read its transport, its URL and its **Discovered Capabilities**. These are the tools the server exposes. Name one tool, such as `get_alert`.
+3. Click **SOC Framework**. Read its transport, its URL and its **Discovered Capabilities**. These are the tools the server exposes. Name one tool, such as **get_alert**.
 
 <!-- capture: fsa02-03-mcp-server-detail -->
 ![fsa02-03-mcp-server-detail](fsa02-03-mcp-server-detail.png?height=600px)

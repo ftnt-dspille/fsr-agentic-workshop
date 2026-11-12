@@ -45,20 +45,20 @@ Do not use **Create MCP Server**. It opens a different dialog, with a configurat
 **You are done when**
 
 - The test lists the server's tool names.
-- After you save, `agentlab-deepwiki` appears in the MCP Servers list.
+- After you save, **agentlab-deepwiki** appears in the MCP Servers list.
 
 ## 4. Check the status
 
 <!-- step: fsa05-02-status-check -->
 
-In the MCP Servers list, find `agentlab-deepwiki`. The **Active** column shows a green check when a server is healthy. Check that a built-in server, such as **Utility Tools**, also shows a green check.
+In the MCP Servers list, find **agentlab-deepwiki**. The **Active** column shows a green check when a server is healthy. Check that a built-in server, such as **Utility Tools**, also shows a green check.
 
 <!-- capture: fsa05-02-status-check-servers-page -->
 ![fsa05-02-status-check-servers-page](fsa05-02-status-check-servers-page.png?height=600px)
 
 **You are done when**
 
-- `agentlab-deepwiki` shows a green check in the Active column.
+- **agentlab-deepwiki** shows a green check in the Active column.
 - The built-in servers still show a green check.
 
 ## Troubleshooting

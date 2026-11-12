@@ -23,7 +23,7 @@ list their names.
 <!-- capture: fsa07-01-bulk-triage -->
 ![fsa07-01-bulk-triage](fsa07-01-bulk-triage.png?height=600px)
 
-The agent makes one `query_records` call to find the batch, then one `update_record` call for each match. It reports the count and the names. Check the count against the grid.
+The agent makes one query_records call to find the batch, then one update_record call for each match. It reports the count and the names. Check the count against the grid.
 
 Each update is a write, so your agent asks you to approve it, as on the approval page in chapter 6. Approve each one.
 
@@ -39,5 +39,5 @@ Each update is a write, so your agent asks you to approve it, as on the approval
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| **ToolDisabled: read-only mode** | `FSR_MCP_READONLY=1` is set in the agent's MCP config | Remove it from the `env` block, then restart the agent |
+| **ToolDisabled: read-only mode** | `FSR_MCP_READONLY=1` is set in the agent's MCP config | Remove it from the env block, then restart the agent |
 | The agent updated zero alerts | No Open alert starts with "Agent Lab" | Seed the lab alerts from the earlier chapters, or check that they are Open |

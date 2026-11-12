@@ -50,4 +50,4 @@ connector to evaluate 2+2 as a demonstration.
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Health check says no config | The connector is installed but not configured | Pick a configured connector, or ask the agent to configure this one (next page) |
-| Operation fails with a parameter error | Wrong parameter names | Ask the agent to list the operation's parameters with `list_connector_operations` |
+| Operation fails with a parameter error | Wrong parameter names | Ask the agent to list the operation's parameters with list_connector_operations |

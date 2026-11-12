@@ -25,7 +25,7 @@ whether FortiAI is on, and how many MCP servers are registered.
 <!-- capture: fsa06-11-map-the-box -->
 ![fsa06-11-map-the-box](fsa06-11-map-the-box.png?height=600px)
 
-The agent calls `survey_box` first. That one call returns the version, the FortiAI state, the MCP servers and the configured connectors. The agent then checks each connector's health and lists the modules. Every claim in the answer should point to one of those results.
+The agent calls survey_box first. That one call returns the version, the FortiAI state, the MCP servers and the configured connectors. The agent then checks each connector's health and lists the modules. Every claim in the answer should point to one of those results.
 
 ## 2. You are done when
 

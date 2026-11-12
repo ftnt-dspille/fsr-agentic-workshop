@@ -33,7 +33,7 @@ Do not assume every AI surface asks for confirmation before it writes. The orche
 
 ## 3. Know whose identity a call uses
 
-Tool calls run as an identity. For built-in servers, and for servers registered with the `fsr` authentication type, the call carries your FortiSOAR token. For a server that uses a static bearer token, an API key or no authentication, every call uses one fixed identity.
+Tool calls run as an identity. For built-in servers, and for servers registered with the fsr authentication type, the call carries your FortiSOAR token. For a server that uses a static bearer token, an API key or no authentication, every call uses one fixed identity.
 
 Before you give an agent write tools, answer two questions:
 

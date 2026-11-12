@@ -60,9 +60,9 @@ Your agent publishes the broken playbook, triggers it, waits for the failure, di
 
 Look for these three things in the diagnosis:
 
-- **`failing_step`**: `Tag Alert`, the step that failed.
-- **`error_message`**: **404 Not Found**. The update step tried to write to a record that does not exist.
-- **Step statuses**: `On Alert Created` finished, `Tag Alert` failed, and `Done` never ran.
+- **failing_step**: Tag Alert, the step that failed.
+- **error_message**: **404 Not Found**. The update step tried to write to a record that does not exist.
+- **Step statuses**: On Alert Created finished, Tag Alert failed, and Done never ran.
 
 The error message names the record the step tried to write. That is the detail you need to fix the step.
 
@@ -70,6 +70,6 @@ The error message names the record the step tried to write. That is the detail y
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `wait_for_playbook_run` never returns **failed** | The broken playbook is not active | Ask the agent to confirm the practice playbook is active, then create a new "Agent Lab diag" alert |
-| `diagnose_playbook_run` says the run was not found | The run is still going, or the agent diagnosed an older run | Wait for the run to finish, then diagnose the newest run of the practice playbook |
+| wait_for_playbook_run never returns **failed** | The broken playbook is not active | Ask the agent to confirm the practice playbook is active, then create a new "Agent Lab diag" alert |
+| diagnose_playbook_run says the run was not found | The run is still going, or the agent diagnosed an older run | Wait for the run to finish, then diagnose the newest run of the practice playbook |
 | The fix did not take | The restored YAML still has the broken record reference | The Tag Alert record must be `{{ vars.input.records[0]['@id'] }}`, not the all-zeros placeholder |

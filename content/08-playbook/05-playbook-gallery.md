@@ -29,7 +29,7 @@ other test alerts you create starting with "Agent Lab".
 <!-- capture: fsa08-06-escalate-critical -->
 ![fsa08-06-escalate-critical](fsa08-06-escalate-critical.png?height=600px)
 
-A trigger filter that compares severity to the text "Critical" may not fire on this build. The reliable filter matches the picklist value's IRI (an ID that starts with `/api/3/picklists/`). If the agent does not know the IRI, it can look it up with `resolve_picklist`. The compile check refuses a filter on `severity.itemValue` outright, so that form never reaches the box.
+A trigger filter that compares severity to the text "Critical" may not fire on this build. The reliable filter matches the picklist value's IRI (an ID that starts with `/api/3/picklists/`). If the agent does not know the IRI, it can look it up with resolve_picklist. The compile check refuses a filter on severity.itemValue outright, so that form never reaches the box.
 
 **You are done when:** the Critical alert is Investigating and the Low alert is still Open.
 
@@ -77,6 +77,6 @@ done. Show me the three alerts' statuses before and after.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| The Critical alert stays Open and no run appears | The trigger compares severity to the text "Critical" | Ask the agent to filter severity on the Critical picklist IRI from `resolve_picklist` |
+| The Critical alert stays Open and no run appears | The trigger compares severity to the text "Critical" | Ask the agent to filter severity on the Critical picklist IRI from resolve_picklist |
 | The code step finishes but the field stays empty | The code does not print its result | Ask the agent to `print()` the value |
 | The sweep finishes but nothing closed | The loop reads `hydra:member` from the find step | Ask the agent to loop over the find step's result directly |

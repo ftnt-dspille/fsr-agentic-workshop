@@ -24,13 +24,13 @@ two other meanings under *Overloaded words* below).
 *server* advertises its tools with typed schemas; a *client* lists them, picks
 one, sends inputs, and reads the result. The agent product (Claude Code, Codex or
 OpenCode) does not need to know anything about FortiSOAR: it just sees tools like
-`search_records` and reads their descriptions.
+search_records and reads their descriptions.
 
 **MCP server.** A small program that exposes a set of tools over MCP. Which side
 calls which matters and changes between the two parts of this workshop:
 - In **Part 1, chapter 5**, FortiSOAR is the *client*: it calls out to an
   external MCP server you register (for example, a public docs server).
-- In **Part 2**, FortiSOAR is the *target*: the `fsr-agentic-toolkit` MCP server
+- In **Part 2**, FortiSOAR is the *target*: the fsr-agentic-toolkit MCP server
   runs on your laptop and turns your coding agent's tool calls into FortiSOAR
   REST calls.
 
@@ -103,9 +103,9 @@ general coding agent competent on FortiSOAR, and it is the heart of Part 2. This
 is the one name the chapters use; you do not install a separate MCP server.
 
 **Workflow (toolkit).** A higher-level operation the toolkit runs in one call.
-Examples: `survey_box`, `provision_module`, `build_playbook`,
-`debug_playbook_run`, `repair_playbook`, `run_playbook_yaml`, `verify_write` and
-`investigate_alert`. Each returns a **WorkflowResult**: findings with evidence,
+Examples: survey_box, provision_module, build_playbook,
+debug_playbook_run, repair_playbook, run_playbook_yaml, verify_write and
+investigate_alert. Each returns a **WorkflowResult**: findings with evidence,
 unknowns, and next steps with their tier. You chain them: provision a module,
 build a playbook on it, then verify the result.
 

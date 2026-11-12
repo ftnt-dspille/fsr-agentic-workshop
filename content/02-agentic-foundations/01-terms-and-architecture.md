@@ -24,7 +24,7 @@ Four building blocks carry most of the vocabulary: the agents that do the work, 
 | Prompt | A named record (system instruction, user instruction, response format) that an agent calls by UUID | Prompts that ship in code are re-imported on upgrade, which reverts your edits. |
 | Skill | Instructions an agent follows | Not a separate screen. In this workshop it only shows up in prompt names, such as `Skills - <persona> - <task>`. |
 | Organization context | Records that shape investigations: SOPs, the tool table, risk criteria, approved activity, role profiles | Check that the record exists before you rely on it. |
-| SOP | An organization context record for one alert type, or for `DEFAULT` | Lookups are exact and case-sensitive. `working_hours` does not match `WORKING_HOURS`. |
+| SOP | An organization context record for one alert type, or for DEFAULT | Lookups are exact and case-sensitive. working_hours does not match WORKING_HOURS. |
 | Plan | The ordered question list the planner writes before evidence is gathered | The planner writes it once. Answers do not change the plan. |
 | Hypothesis | A candidate explanation, such as benign, malicious or suspicious, with questions that support or weaken it | Hypothesis statuses are confirmed, ruled out or inconclusive. |
 | Verdict | The alert-level result: Malicious, Suspicious, Benign, False Positive or Inconclusive | "Confirmed" is a hypothesis status, not a verdict. |

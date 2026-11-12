@@ -12,10 +12,10 @@ Labs 3, 6 and 7 only read. Lab 3 needs the `agentlab-dadjoke` folder from chapte
 
 ## 1. Call a tool on an MCP server registered in FortiSOAR
 
-In chapter 5 you registered `agentlab-deepwiki` with FortiSOAR. Your coding agent can use the same registration. The toolkit reads the server's URL and login from FortiSOAR and calls the tool.
+In chapter 5 you registered agentlab-deepwiki with FortiSOAR. Your coding agent can use the same registration. The toolkit reads the server's URL and login from FortiSOAR and calls the tool.
 
 {{% notice note %}}
-This lab needs the `agentlab-deepwiki` registration from chapter 5, page 2. If you skipped it, point the prompt at a built-in server instead, for example **Utility Tools** and its `get_current_datetime` tool.
+This lab needs the agentlab-deepwiki registration from chapter 5, page 2. If you skipped it, point the prompt at a built-in server instead, for example **Utility Tools** and its get_current_datetime tool.
 {{% /notice %}}
 
 Give your agent this prompt:
@@ -34,11 +34,11 @@ tool that answered, and the answer.
 
 The agent lists the registrations, lists the server's tools, and then calls the question tool. The call is a write, with `confirm: true`, so your coding agent's approval prompt asks you first. A registered tool can do anything on its server, so read the server and tool in the prompt before you approve.
 
-**You are done when:** the agent reports an answer from `agentlab-deepwiki` and names the tool it called (`ask_wiki_question`).
+**You are done when:** the agent reports an answer from agentlab-deepwiki and names the tool it called (ask_wiki_question).
 
 ## 2. Let the agent repair a playbook on its own
 
-In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. It saves the alert's `@id` in a variable, then builds the record reference as `/api/3/alerts/` plus that variable. The `@id` already starts with `/api/3/alerts/`, so the path is doubled and the update fails with **No route found**. The publish check catches this mistake when `@id` is written in the reference itself. Through a variable it cannot see it, so the error only shows when the playbook runs.
+In chapter 8 you told the agent the fix. Here the agent finds the fix itself. The playbook below has a common mistake. It saves the alert's @id in a variable, then builds the record reference as `/api/3/alerts/` plus that variable. The @id already starts with `/api/3/alerts/`, so the path is doubled and the update fails with **No route found**. The publish check catches this mistake when @id is written in the reference itself. Through a variable it cannot see it, so the error only shows when the playbook runs.
 
 Give your agent this prompt:
 
@@ -86,13 +86,13 @@ playbooks:
 <!-- capture: fsa10-05-repair-playbook -->
 ![fsa10-05-repair-playbook](fsa10-05-repair-playbook.png?height=600px)
 
-`debug_playbook_run` names the failing step and the doubled reference. `repair_playbook` removes the extra `/api/3/alerts/` prefix and checks the result. It applies only fixes it can make mechanically. Anything else, it reports as a change for you to make by hand.
+debug_playbook_run names the failing step and the doubled reference. repair_playbook removes the extra `/api/3/alerts/` prefix and checks the result. It applies only fixes it can make mechanically. Anything else, it reports as a change for you to make by hand.
 
-**You are done when:** the first run is **failed** at Tag Alert, the second run is **finished**, and the change shown is the one `repair_playbook` made.
+**You are done when:** the first run is **failed** at Tag Alert, the second run is **finished**, and the change shown is the one repair_playbook made.
 
 ## 3. Security-review the connector you built
 
-The agent wrote `agentlab-dadjoke` in chapter 9. Before code like that goes on a production box, it should pass the same checks a reviewer would apply. This lab runs the checks, then adds a deliberate security flaw to confirm the checks catch it.
+The agent wrote agentlab-dadjoke in chapter 9. Before code like that goes on a production box, it should pass the same checks a reviewer would apply. This lab runs the checks, then adds a deliberate security flaw to confirm the checks catch it.
 
 Give your agent this prompt:
 
@@ -162,7 +162,7 @@ schedule.
 <!-- capture: fsa10-07-schedule-and-prove -->
 ![fsa10-07-schedule-and-prove](fsa10-07-schedule-and-prove.png?height=600px)
 
-**You are done when:** `diagnose_schedule` reports that the schedule has fired, its runs finish, and it has no problems. The schedule is gone afterwards.
+**You are done when:** diagnose_schedule reports that the schedule has fired, its runs finish, and it has no problems. The schedule is gone afterwards.
 
 ## 5. Plan a use case and build it end to end
 
@@ -318,10 +318,10 @@ Each run pauses at **Approve Containment**. Open the alert in FortiSOAR (or the 
 ![fsa10-11-approval-gate](fsa10-11-approval-gate.png?height=600px)
 
 {{% notice note %}}
-The approval is a `manual_input` step with `is_approval: true`, not the legacy standalone Approval step type. Only the `manual_input` form creates an answerable item an agent or the API can resume; the legacy Approval step records an entry but cannot be resumed programmatically.
+The approval is a manual_input step with `is_approval: true`, not the legacy standalone Approval step type. Only the manual_input form creates an answerable item an agent or the API can resume; the legacy Approval step records an entry but cannot be resumed programmatically.
 {{% /notice %}}
 
-**You are done when:** the rejected run finishes with the IP **absent** from the block list (the gate failed closed), and the approved run finishes with the IP **present** in `threat_intel_feeds`, ready for the gates to pull over TAXII.
+**You are done when:** the rejected run finishes with the IP **absent** from the block list (the gate failed closed), and the approved run finishes with the IP **present** in threat_intel_feeds, ready for the gates to pull over TAXII.
 
 ## 9. Prompt injection: can an alert tell the agent what to do?
 

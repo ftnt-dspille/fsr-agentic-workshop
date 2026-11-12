@@ -5,14 +5,14 @@ weight: 60
 description: "Part 2: create a login for the agent, connect your coding agent to FortiSOAR over MCP, and check that it can read the box before it can change anything."
 ---
 
-In this chapter you create a FortiSOAR login for the agent. You connect your coding agent to FortiSOAR through the `fsr-agentic-toolkit` MCP server, using the box URL and that login. You confirm that it can read the box, and that it asks you before every write.
+In this chapter you create a FortiSOAR login for the agent. You connect your coding agent to FortiSOAR through the fsr-agentic-toolkit MCP server, using the box URL and that login. You confirm that it can read the box, and that it asks you before every write.
 
 {{% notice info %}}
 **Time:** setup takes about 10 minutes. Each Part 2 lab takes about 10 to 15 minutes. The coding agent uses model credits while it works.
 {{% /notice %}}
 
 {{% notice warning %}}
-**Sharing a box?** The Part 2 labs create objects with fixed names: `agentlab_assets`, an "Agent Lab" playbook and an `agentlab-greeter` connector. A module publish also ships everyone's staged schema changes at once. If several people share a box, agree on a per-person suffix, such as `agentlab_assets_jdoe`, and coordinate before any publish. Otherwise, use one box each.
+**Sharing a box?** The Part 2 labs create objects with fixed names: agentlab_assets, an "Agent Lab" playbook and an agentlab-greeter connector. A module publish also ships everyone's staged schema changes at once. If several people share a box, agree on a per-person suffix, such as agentlab_assets_jdoe, and coordinate before any publish. Otherwise, use one box each.
 {{% /notice %}}
 
 {{% children %}}

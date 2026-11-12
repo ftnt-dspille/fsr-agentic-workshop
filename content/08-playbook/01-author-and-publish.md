@@ -7,7 +7,7 @@ description: "The agent writes playbook YAML, compiles it offline, and publishes
 
 A playbook is automation that runs on its own, without an agent. In this page the agent writes the playbook as YAML (the fsr_playbooks format), compiles it offline to catch mistakes, and then publishes it to the box.
 
-The toolkit includes the YAML format, so the agent does not need outside docs. It reads the format with the `playbook_yaml_reference` tool.
+The toolkit includes the YAML format, so the agent does not need outside docs. It reads the format with the playbook_yaml_reference tool.
 
 ## 1. Ask the agent
 
@@ -28,7 +28,7 @@ compiled result. Do not publish yet.
 <!-- capture: fsa08-01-compile-yaml -->
 ![fsa08-01-compile-yaml](fsa08-01-compile-yaml.png?height=600px)
 
-The agent writes YAML close to the example below and checks it with `compile_playbook_yaml`. You do not type this YAML. It shows what a correct result looks like.
+The agent writes YAML close to the example below and checks it with compile_playbook_yaml. You do not type this YAML. It shows what a correct result looks like.
 
 ```yaml
 collection: Agent Lab
@@ -57,7 +57,7 @@ playbooks:
         type: end
 ```
 
-**You are done when:** `compile_playbook_yaml` returns **ok: true** and lists the playbook name. Compiling is offline, so nothing on the box changed. If it returns errors, each one gives a code, a message and a path. Tell the agent to fix the YAML and compile again.
+**You are done when:** compile_playbook_yaml returns **ok: true** and lists the playbook name. Compiling is offline, so nothing on the box changed. If it returns errors, each one gives a code, a message and a path. Tell the agent to fix the YAML and compile again.
 
 ## 2. Publish
 
@@ -89,7 +89,7 @@ With the Assistant".
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Agent guesses the YAML shape or reaches for outside docs | It skipped the toolkit's own reference | Tell it to read the `playbook_yaml_reference` tool first |
+| Agent guesses the YAML shape or reaches for outside docs | It skipped the toolkit's own reference | Tell it to read the playbook_yaml_reference tool first |
 | Compile error **no_trigger** | The playbook has no start_on_create step | The YAML needs exactly one trigger step per playbook |
 | Compile or publish reports a missing Python package | The toolkit is not fully installed where the MCP server runs | Reinstall `fsr-agentic-toolkit==0.2.3` there, then restart the agent |
 | Playbook exists but shows inactive | Publish did not activate it | Ask the agent to check it and activate it |

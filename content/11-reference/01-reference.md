@@ -20,7 +20,7 @@ These prompt patterns worked throughout the workshop. Adapt them to your own goa
 
 ## Safety knobs
 
-Set these in the MCP server's `env` block (see chapter 6):
+Set these in the MCP server's env block (see chapter 6):
 
 | Variable | Effect |
 |---|---|
@@ -29,7 +29,7 @@ Set these in the MCP server's `env` block (see chapter 6):
 | `FSR_MCP_DENY_TOOLS` | Matching tools are hidden |
 | `FSR_MCP_OUTPUT_CAP` | Max characters per tool result (default 4000) |
 
-These calls ask for confirmation no matter what the settings are: `delete_record`, `delete_schedule`, `publish`, `create_user`, `install_connector`.
+These calls ask for confirmation no matter what the settings are: delete_record, delete_schedule, publish, create_user, install_connector.
 
 ## Cleaning up a lab box
 

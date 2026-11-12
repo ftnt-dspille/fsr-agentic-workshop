@@ -7,14 +7,14 @@ description: "Hands-on workshop on running FortiSOAR with AI agents: how agents 
 
 ## Workshop Overview
 
-This workshop shows you how to put an AI agent to work on FortiSOAR, two ways: the agentic features that ship inside the product, and an external coding agent that drives FortiSOAR through the `fsr-agentic-toolkit`. Along the way an agent will investigate real alerts with cited verdicts, and you will turn the investigations that work into playbooks that run on their own.
+This workshop shows you how to put an AI agent to work on FortiSOAR, two ways: the agentic features that ship inside the product, and an external coding agent that drives FortiSOAR through the fsr-agentic-toolkit. Along the way an agent will investigate real alerts with cited verdicts, and you will turn the investigations that work into playbooks that run on their own.
 
 ## Two Tracks
 
 The workshop has two parts that share one idea: an agent is only as useful as the guardrails and verification around it.
 
 - **Part 1 - Out of the box (chapters 2-5):** the agentic AI capabilities that ship with FortiSOAR 8.0.1, driven from the FortiSOAR UI: the built-in investigation and insight agents, building your own FortiAI agent, and registering external MCP servers.
-- **Part 2 - Do it yourself with the agentic toolkit (chapters 6-10):** point an external coding agent (Claude Code is the primary path; Codex and OpenCode also work) at FortiSOAR and have it automate real SOC work. The agent reaches the platform through the `fsr-agentic-toolkit`, whose ready-made workflows make a general coding agent competent on FortiSOAR (chapter 1 lists them). You will update alerts, create a module and its records, author and publish a playbook, explore and build connectors, and run a full investigation that writes its findings back.
+- **Part 2 - Do it yourself with the agentic toolkit (chapters 6-10):** point an external coding agent (Claude Code is the primary path; Codex and OpenCode also work) at FortiSOAR and have it automate real SOC work. The agent reaches the platform through the fsr-agentic-toolkit, whose ready-made workflows make a general coding agent competent on FortiSOAR (chapter 1 lists them). You will update alerts, create a module and its records, author and publish a playbook, explore and build connectors, and run a full investigation that writes its findings back.
 
 **Do chapter 1 first.** Then:
 - **Part 1 is optional** and its chapters stand alone: take the ones that interest you.

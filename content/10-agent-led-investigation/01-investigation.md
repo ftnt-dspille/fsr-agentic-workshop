@@ -104,7 +104,7 @@ and the deny policy in front of the accept rules starts dropping it.
   evidence, and said what it could not check.
 - The alert's description holds the structured findings, and any severity change is
   justified.
-- `203.0.113.99` is served on the Block List (IP Address) collection, and within a
+- 203.0.113.99 is served on the Block List (IP Address) collection, and within a
   refresh interval it shows up in the gates' feed and is denied. Blocking on
   FortiSOAR reached the whole fleet without touching a single firewall.
 
@@ -172,5 +172,5 @@ interesting part.
 |---|---|---|
 | Agent invents enrichment results | No suitable connector, so the model filled the gap | Say so, then ask again with: "only claim what a tool result shows; state gaps explicitly" |
 | The write-back replaced the playbook's tag | The write-back overwrites the whole description | Fine for the lab. To keep the tag, ask the agent to append the summary instead |
-| `investigate_alert` errors | Native AI investigation is not set up on this box | Expected on a bare lab box. Skip step 4 |
+| investigate_alert errors | Native AI investigation is not set up on this box | Expected on a bare lab box. Skip step 4 |
 | Investigation stalls on large results | Tool output hit the size cap | Ask the agent to narrow its queries (for example `summary=true` and filters) |

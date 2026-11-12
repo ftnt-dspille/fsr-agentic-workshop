@@ -92,7 +92,7 @@ opencode --version
 
 Run `opencode` in your working folder and connect a model provider when asked. OpenCode reads `opencode.json` from the project folder. The next page adds FortiSOAR there.
 
-In OpenCode 2, the FortiSOAR tools appear as `tools.fortisoar.<tool>` inside `execute`, not as separate tool names.
+In OpenCode 2, the FortiSOAR tools appear as `tools.fortisoar.<tool>` inside execute, not as separate tool names.
 
 <!-- step: fsa06-01a-opencode-version -->
 <!-- capture: fsa06-01a-opencode-version -->

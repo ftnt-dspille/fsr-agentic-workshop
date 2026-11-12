@@ -10,7 +10,7 @@ The investigation on page 1 runs as a pipeline: you start it and read the result
 | | FortiAI (Fortinet, built in) | Agentic Assistant (this lab's) |
 |---|---|---|
 | Launcher title | **AI Assistant** | **Agentic Assistant** |
-| Ships with | FortiSOAR | The `connector-fsr-agentic-assistant` connector and its widget, installed on the lab box. It uses FortiAI only as its language model |
+| Ships with | FortiSOAR | The connector-fsr-agentic-assistant connector and its widget, installed on the lab box. It uses FortiAI only as its language model |
 | Best for | Questions: security concepts, how-to, Jinja, indicator lookups through its tools | Triage of the open record: it searches, enriches, and writes a verdict card with its evidence |
 | Can it change data? | Only through the tools its agent is granted (chapter 5) | Never directly: every write stops on an approval card for you to accept or reject |
 | Where a lead watches it | The agent's trace (chapter 3, page 1) | The **Agentic Assistant Monitor** dashboard |

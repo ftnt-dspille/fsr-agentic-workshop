@@ -9,14 +9,14 @@ The Agentic Assistant is not part of FortiSOAR. It ships as a solution pack: one
 
 | What the pack carries | Version |
 |---|---|
-| Solution pack `agenticAssistant` | 1.1.0 |
-| Connector `connector-fsr-agentic-assistant` | 0.6.1 |
-| Widget `agenticAssistant` | 1.4.1 |
-| Widget `agenticAssistantMonitor` | 1.1.0 |
+| Solution pack agenticAssistant | 1.1.0 |
+| Connector connector-fsr-agentic-assistant | 0.6.1 |
+| Widget agenticAssistant | 1.4.1 |
+| Widget agenticAssistantMonitor | 1.1.0 |
 | Dashboard: Agentic Assistant Monitor | |
-| Framework `fsr-playbooks` (installed by the connector) | 0.11.0 |
+| Framework fsr-playbooks (installed by the connector) | 0.11.0 |
 
-You need: FortiSOAR 8.0 or newer, an LLM the appliance can reach (an OpenAI or Anthropic API key, an OpenAI-compatible endpoint, or the FortiAI service this lab uses), shell access to the appliance as `csadmin` for step 2, and reachability of `pypi.org` over HTTPS.
+You need: FortiSOAR 8.0 or newer, an LLM the appliance can reach (an OpenAI or Anthropic API key, an OpenAI-compatible endpoint, or the FortiAI service this lab uses), shell access to the appliance as `csadmin` for step 2, and reachability of pypi.org over HTTPS.
 
 ## 1. Check whether it is already installed
 
@@ -28,7 +28,7 @@ Sign in to FortiSOAR and open **Content Hub** > **Manage**, filtered to **Widget
 
 ## 2. Let the connector reach PyPI
 
-The connector's installer pulls its playbook framework (`fsr-playbooks`) from PyPI at import time. The appliance's integration environment blocks that index by default, so allow it first. On the appliance, as `csadmin`:
+The connector's installer pulls its playbook framework (fsr-playbooks) from PyPI at import time. The appliance's integration environment blocks that index by default, so allow it first. On the appliance, as `csadmin`:
 
 ```bash
 sudo chattr -i /opt/cyops/configs/integrations/packages/integrations_env/pip.conf
@@ -36,7 +36,7 @@ sudo sed -i -e '$a extra-index-url = https://pypi.org/simple/' -e '$a trusted-ho
 sudo chattr +i /opt/cyops/configs/integrations/packages/integrations_env/pip.conf
 ```
 
-The `csadmin` sudo rules allow exactly this: `chattr` and `sed`, not a root shell.
+The `csadmin` sudo rules allow exactly this: chattr and sed, not a root shell.
 
 ## 3. Allow custom content
 
@@ -107,7 +107,7 @@ Open the **Agentic Assistant Monitor** dashboard: usage, sessions and the autono
 ## Troubleshooting
 
 - **Content Hub showed the pack but nothing works.** That install path skips bundled connector and widget files. Re-import the same zip through the Import Wizard.
-- **The connector's status stays In-Progress.** A requirements install that failed once is never retried automatically. Re-run it from the connector's action menu (**Dependencies check**), after fixing the cause: most often the PyPI lines from step 2 are missing, or the appliance cannot resolve `pypi.org`.
+- **The connector's status stays In-Progress.** A requirements install that failed once is never retried automatically. Re-run it from the connector's action menu (**Dependencies check**), after fixing the cause: most often the PyPI lines from step 2 are missing, or the appliance cannot resolve pypi.org.
 - **The import refuses custom content.** Step 3's Development Features toggles are off, or your login lacks the permission to change them.
 - **The widgets are listed but record pages show no launcher.** The widgets are still drafts: publish them (step 5).
 - **Health check fails on the model.** The appliance cannot reach the LLM endpoint, or the key is wrong. Health check names the cause; fix the provider or key in a NEW configuration.

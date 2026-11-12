@@ -184,26 +184,26 @@ This record is shared by every investigation on the box. When you finish, set it
 
 Compare two alerts of the same type. The lab seeds both:
 
-- **Agent Lab - C2 callback from dev-laptop-12** has the original event as source data. It names the process `updater.exe` and the destination `203.0.113.121`.
+- **Agent Lab - C2 callback from dev-laptop-12** has the original event as source data. It names the process updater.exe and the destination 203.0.113.121.
 - **Agent Lab - C2 callback from dev-laptop-13** has no source data.
 
 <!-- step: fsa03-09-sourcedata-check -->
 
 1. Open the dev-laptop-12 alert. Select **AI Investigation**. If the run has not started, click **Begin AI-Powered Alert Investigation**. Otherwise open the finished run.
-2. When the run is done, select the **Key Findings** tab. Its findings name `updater.exe` or `203.0.113.121`, because the agent extracted those indicators from the event and checked them.
+2. When the run is done, select the **Key Findings** tab. Its findings name updater.exe or 203.0.113.121, because the agent extracted those indicators from the event and checked them.
 
 <!-- capture: fsa03-09-sourcedata-check -->
 ![fsa03-09-sourcedata-check](fsa03-09-sourcedata-check.png?height=600px)
 
 3. Open the dev-laptop-13 alert. Run the investigation, or open its finished run. Select **Key Findings**.
-4. The findings do not name `updater.exe`. Most of them say that a data source was missing.
+4. The findings do not name updater.exe. Most of them say that a data source was missing.
 
 <!-- capture: fsa03-09-sourcedata-check-b -->
 ![fsa03-09-sourcedata-check-b](fsa03-09-sourcedata-check-b.png?height=600px)
 
 **You are done when**
 
-- The alert with source data has findings that name `updater.exe` or `203.0.113.121`.
+- The alert with source data has findings that name updater.exe or 203.0.113.121.
 - The alert without source data has none of those, and its findings say which data was missing.
 
 Source data makes an investigation better. Forward the original event with the alert, not only a summary.
@@ -213,7 +213,7 @@ Source data makes an investigation better. Forward the original event with the a
 <!-- step: fsa03-04-trace-steps -->
 
 1. Open the trace for the run from section 2. Click **Traces** in the investigation graph.
-2. Find the steps in order. On 8.0.1 the step names are `normalization`, `context_enrichment`, `hypothesis`, `investigation_plan`, `investigation_execution`, `hypothesis_evaluation`, `key_finding`, `verdict` and `next_action`.
+2. Find the steps in order. On 8.0.1 the step names are normalization, context_enrichment, hypothesis, investigation_plan, investigation_execution, hypothesis_evaluation, key_finding, verdict and next_action.
 3. Open one tool call that returned evidence. Read what it returned, and whether the hypothesis used it.
 
 <!-- capture: fsa03-04-trace-steps -->

@@ -10,7 +10,7 @@ Working from plain-English prompts, your coding agent made these changes on the 
 
 | Chapter | You asked for | The agent produced |
 |---|---|---|
-| 7 | A module for lab assets | A published `agentlab_assets` module with typed fields, a picklist, role permissions and a test record |
+| 7 | A module for lab assets | A published agentlab_assets module with typed fields, a picklist, role permissions and a test record |
 | 8 | A playbook from a goal | A published playbook that acts on matching alerts, and a test run that proves it |
 | 9 | A connector for a service | A connector that is scaffolded, packaged, installed, configured and health-checked |
 | 10 | An investigation of an alert | A verdict with cited evidence, written back to the alert |

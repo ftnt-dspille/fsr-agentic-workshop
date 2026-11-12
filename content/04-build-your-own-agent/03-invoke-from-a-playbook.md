@@ -43,14 +43,14 @@ Build the playbook in the playbook designer. Put it in the **Agent Lab** collect
 1. Add the trigger **On Alert Created**, with the condition **Name** starts with `Agent Lab hello`. The playbook then runs only for your test alerts.
 2. Add an **Invoke AI Agent** step from the Remote FortiSOAR connector. Pick the connector's configuration in the step, and make sure that configuration logs in as a user (Basic authentication). An API key does not work: the AI service rejects it.
 3. In the step's **Inputs**, set:
-   - **Agent Name** (the `agent_name` input): `workshop_hello_agent`
-   - **Agent Payload** (the `body` input): `{"entity": "host-01.example.com"}`
+   - **Agent Name** (the agent_name input): `workshop_hello_agent`
+   - **Agent Payload** (the body input): `{"entity": "host-01.example.com"}`
 
    <!-- step: fsa04-04-invoke-step-config -->
    <!-- capture: fsa04-04-invoke-step-config -->
    ![fsa04-04-invoke-step-config](fsa04-04-invoke-step-config.png?height=600px)
 
-4. Add a **Decision** step named **Confidence Check**. Use the `confidence` value from the Invoke AI Agent output as its input. That value sits under `data` in the step output. Add two branches: **High confidence** and **Low confidence**.
+4. Add a **Decision** step named **Confidence Check**. Use the confidence value from the Invoke AI Agent output as its input. That value sits under data in the step output. Add two branches: **High confidence** and **Low confidence**.
 
    <!-- step: fsa04-04-decision-config -->
    <!-- capture: fsa04-04-decision-config -->
@@ -71,15 +71,15 @@ Open the alert's **Executed Playbook Logs**, and select the run of **Agent Lab -
 <!-- capture: fsa04-04-playbook-branch-run -->
 ![fsa04-04-playbook-branch-run](fsa04-04-playbook-branch-run.png?height=600px)
 
-Click the **Invoke AI Agent** step to see its output. The agent's answer and its `confidence` are under `data`. The step's `status` shows **Success**.
+Click the **Invoke AI Agent** step to see its output. The agent's answer and its confidence are under data. The step's status shows **Success**.
 
 <!-- capture: fsa04-04-playbook-branch-step-output -->
 ![fsa04-04-playbook-branch-step-output](fsa04-04-playbook-branch-step-output.png?height=600px)
 
 **You are done when**
 
-- The Invoke AI Agent step returns the agent's answer under `data`, with a `status` of **Success**.
-- The Decision step takes the branch that matches the `confidence` value.
+- The Invoke AI Agent step returns the agent's answer under data, with a status of **Success**.
+- The Decision step takes the branch that matches the confidence value.
 - The connection uses a user login.
 
 ## Troubleshooting
@@ -87,5 +87,5 @@ Click the **Invoke AI Agent** step to see its output. The agent's answer and its
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | The Invoke AI Agent step fails to authenticate | The connector uses an API key, not a user login | Reconfigure it with a user login |
-| The connector has no `invoke_agent` operation | The Content Hub version of the connector is installed | Upload the 2.1.0 package from section 1 |
+| The connector has no invoke_agent operation | The Content Hub version of the connector is installed | Upload the 2.1.0 package from section 1 |
 | The branch always takes the same path | The Decision reads a field that is not in the step output | Open the step output and choose the field that is there |
