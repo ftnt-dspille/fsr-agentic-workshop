@@ -39,19 +39,16 @@ const hubInstalled = (): boolean =>
 
 test.describe.configure({ mode: 'serial' });
 
-// The only shell commands the deploy step allows: the page's package command and a plain `ls`, in
-// ANY joining — each segment optionally decorated (`2>&1`, a tail/head pipe, optional parens), the
-// segments joined by `&&`, `;` or `|`, at most four. Whole-command shapes were whack-a-mole with the
-// agent's formatting: live runs packaged as `pkg 2>&1 | tail -20; ls` and `ls && pkg`, each novel
-// shape was denied, and a denied package leaves the turn nothing to install. Every escape lives in
-// a String.raw piece on purpose — a plain template literal turns `\s` into `s` and `\|` into `|`,
-// silently corrupting the rule (an empty joiner alternative that admits glued segments).
+// The only shell commands the deploy step allows: the page's package command and a plain `ls`, as
+// SEGMENTS the agent may join any which way (&&, ;) with the usual decorations (2>&1, a tail/head
+// filter pipe stays inside the segment). This is the kit's segment mode (BuiltinRule.segments) --
+// it exists because of this step: whole-command shapes were whack-a-mole with the agent's
+// formatting (`pkg 2>&1 | tail -20; ls`, then `ls && pkg` each denied a live run), and a denied
+// package leaves the turn nothing to install. Every escape lives in a String.raw piece on
+// purpose -- a plain template literal turns `\s` into `s` and `\|` into `|`, silently corrupting
+// the shape (an empty joiner alternative that admits glued segments).
 const DEC = String.raw`(?: 2>&1)?(?: \| (?:tail|head)(?: -n \d+| -\d+)?(?: \d+)?)?`;
-const PKG = String.raw`pyfsr connector package ${DADJOKE}${DEC}`;
-const LS = String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*${DEC}`;
-const SEG = String.raw`[(]?\s*(?:${PKG}|${LS})\s*[)]?`;
-const JOIN = String.raw`\s*(?:&&|;|\|)\s*`;
-const PACKAGE_SHELL = [`${SEG}(?:${JOIN}${SEG}){0,3}`];
+const PACKAGE_SHELL = { segments: [String.raw`pyfsr connector package ${DADJOKE}${DEC}`, String.raw`ls(?: -[a-zA-Z]+)?(?: [\w./*-]+)*${DEC}`] };
 
 // The calls that save a connector's configuration. Each is a write Claude's own prompt asks about; the hook denies any other.
 const configTools = (connector: string): Allowed[] =>
