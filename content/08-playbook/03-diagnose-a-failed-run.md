@@ -66,6 +66,19 @@ Look for these three things in the diagnosis:
 
 The error message names the record the step tried to write. That is the detail you need to fix the step.
 
+## 3. Ask the assistant on the box
+
+Your terminal agent is not the only way to diagnose a run. FortiSOAR ships an Agentic Assistant on the record page too, and it reaches the same diagnosis tools. Open the **Agent Lab diag test** alert from section 1 and click the **Agentic Assistant** launcher on the right edge of the record. Click **New** to start a fresh conversation and ask:
+
+`Diagnose the latest failed run of Agent Lab Diagnose Practice. Which step failed, and what is the error verbatim?`
+
+<!-- step: fsa08-04b-diagnose-assistant -->
+
+<!-- capture: fsa08-04b-diagnose-assistant -->
+![fsa08-04b-diagnose-assistant](fsa08-04b-diagnose-assistant.png?height=600px)
+
+The assistant names the failing step and quotes the same 404 error your agent found in section 1. The diagnosis runs on the box itself, so the answer comes from the failed run, not from a guess.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
