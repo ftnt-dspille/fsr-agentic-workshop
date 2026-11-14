@@ -301,7 +301,7 @@ test('chapter 10 - advanced labs', async ({ local, gui, capture, page }) => {
   if (shouldRunStep('fsa10-07-schedule-and-prove')) await test.step('fsa10-07-schedule-and-prove', async () => {
     // Start from no schedule so "it fired on its own" is this run's evidence.
     // A silent leftover flips the story — the agent then reports reusing an
-    // existing schedule ("created nothing new", live 2026-11-12) and the
+    // existing schedule ("created nothing new", seen live) and the
     // figure documents a reuse, not the page's create — so the absence is
     // verified over pyfsr after the delete, not assumed. The delete's own
     // failure modes are caught by that check.

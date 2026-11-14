@@ -17,7 +17,7 @@
 // pair together (DOCUBOT_ONLY_STEPS takes both ids; a lone second half throws).
 // The build turns scaffold files with shell commands: without Bash,Edit,Write
 // pre-approved a plain agentTurn stalls on a TUI permission dialog it can never
-// answer (that is exactly how fsa09-03 failed on 2026-11-11 — the turn returned
+// answer (that is exactly how fsa09-03 failed live — the turn returned
 // with "shell operators that require approval" on screen and no info.json).
 // fsa09-08 is self-contained: without DOCUBOT_VT_API_KEY a dummy key exercises the
 // env-reference path and the masked key field, and its Lab config is removed after.
