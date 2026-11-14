@@ -63,6 +63,11 @@ TEST_STEP_RE = re.compile(r"""test\.step\(\s*(['"`])(?P<id>[^'"`]+)\1""")
 # A spec helper that wraps test.step(id), called with the step id first:
 # ``await gallery('fsa08-06-escalate-critical', ...)``.
 HELPER_STEP_RE = re.compile(r"""await\s+\w+\(\s*(['"`])(?P<id>fsa[\w-]+)\1""")
+# A chapter() spec (docubot's declarative contract) declares each step as a key of
+# its ``steps`` map, one per line: ``'fsa02-01-ai-enabled': async (ctx) => {``.
+# Same shape as the kit's CHAPTER_STEP_RE (src/core/markers.ts).
+CHAPTER_CALL_RE = re.compile(r"""\bchapter\(\s*['"`]""")
+CHAPTER_STEP_RE = re.compile(r"""^\s*(['"`])(?P<id>[a-z]+\d+-\d{2}[a-z]?(?:-[a-z0-9]+)+)\1\s*:""", re.MULTILINE)
 IPV4_RE = re.compile(r"(?<![\d.])((?:\d{1,3}\.){3}\d{1,3})(?![\d.])")
 
 
@@ -123,6 +128,8 @@ def spec_step_ids() -> set[str]:
         text = spec.read_text(encoding="utf-8")
         for rx in (TEST_STEP_RE, HELPER_STEP_RE):
             ids.update(m.group("id") for m in rx.finditer(text))
+        if CHAPTER_CALL_RE.search(text):
+            ids.update(m.group("id") for m in CHAPTER_STEP_RE.finditer(text))
     return ids
 
 
