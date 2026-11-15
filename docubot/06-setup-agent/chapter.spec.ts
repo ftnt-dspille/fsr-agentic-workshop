@@ -20,7 +20,7 @@
 //   - a PATH-pinned claude 2.1.321: 2.1.322 stalls big multi-tool turns (thinking_drop prefix_mismatch,
 //     then a hung request; reproduced 4/4, small stub turns were unaffected);
 //   - ENABLE_TOOL_SEARCH=false: deferring the lab server's 74 tools behind ToolSearch triggers the same stall;
-//   - DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*": a plain agentTurn has no permission driver, so an MCP tool
+//   - DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar-lab__*": a plain agentTurn has no permission driver, so an MCP tool
 //     prompt would just sit until the timeout; the write-approval prompts themselves are captured on page 03
 //     through the governed drivers, which answer their own prompts.
 import { env, expect, skipStep, test } from 'docubot';

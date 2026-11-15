@@ -22,7 +22,7 @@
 //   DOCUBOT_TARGET=<repo> SPEND_AI=1 FSR_ENV_FILE=<repo>/.env.lab \
 //   FSR_PYTHON=<python with the toolkit> DOCUBOT_MCP_CONFIG=<repo>/.agent-lab/.mcp.json \
 //   PATH=<claude 2.1.321 pin dir>:$PATH ENABLE_TOOL_SEARCH=false \
-//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*" \
+//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar-lab__*" \
 //   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
 //   --tsconfig=<kit>/tsconfig.json <repo>/docubot/08-playbook/chapter.spec.ts
 // With SPEND_AI=1 the agent builds the playbook, so DOCUBOT_SEED is not needed

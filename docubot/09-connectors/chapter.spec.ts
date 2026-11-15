@@ -10,7 +10,7 @@
 //   DOCUBOT_TARGET=<repo> SPEND_AI=1 FSR_ENV_FILE=<repo>/.env.lab \
 //   FSR_PYTHON=<python with the toolkit> DOCUBOT_MCP_CONFIG=<repo>/.agent-lab/.mcp.json \
 //   PATH=<claude 2.1.321 pin dir>:$PATH ENABLE_TOOL_SEARCH=false \
-//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*,Bash,Edit,Write" \
+//   DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar-lab__*,Bash,Edit,Write" \
 //   node_modules/.bin/playwright test --config=<kit>/playwright.config.ts \
 //   --tsconfig=<kit>/tsconfig.json <repo>/docubot/09-connectors/chapter.spec.ts
 // fsa09-03→04→05 share one agent conversation and fsa09-06→07 another — run each

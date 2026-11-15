@@ -22,7 +22,7 @@
 // The live TUI turns need the three facts chapter 6 diagnosed the hard way: a
 // PATH-pinned claude 2.1.321 (2.1.322 stalls big multi-tool turns), ENABLE_TOOL_SEARCH=false
 // (deferring the lab server's 74 tools behind ToolSearch triggers the same stall), and
-// DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar__*" for the plain agentTurn turns (fsa07-02's
+// DOCUBOT_CLAUDE_ALLOW="mcp__fortisoar-lab__*" for the plain agentTurn turns (fsa07-02's
 // governed approval flow answers its own prompts).
 //
 // Env: SPEND_AI=1 for the agent captures; DOCUBOT_SEED=1 seeds the Agent Lab
