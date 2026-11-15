@@ -211,6 +211,11 @@ export default chapter('10-agent-led-investigation', {
           ({ held } = await approvedTurnOnce(await termPage(ctx), promptFor(CHAPTER, PAGE, 2), [{
             tool: 'update_record', args: { module: 'alerts' }, required: true,
             check: (a) => refCheck(a) ?? (/closed/i.test(JSON.stringify(a.data?.status ?? '')) ? 'the page says never close the alert' : undefined),
+          }, {
+            // Enrichment is part of an investigation: a read-only reputation lookup of the alert's (documentation-range)
+            // IP. Optional: the agent may or may not reach for it.
+            tool: 'run_connector_operation', args: { connector: 'virustotal' }, required: false,
+            check: (a) => (/^(query_ip|get_ip_reputation|ip_reputation)$/i.test(String(a.operation ?? '')) ? undefined : 'only a read-only IP lookup is approved'),
           }], { timeoutMs: 20 * 60 * 1000 }));
         }
         // The proof: the findings were written BACK to an investigation alert. This
