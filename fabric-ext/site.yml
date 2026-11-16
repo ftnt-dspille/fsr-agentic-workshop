@@ -1,24 +1,16 @@
 ---
-# Proof-of-concept entry playbook for the fmgfaz_onboard svc-controller's
-# GitHub-fetched extension phase (see fndn/fabric_studio_terraform's
-# devices/fmgfaz_onboard/README.md "GitHub extension phase"). run-onboard.sh
-# git-clones this repo on every boot and runs this file, AFTER the on-disk
-# onboard.yml play -- so new onboarding logic can ship by pushing to this
-# repo, with no change to the device's .conf.
-#
-# This file is intentionally a harmless, provable no-op: it writes a
-# timestamped marker to /fabric/logs/ext-proof.json on the guest so the
-# fetch-and-run mechanism itself can be verified end to end, without making
-# any change to a live appliance. Real extension content (additional FMG/FAZ
-# setup, more onboarding steps, etc.) replaces this once the mechanism is
-# proven -- keep this file as the harness's own smoke test if you add more
-# entry playbooks alongside it.
-- name: GitHub extension-phase smoke test
+# GitHub extension phase for the lab's onboarding controller (RedTeam_LXC).
+# The controller clones this repo at main on every boot and runs this playbook once per
+# gate, after its built-in onboarding, against its own inventory (FGT_IP and the device
+# logins come from its environment). Push new steps here; no device config rebuild needed.
+# Keep steps idempotent: they run on every boot, for every gate.
+
+- name: Record that the GitHub extension phase ran
   hosts: localhost
   connection: local
   gather_facts: false
   tasks:
-    - name: Record proof that this playbook was fetched from GitHub and ran
+    - name: Write the proof file
       ansible.builtin.copy:
         dest: /fabric/logs/ext-proof.json
         mode: "0644"
@@ -26,10 +18,20 @@
           {
             "source": "github.com/ftnt-dspille/fsr-agentic-workshop",
             "path": "fabric-ext/site.yml",
-            "ran_at": "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}",
-            "note": "GitHub-fetched extension phase proof -- see devices/fmgfaz_onboard/README.md"
+            "gate": "{{ lookup('env', 'FGT_IP') }}",
+            "ran_at": "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           }
 
-    - name: Print the same proof to the onboard log
+- name: Read-only check that this gate answers the controller's API login
+  hosts: fortigates
+  gather_facts: false
+  tasks:
+    - name: Read the gate's system status
+      fortinet.fortios.fortios_monitor_fact:
+        selector: system_status
+        vdom: root
+      register: status
+
+    - name: Report it
       ansible.builtin.debug:
-        msg: "GitHub extension phase ran OK -- fetched from fsr-agentic-workshop and executed on this guest."
+        msg: "ext-check: gate {{ status.meta.results.hostname | default('?') }} answers, FortiOS {{ status.meta.version | default('?') }}"
