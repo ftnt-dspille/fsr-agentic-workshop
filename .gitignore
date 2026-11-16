@@ -36,3 +36,6 @@ tools/agent-shots/__pycache__/
 content/*/.docubot-fingerprints.json
 .docubot/*.log
 docs/plans/
+
+# local-only: everything docubot writes under .docubot/
+.docubot/
