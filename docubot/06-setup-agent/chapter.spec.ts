@@ -263,23 +263,28 @@ export default chapter('06-setup-agent', {
       await cap(ctx).screen('fsa06-03-agent-init', agent.screen(), agentScreen());
     },
 
-    // Page 02 s2 and s3, Claude Code tab: the toolkit's init output and the MCP check
-    // in a shell. Both are plain commands in a pty, so no model turn and no tokens.
-    // The init command reads the password from FSR_PASSWORD (never argv), and the
-    // shot masks it to the page's placeholder. The mcp list runs in a throwaway folder
-    // with an isolated CLAUDE_CONFIG_DIR, so a user-level fortisoar server cannot
-    // shadow the project file the page tells the student to save.
-    'fsa06-02-init-output': async (ctx) => {
-      const login = pyfsrEnv().FSR_USERNAME ?? '';
-      await shellShot(cap(ctx), 'fsa06-02-init-output', {
-        command: `fsr-agentic-toolkit init --url ${boxHost()} --username '${login}' --no-verify-ssl`,
-        secrets: [['FSR_PASSWORD', '<your-password>']],
-        // The connected line, then the Claude Code snippet up to its closing brace.
-        from: /^connected: /,
-        to: /^\}\s*$/,
-        // Checked on the masked output: the login connected and the password is the placeholder.
-        expect: [/^connected: agentlab </m, /"FSR_PASSWORD": "<your-password>"/],
-      });
+    // Page 02 s2: `pyfsr instances check lab`, run against a throwaway registry that names
+    // the capture box `lab`, so the shot shows exactly the page's command. The registry and
+    // its env file live in a 0600 temp folder; the student's real ~/.pyfsr is never read.
+    // Page 02 s3: the MCP check in a shell. Both are plain commands in a pty, so no model
+    // turn and no tokens. The mcp list runs in a throwaway folder with an isolated
+    // CLAUDE_CONFIG_DIR, so a user-level fortisoar server cannot shadow the project file
+    // the page tells the student to save.
+    'fsa06-02-instances-check': async (ctx) => {
+      const reg = fs.mkdtempSync(path.join(os.tmpdir(), 'fsa-pyfsr-'));
+      const fsr = Object.entries(pyfsrEnv()).filter(([k]) => k.startsWith('FSR_'));
+      fs.writeFileSync(path.join(reg, 'lab.env'), fsr.map(([k, v]) => `${k}=${v}`).join('\n') + '\n', { mode: 0o600 });
+      fs.writeFileSync(path.join(reg, 'instances.toml'), 'default = "lab"\n\n[instances.lab]\nenv_file = "lab.env"\n', { mode: 0o600 });
+      try {
+        await shellShot(cap(ctx), 'fsa06-02-instances-check', {
+          command: 'pyfsr instances check lab',
+          env: { PYFSR_INSTANCES: path.join(reg, 'instances.toml'), FSR_BASE_URL: '' },
+          // The line the page says a good registration shows.
+          expect: [/^lab\s+\S+\s+ok\s+\d/m],
+        });
+      } finally {
+        fs.rmSync(reg, { recursive: true, force: true });
+      }
     },
 
     'fsa06-03-claude-mcp-list': async (ctx) => {

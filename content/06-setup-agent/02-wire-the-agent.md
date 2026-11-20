@@ -2,10 +2,10 @@
 title: Wire the Agent to FortiSOAR
 linkTitle: Wire the Agent
 weight: 20
-description: "Install the FortiSOAR toolkit, generate your agent's MCP config, and check that the agent can reach FortiSOAR."
+description: "Install the FortiSOAR toolkit, add it to your agent as an MCP server, and check that the agent can reach FortiSOAR."
 ---
 
-Your agent connects to FortiSOAR through the fsr-agentic-toolkit MCP server. You need the box URL and the login from the previous page.
+Your agent connects to FortiSOAR through the fsr-agentic-toolkit MCP server. The server signs in with the box you registered with `pyfsr instances add lab` in chapter 1, so no agent config on this page holds a URL, a login or a key.
 
 ## 1. Install the toolkit
 
@@ -14,61 +14,52 @@ Your agent connects to FortiSOAR through the fsr-agentic-toolkit MCP server. You
 You need Python 3.10 or later, and [uv](https://docs.astral.sh/uv/) or pip. Then run:
 
 ```bash
-pip install "fsr-agentic-toolkit==0.2.3"
+pip install "fsr-agentic-toolkit==0.2.3" "pyfsr>=0.35.0"
 ```
 
-## 2. Generate the MCP config
+## 2. Check the box registration
 
-Run this command. Leave out `--password`. The toolkit then prompts for the password, so it stays out of your shell history.
+Check that pyfsr still reaches the box you registered in chapter 1:
 
 ```bash
-fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl
+pyfsr instances check lab
 ```
 
-Replace the URL and the login id with yours. `--no-verify-ssl` trusts the self-signed certificate of a lab box.
+<!-- step: fsa06-02-instances-check -->
+<!-- capture: fsa06-02-instances-check -->
+![fsa06-02-instances-check](fsa06-02-instances-check.png)
 
-`init` checks the connection, then prints the config snippet for your agent:
+The **status** column should read **ok**, with your box version. If you skipped chapter 1, or this is another machine, register the box first with `pyfsr instances add lab` (see [Prepare Your Box](../../01-intro/02-prepare-your-box/)). The first box you add is the default, and the MCP server signs in to the default box.
 
-```text
-connected: agentlab <admin@example.com> @ fortisoar.example.com
---- claude-code ---
-# .mcp.json (project root), or merge into ~/.claude.json
-{
-  "mcpServers": {
-    "fortisoar": {
-      "command": "/your/venv/bin/fsr-agentic-toolkit",
-      "args": [
-        "mcp"
-      ],
-      "env": {
-        "FSR_BASE_URL": "fortisoar.example.com",
-        "FSR_USERNAME": "agentlab",
-        "FSR_PASSWORD": "<your-password>",
-        "FSR_VERIFY_SSL": "false",
-        "FSR_SUPPRESS_INSECURE_WARNINGS": "true"
-      }
-    }
-  }
-}
+Then find the toolkit's full path. Every agent config below starts it by this path:
+
+```bash
+which fsr-agentic-toolkit
 ```
 
-<!-- step: fsa06-02-init-output -->
-<!-- capture: fsa06-02-init-output -->
-![fsa06-02-init-output](fsa06-02-init-output.png?height=600px)
+The examples show it as `/your/venv/bin/fsr-agentic-toolkit`; use yours.
 
-It also prints safety notes and a short guide for the agent. You only need the JSON block. The snippet holds your password, so keep the file out of shared folders and version control.
+## 3. Add the toolkit to your agent
 
-The **connected:** line names the login the agent signs in as. If that line does not appear, check the URL and the login. No snippet is printed.
-
-## 3. Add the snippet to your agent
-
-You do not start the toolkit yourself. The snippet tells your agent how to: command is the toolkit program in your Python environment, args (mcp) makes it run as an MCP server, and env passes it your box URL, login and password. When the agent starts, it launches that program in the background and talks to it directly. Each agent reads the snippet from its own config file.
+You do not start the toolkit yourself. Each agent's config tells it how: command is the toolkit program in your Python environment, and args (`mcp`) makes it run as an MCP server. When the agent starts, it launches that program in the background and talks to it directly. The server reads your box and its login from pyfsr, so the config has nothing secret in it and is safe to keep in the lab folder.
 
 {{% tabs groupid="agent" %}}
 {{% tab title="Claude Code" %}}
 Claude Code reads its MCP servers from `.mcp.json` in the folder where you start `claude`.
 
-1. In the folder you made on the previous page, save the printed JSON block as `.mcp.json`. To print it again, run the section 2 command with `--claude-code` added.
+1. In the folder you made on the previous page, save this as `.mcp.json`, with your toolkit path:
+
+   ```json
+   {
+     "mcpServers": {
+       "fortisoar": {
+         "command": "/your/venv/bin/fsr-agentic-toolkit",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+
 2. Still in your shell, run `claude mcp list`. It also checks the file: if the JSON is broken, it prints **[Failed to parse]** with the file name. A good file shows **fortisoar** as **Pending approval**.
 
    <!-- step: fsa06-03-claude-mcp-list -->
@@ -86,29 +77,16 @@ Claude Code reads its MCP servers from `.mcp.json` in the folder where you start
 {{% tab title="Codex" %}}
 Codex reads its MCP servers from `~/.codex/config.toml`.
 
-1. In your shell, run the section 2 command again with `--codex` added. Use your own URL and login id; it prompts for the password.
-
-   ```bash
-   fsr-agentic-toolkit init --url fortisoar.example.com --username '<login-id>' --no-verify-ssl --codex
-   ```
-
-   It prompts for your password, checks the login, then prints the Codex config. Your password is written into the env table, which is how Codex's copy of the toolkit signs in:
+1. Add this table to `~/.codex/config.toml`, with your toolkit path. Create the file if it does not exist.
 
    ```toml
    [mcp_servers.fortisoar]
    command = "/your/venv/bin/fsr-agentic-toolkit"
    args = ["mcp"]
    startup_timeout_sec = 60
-
-   [mcp_servers.fortisoar.env]
-   FSR_BASE_URL = "fortisoar.example.com"
-   FSR_USERNAME = "agentlab"
-   FSR_PASSWORD = "<your-password>"
-   FSR_VERIFY_SSL = "false"
-   FSR_SUPPRESS_INSECURE_WARNINGS = "true"
    ```
 
-   Copy both tables into `~/.codex/config.toml`, creating the file if it does not exist. `startup_timeout_sec = 60` is there because a first start can take longer than Codex's 10-second default. The file holds your password, so do not share it or commit it.
+   `startup_timeout_sec = 60` is there because a first start can take longer than Codex's 10-second default.
 2. Still in your shell, not inside Codex, run `codex mcp list`. It also checks the file: if the TOML is broken, it prints the line and column to fix instead of the table. The **fortisoar** row should read **enabled**. For a full check of the Codex setup, run `codex doctor` and look for **✓ config loaded**.
 
 <!-- step: fsa06-12-codex-mcp-list -->
@@ -124,25 +102,32 @@ Codex reads its MCP servers from `~/.codex/config.toml`.
 
 {{% /tab %}}
 {{% tab title="OpenCode" %}}
-1. Run the `init` command with `--opencode`. Merge the printed mcp block into the `opencode.json` file in your project folder.
+1. Merge this block into the `opencode.json` file in your project folder, with your toolkit path:
+
+   ```json
+   {
+     "mcp": {
+       "fortisoar": {
+         "type": "local",
+         "command": ["/your/venv/bin/fsr-agentic-toolkit", "mcp"],
+         "enabled": true
+       }
+     }
+   }
+   ```
+
 2. Restart OpenCode in the project.
 3. Ask it to list its tools. The FortiSOAR tools should appear. In OpenCode 2 they appear inside execute as `tools.fortisoar.<tool>`.
 {{% /tab %}}
 {{% tab title="FortiAgent" %}}
-FortiAgent keeps its MCP servers in its own settings. You add the toolkit in the app with the same values that the `init` snippet printed.
+FortiAgent keeps its MCP servers in its own settings. FortiAgent searches only the standard folders for a bare program name, so give it the full toolkit path from section 2.
 
-1. Find the toolkit's full path. FortiAgent searches only the standard folders for a bare name, so a full path always works:
-
-   ```bash
-   which fsr-agentic-toolkit
-   ```
-
-2. Open **Settings > MCP servers** and click **Add an MCP server**. Pick **Local command**.
-3. **Name:** `FortiSOAR`.
-4. **Command:** the full path from step 1, the snippet's command.
-5. **Arguments:** `mcp` on the first line.
-6. **Environment variables:** add each env entry from the snippet: `FSR_BASE_URL`, `FSR_USERNAME`, `FSR_PASSWORD`, `FSR_VERIFY_SSL` (`false`) and `FSR_SUPPRESS_INSECURE_WARNINGS` (`true`). FortiAgent stores every value encrypted and never shows it again.
-7. Click **Add server**.
+1. Open **Settings > MCP servers** and click **Add an MCP server**. Pick **Local command**.
+2. **Name:** `FortiSOAR`.
+3. **Command:** the full toolkit path from section 2.
+4. **Arguments:** `mcp` on the first line.
+5. **Environment variables:** none. The toolkit reads the box from pyfsr.
+6. Click **Add server**.
 
 <!-- step: fsa06-15-fortiagent-add-mcp-form -->
 <!-- capture: fsa06-15-fortiagent-add-mcp-form -->
@@ -151,16 +136,10 @@ FortiAgent keeps its MCP servers in its own settings. You add the toolkit in the
 From a shell, the same thing is:
 
 ```bash
-fortiagent mcp add FortiSOAR \
-  --env FSR_BASE_URL=fortisoar.example.com \
-  --env FSR_USERNAME=agentlab \
-  --env FSR_PASSWORD='<your-password>' \
-  --env FSR_VERIFY_SSL=false \
-  --env FSR_SUPPRESS_INSECURE_WARNINGS=true \
-  -- /your/venv/bin/fsr-agentic-toolkit mcp
+fortiagent mcp add FortiSOAR -- /your/venv/bin/fsr-agentic-toolkit mcp
 ```
 
-8. Open a **New chat**, so the engine starts the server. Back in **Settings > MCP servers**, the `FortiSOAR` row shows a green dot when it is connected. Hover over a dot that is not green for the reason. In a shell, `fortiagent mcp list` shows **connected**.
+7. Open a **New chat**, so the engine starts the server. Back in **Settings > MCP servers**, the `FortiSOAR` row shows a green dot when it is connected. Hover over a dot that is not green for the reason. In a shell, `fortiagent mcp list` shows **connected**.
 
 <!-- step: fsa06-16-fortiagent-mcp-list -->
 <!-- capture: fsa06-16-fortiagent-mcp-list -->
@@ -249,4 +228,5 @@ The agent calls list_modules, reads the newest alerts, and gives a short summary
 |---|---|
 | The agent says it has no fortisoar tools | The MCP config is not loaded. In Claude Code, `.mcp.json` must be in the folder where you started `claude`. Run `/mcp` to check. |
 | Tools are listed, but every call fails to connect | Your workstation cannot reach the box. Run `curl -k https://fortisoar.example.com` from the same machine. |
+| whoami answers with a different box or login | The server signs in to the default pyfsr box. Run `pyfsr instances list`: the default is marked `*`. If `FSR_BASE_URL` is set in the shell that starts your agent, it wins over pyfsr, so unset it. |
 | Codex says the fortisoar tools are not available | Codex started the chat before the server connected. Type `/mcp` and wait for **fortisoar: connected**. Then type `/new` and ask again. |

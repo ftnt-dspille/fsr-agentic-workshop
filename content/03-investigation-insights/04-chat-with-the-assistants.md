@@ -92,9 +92,9 @@ In the last section you rejected the card. This time approve one, and then hold 
 Do not take the chat's word for the result. The block's effect is the FortiGate's **ban list**, and you can read it through the same connector the action used, from your workstation:
 
 ```python
-from pyfsr import FortiSOAR
+from pyfsr.instances import InstanceRegistry
 
-c = FortiSOAR.from_env()   # reads FSR_BASE_URL / FSR_USERNAME / FSR_PASSWORD
+c = InstanceRegistry.load().client("lab")   # the box you registered in chapter 1
 r = c.connectors.execute("fortigate-firewall", "get_blocked_ip",
                          config="Enterprise_Core",
                          params={"method": "Quarantine Based"})
