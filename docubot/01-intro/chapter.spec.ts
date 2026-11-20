@@ -38,7 +38,7 @@ const STEPS = [
 ] as const;
 
 // The pack the page tells students to download; the spec imports exactly that file.
-const PACK = path.resolve(process.env.DOCUBOT_TARGET || '.', 'static/downloads/agentic-assistant-pack-1.1.0.zip');
+const PACK = path.resolve(process.env.DOCUBOT_TARGET || '.', 'static/downloads/agentic-assistant-pack-1.2.0.zip');
 
 test('chapter 1 - install the Agentic Assistant', async ({ gui, capture }) => {
   test.setTimeout(40 * 60 * 1000);
@@ -69,7 +69,7 @@ test('chapter 1 - install the Agentic Assistant', async ({ gui, capture }) => {
     // Shoot the wizard dialog itself (the dimmed importer page behind it is
     // noise), and skip the key-like-token category for this picture: the dialog
     // legitimately displays the pack's own file name on every configuration row
-    // ("agentic-assistant-pack-1.1.0.zip" reads as a 24-char token), and it is
+    // ("agentic-assistant-pack-1.2.0.zip" reads as a 24-char token), and it is
     // the student's downloaded file, not a secret. IPs/hosts/emails still scan.
     const dialog = soar.locator('.modal-content, [role=dialog]').first();
     await capture.shot(soar, 'fsa01-20-import-upload', SCRUB.with(SCRUB.dates, 'key-like-token'), { target: dialog });
