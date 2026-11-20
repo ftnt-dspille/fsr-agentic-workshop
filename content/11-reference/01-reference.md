@@ -52,7 +52,7 @@ It deactivates users whose email starts with `agentlab_`. Run the tool yourself,
 
 ## Where to go next
 
-- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install fsr-agentic-toolkit==0.2.3`. This also installs pyfsr 0.32.0 and fsr-playbooks 0.10.1. pyfsr is at https://github.com/ftnt-dspille/pyfsr. Its AGENTS.md is the operating guide this workshop follows.
+- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install fsr-agentic-toolkit==0.2.3`. This also installs pyfsr (0.32.0 or newer) and fsr-playbooks (0.10.1 or newer). pyfsr is at https://github.com/ftnt-dspille/pyfsr. Its AGENTS.md is the operating guide this workshop follows.
 - **Playbook YAML authoring:** the fsr_playbooks package documentation (step types, triggers, Jinja).
 - **Connector development in depth:** the FortiSOAR Connectors workshop.
 - **Part 1 features in depth:** the FortiSOAR 8.0 product documentation on Agentic AI.
