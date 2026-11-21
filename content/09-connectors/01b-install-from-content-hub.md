@@ -9,6 +9,10 @@ The last page ran a connector the box already had. Often the connector you need 
 
 This page uses whois-rdap. It looks up domain and IP registration, and it needs no credentials. You can use any Content Hub connector the same way. Change the name in the prompts.
 
+{{% notice info %}}
+The lab image ships with whois-rdap already installed. The agent sees this and reports that the connector is already there instead of installing it. That is the expected result; go on to step 2. To watch a real install, pick a Content Hub connector the box does not have yet and change the name in the prompts.
+{{% /notice %}}
+
 {{% notice note %}}
 Installing a connector puts executable code on the appliance. Your coding agent's approval prompt asks you before the install runs, and again before the configuration is saved. Read each prompt, then approve. Run this page in the lab working folder from chapter 6, and turn off the read-only guard first (chapter 7 shows how).
 {{% /notice %}}
