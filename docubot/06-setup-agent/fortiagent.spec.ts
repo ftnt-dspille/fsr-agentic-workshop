@@ -76,7 +76,7 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
   // The mcp-list row then reads /your/venv/bin/fsr-agentic-toolkit, the placeholder the
   // page's own snippet teaches.
   const showAs = { ...Object.fromEntries(toolkitVenvMasks()), [os.homedir()]: '/Users/student',
-    [host]: 'fortisoar.example.com', ...labelMask, [who.loginid]: 'agentlab', [who.name]: 'Agent Lab' };
+    [host]: 'fortisoar.example.com', [host.replace(/:\d+$/, '')]: 'fortisoar.example.com', ...labelMask, [who.loginid]: 'agentlab', [who.name]: 'Agent Lab' };
   const shot = (app: FortiagentApp, id: string, o: Record<string, unknown> = {}) =>
     capture.shot(app.page, id, { showAs, scrubSkip: ['date-or-time'], ...o });
 
@@ -104,7 +104,16 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
         await w.getByPlaceholder('/path/to/server or npx').fill(tk.command.replace(os.homedir(), '/Users/student'));
         // The form's Arguments box (one per line). Its label was not read from a live window yet: verify on the first run.
         await w.getByLabel(/Arguments/i).fill('mcp');
-        await shot(app, 'fsa06-15-fortiagent-add-mcp-form', { highlight: [w.getByRole('button', { name: 'Add server' })], ocrAllow: ['/Users/student'], expect: [/Add an MCP server/i, /Arguments \(one per line\)/i] });
+        // The picture is the add form alone: the server rows above it (some carry other hosts and ports) fall outside
+        // the clip. Scrolling cannot lift the form clear of them (it sits at the bottom of the pane), so the clip is the cut.
+        const heading = w.getByText('Add an MCP server', { exact: true });
+        const args = w.getByLabel(/Arguments/i);
+        const addBtn = w.getByRole('button', { name: 'Add server' });
+        const [h, a, b] = await Promise.all([heading.boundingBox(), args.boundingBox(), addBtn.boundingBox()]);
+        if (!h || !a || !b) throw new Error('fsa06-15: the add form has no layout box to clip to');
+        const pad = 16;
+        const clip = { x: Math.max(0, h.x - pad), y: Math.max(0, h.y - pad), width: a.x + a.width + pad - (h.x - pad), height: b.y + b.height + pad - (h.y - pad) };
+        await capture.shotClip(w, 'fsa06-15-fortiagent-add-mcp-form', clip, { ocrAllow: ['/Users/student'], expect: [/Add an MCP server/i, /Arguments \(one per line\)/i] });
         // The picture shows the form; the add itself goes through the CLI (same values, stored as secrets), so no
         // password is ever typed into the window that is being photographed.
         await w.keyboard.press('Escape');
