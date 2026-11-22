@@ -76,7 +76,7 @@ Widgets import as **drafts**. In **Content Hub** > **Manage** (filtered to **Wid
 
 ## 6. Configure the connector
 
-Open the **FSR Agentic Assistant** connector and create a **new** configuration. Do not edit an existing one: updating a configuration does not replace a stored secret. Pick the LLM provider your box can reach, paste its API key (or point an OpenAI-compatible endpoint at your service), mark the configuration as the **default**, and save.
+Open the **FSR Agentic Assistant** connector and check its **Configurations** first. If one already exists, is marked as the **default**, and its health check is green, keep it and go on to the health check below. Create a new configuration only when none exists: pick the LLM provider your box can reach, paste its API key (or point an OpenAI-compatible endpoint at your service), mark it as the **default**, and save. If an existing configuration fails its health check, create a new one rather than editing it: updating a configuration does not replace a stored secret.
 
 The lab box uses FortiAI as the provider, so the assistant spends FortiAI tokens, the same currency as the rest of this workshop.
 
