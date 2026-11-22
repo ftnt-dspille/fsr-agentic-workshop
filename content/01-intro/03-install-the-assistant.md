@@ -5,7 +5,7 @@ weight: 30
 description: "Put the Agentic Assistant solution pack on your FortiSOAR box: the connector, the two widgets and the Monitor dashboard, in one import."
 ---
 
-The Agentic Assistant is not part of FortiSOAR. It ships as a solution pack: one zip that carries the connector, both widgets and the Monitor dashboard. This page installs it. If your lab box already has the assistant, run the check in step 1 and skip to the configuration check in step 5.
+The Agentic Assistant is not part of FortiSOAR. It ships as a solution pack: one zip that carries the connector, both widgets and the Monitor dashboard. This page installs it. If your lab box already has the assistant, run the check in step 1 and skip to step 6, the connector configuration.
 
 | What the pack carries | Version |
 |---|---|
