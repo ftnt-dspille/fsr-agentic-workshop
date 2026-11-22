@@ -104,7 +104,7 @@ test('chapter 6 - fortiagent', async ({ capture }) => {
         await w.getByPlaceholder('/path/to/server or npx').fill(tk.command.replace(os.homedir(), '/Users/student'));
         // The form's Arguments box (one per line). Its label was not read from a live window yet: verify on the first run.
         await w.getByLabel(/Arguments/i).fill('mcp');
-        await shot(app, 'fsa06-15-fortiagent-add-mcp-form', { highlight: [w.getByRole('button', { name: 'Add server' })], ocrAllow: ['/Users/student'] });
+        await shot(app, 'fsa06-15-fortiagent-add-mcp-form', { highlight: [w.getByRole('button', { name: 'Add server' })], ocrAllow: ['/Users/student'], expect: [/Add an MCP server/i, /Arguments \(one per line\)/i] });
         // The picture shows the form; the add itself goes through the CLI (same values, stored as secrets), so no
         // password is ever typed into the window that is being photographed.
         await w.keyboard.press('Escape');
