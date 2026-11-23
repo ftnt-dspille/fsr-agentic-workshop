@@ -9,12 +9,12 @@ The Agentic Assistant is not part of FortiSOAR. It ships as a solution pack: one
 
 | What the pack carries | Version |
 |---|---|
-| Solution pack agenticAssistant | 1.1.0 |
-| Connector connector-fsr-agentic-assistant | 0.6.1 |
-| Widget agenticAssistant | 1.4.1 |
-| Widget agenticAssistantMonitor | 1.1.0 |
+| Solution pack agenticAssistant | 1.2.1 |
+| Connector connector-fsr-agentic-assistant | 0.6.23 |
+| Widget agenticAssistant | 1.4.7 |
+| Widget agenticAssistantMonitor | 1.1.5 |
 | Dashboard: Agentic Assistant Monitor | |
-| Framework fsr-playbooks (installed by the connector) | 0.11.0 |
+| Framework fsr-playbooks (installed by the connector) | 0.12.2 |
 
 You need: FortiSOAR 8.0 or newer, an LLM the appliance can reach (an OpenAI or Anthropic API key, an OpenAI-compatible endpoint, or the FortiAI service this lab uses), shell access to the appliance as `csadmin` for step 2, and reachability of pypi.org over HTTPS.
 
@@ -50,7 +50,9 @@ The pack's connector and widgets are custom content, which a locked-down box ref
 
 Download the pack zip:
 
-{{< download "/downloads/agentic-assistant-pack-1.1.0.zip" >}}agentic-assistant-pack-1.1.0.zip (about 4 MB){{< /download >}}
+{{< download "/downloads/agentic-assistant-pack-1.2.1.zip" >}}agentic-assistant-pack-1.2.1.zip (about 4 MB){{< /download >}}
+
+The pack is also published on GitHub, with the user and administrator guides, at [solution-pack-fsr-agentic-assistant releases](https://github.com/ftnt-dspille/solution-pack-fsr-agentic-assistant/releases/latest).
 
 Then install it with the **Import Wizard** (**Application Editor** > **Import Wizard**), not Content Hub. A Content Hub upload registers the pack and its dashboard but silently skips the bundled connector and widget files, so you end up with a pack entry and nothing installed. The Import Wizard installs all of it.
 

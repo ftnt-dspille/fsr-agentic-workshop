@@ -216,7 +216,7 @@ def read_instance(name: str) -> dict[str, str]:
         import tomllib
     except ModuleNotFoundError:  # py<3.11
         import tomli as tomllib  # type: ignore
-    path = Path.home() / ".pyfsr" / "instances.toml"
+    path = Path(os.environ.get("PYFSR_INSTANCES") or Path.home() / ".pyfsr" / "instances.toml").expanduser()
     if not path.exists():
         sys.exit(f"lab_setup: {path} not found; --instance needs a pyfsr instances file")
     data = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -227,7 +227,11 @@ def read_instance(name: str) -> dict[str, str]:
     if inst.get("env_file") and not inst.get("base_url"):
         # Instances may keep everything in a gitignored env file instead.
         env: dict[str, str] = {}
-        for raw in Path(inst["env_file"]).expanduser().read_text(encoding="utf-8").splitlines():
+        # A relative env_file sits beside the registry (`pyfsr instances add` writes it there).
+        env_path = Path(inst["env_file"]).expanduser()
+        if not env_path.is_absolute():
+            env_path = path.parent / env_path
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, _, v = line.partition("=")

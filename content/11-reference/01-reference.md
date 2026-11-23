@@ -36,8 +36,7 @@ These calls ask for confirmation no matter what the settings are: delete_record,
 Everything this workshop creates is prefixed `agentlab` or named "Agent Lab". To remove it, either ask your agent (each delete asks for confirmation), or run the repo's reset tool yourself:
 
 ```bash
-FSR_BASE_URL=https://fortisoar.example.com FSR_USERNAME='<login-id>' FSR_PASSWORD='<password>' \
-  python3 tools/reset_lab.py --check-only
+python3 tools/reset_lab.py --instance lab --check-only
 ```
 
 `--check-only` lists what exists and changes nothing. Without it, the tool prints the same list and asks you to type `RESET` before it deletes anything. The tool removes:
@@ -52,7 +51,7 @@ It deactivates users whose email starts with `agentlab_`. Run the tool yourself,
 
 ## Where to go next
 
-- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install fsr-agentic-toolkit==0.2.3`. This also installs pyfsr 0.32.0 and fsr-playbooks 0.10.1. pyfsr is at https://github.com/ftnt-dspille/pyfsr. Its AGENTS.md is the operating guide this workshop follows.
+- **fsr-agentic-toolkit (MCP server) and pyfsr SDK:** `pip install "fsr-agentic-toolkit==0.2.3" "pyfsr>=0.35.0"`. This also installs pyfsr and fsr-playbooks (0.10.1 or newer). pyfsr is at https://github.com/ftnt-dspille/pyfsr. Its AGENTS.md is the operating guide this workshop follows.
 - **Playbook YAML authoring:** the fsr_playbooks package documentation (step types, triggers, Jinja).
 - **Connector development in depth:** the FortiSOAR Connectors workshop.
 - **Part 1 features in depth:** the FortiSOAR 8.0 product documentation on Agentic AI.
