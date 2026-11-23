@@ -76,8 +76,24 @@
 
       @media print {
         body { padding: 0; font-size: 10.5pt; }
+        /* h1/h2 are rem-based (3.25rem/2.2rem) off the 16px screen root and
+           print as ~39/26pt; scale the root so they match the themed pages */
+        html { font-size: 9pt; }
         img.figure-image, img:not(.inline):not(.lightbox-image) { max-height: 9cm; }
         pre, code { white-space: pre-wrap; word-break: break-word; }
+        /* code blocks ship with inline monokai styling (dark bg, near-white
+           text); with "Background graphics" unchecked the background is
+           dropped and the code prints as pale gray on white. Force a light
+           block with dark text so it prints readably in both modes. */
+        pre {
+          background-color: #f6f6f6 !important;
+          color: #1f1f1f !important;
+          border: 1px solid #ccc;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        pre span { color: #1f1f1f !important; }
+        h1, h2, h3 { break-after: avoid-page; }
         .no-print,
         .no-print * {
           display: none !important;
