@@ -330,6 +330,7 @@ setThemeMode()
 <!-- mermaid logo icons -->
 <script>
   document.addEventListener('DOMContentLoaded', function (event) {
+    if (!window.mermaid) return;
     mermaid.registerIconPacks([
       {
         name: 'logos',
