@@ -69,8 +69,15 @@ name = "<i class='fas fa-print'></i> Single Page View (for printing)"
 url = "allpages.html"
 weight = 1
 
+[outputFormats.allpages]
+mediaType = "text/html"
+baseName = "allpages"
+isHTML = true
+isPlainText = false
+permalinkable = false
+
 [outputs]
-home = ["HTML", "markdown"]
+home = ["HTML", "markdown", "allpages"]
 page = ["HTML", "markdown"]
 section = ["HTML", "markdown"]
 
