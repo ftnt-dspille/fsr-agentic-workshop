@@ -55,12 +55,27 @@
         visibility: visible !important;
       }
       .tab-content-container, .tab-content { height: auto !important; min-height: 0 !important; display: block !important; }
-      .ap-tab-label { font-weight: 600; margin: 0.4rem 0 0.2rem; }
+      /* every tab's content is shown under a folder-tab chip in the accent
+         color (matches the notice styling); the pill switcher stays hidden */
+      .ap-tab-label {
+        display: inline-block;
+        font-weight: 600;
+        font-size: 0.92em;
+        padding: 0.15rem 0.7rem;
+        margin: 0.6rem 0 -1px 2rem;
+        border: 1px solid var(--INTERNAL-ACCENT-color, #77838a);
+        border-bottom: none;
+        border-radius: 0.4rem 0.4rem 0 0;
+        background: var(--INTERNAL-ACCENT-color, #77838a);
+        color: #1a1a1a;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
       .tab-content {
-        margin: 0.2rem 0 0 2rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        border: 1px solid gray;
+        margin: 0 0 0.9rem 2rem;
+        padding: 0.5rem 0.8rem;
+        border: 1px solid var(--INTERNAL-ACCENT-color, #77838a);
+        border-radius: 0 0.4rem 0.4rem 0.4rem;
       }
 
       /* screenshots: keep them readable but not page-sized */
@@ -128,20 +143,29 @@
     {{ end }}
     {{ partial "copyright.html" . }}
     <script>
-      // Tabs: show every tab's content under its own label (no clicking in print).
-      document.querySelectorAll('.tab-panel').forEach(function (panel) {
+      // Tabs: show every tab's content under its own label (no clicking in
+      // print). Works even when the tabs shortcode emits the nav and the
+      // content boxes OUTSIDE the .tab-panel wrapper (broken list nesting):
+      // navs are hidden document-wide, and each content box takes its label
+      // from the nearest preceding .tab-nav.
+      var buttonNames = {};
+      document.querySelectorAll('.tab-nav').forEach(function (nav) {
+        nav.style.display = 'none';
+        nav.querySelectorAll('.tab-nav-button').forEach(function (b) {
+          buttonNames[b.dataset.tabItem] = b.textContent.trim();
+        });
+      });
+      document.querySelectorAll('.tab-content').forEach(function (c) {
         var names = {};
-        panel.querySelectorAll('.tab-nav-button').forEach(function (b) {
+        var sib = c.parentNode.previousElementSibling;
+        while (sib && !sib.classList.contains('tab-nav')) sib = sib.previousElementSibling;
+        if (sib) sib.querySelectorAll('.tab-nav-button').forEach(function (b) {
           names[b.dataset.tabItem] = b.textContent.trim();
         });
-        panel.querySelectorAll('.tab-content').forEach(function (c) {
-          var h = document.createElement('div');
-          h.className = 'ap-tab-label';
-          h.textContent = names[c.dataset.tabItem] || c.dataset.tabItem;
-          c.insertBefore(h, c.firstChild);
-        });
-        var nav = panel.querySelector('.tab-nav');
-        if (nav) nav.style.display = 'none';
+        var h = document.createElement('div');
+        h.className = 'ap-tab-label';
+        h.textContent = names[c.dataset.tabItem] || buttonNames[c.dataset.tabItem] || c.dataset.tabItem;
+        c.parentNode.insertBefore(h, c);
       });
     </script>
   </body>
