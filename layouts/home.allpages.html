@@ -92,7 +92,7 @@
       {{ $modifiedContent |safeHTML }}
       <div class="pagebreak"></div>
     {{ end }}
-    {{ range .Site.Sections }}
+    {{ range .Site.Home.Sections.ByWeight }}
       {{ partial "ap-print-section.hugo" . }}
     {{ end }}
     {{ partial "copyright.html" . }}
