@@ -13,7 +13,7 @@ Containment is only useful for the exercise. This page removes the block you add
 Give your agent this prompt:
 
 ```text
-On the Branch2 gate, remove the source IP of that alert from the SOAR-Blocklist address group. Use the fortigatev2 connector, configuration Branch2, operation unblock_ip with method "Policy Based", ip as a list with that one source IP, ip_group_name "SOAR-Blocklist", ip_block_policy "SOAR-contain-deny" and ip_type "IPv4". Show me the parameters first and wait for my yes. Then tell me the newly_unblocked list it returned.
+On the Branch2 gate, remove the source IP of the port scan alert from the red-team host from the SOAR-Blocklist address group. Use the fortigatev2 connector, configuration Branch2, operation unblock_ip with method "Policy Based", ip as a list with that one source IP, ip_group_name "SOAR-Blocklist", ip_block_policy "SOAR-contain-deny" and ip_type "IPv4". Show me the parameters first and wait for my yes. Then tell me the newly_unblocked list it returned.
 ```
 
 **You are done when:** the operation returns the source IP in **newly_unblocked**.
