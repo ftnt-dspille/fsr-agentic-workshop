@@ -26,6 +26,15 @@ devices:
     user: student
     pass: <your-password>
 
+  # The Branch2 FortiGate GUI (the red-team gate, address group SOAR-Blocklist). The chapter 11 containment is tracked
+  # on this device; the real port and login live in labconfig.local.yaml.
+  branch2:
+    type: gui
+    product: fortigate
+    url: https://fortigate.example.com:13002
+    user: admin
+    pass: <your-password>
+
   # The student's own machine, where the Claude Code agent runs against the box
   # over MCP. Used for the agent-TUI capture steps (local + capture.screen).
   # cwd is the agent's working folder; env carries the box coordinates the agent
