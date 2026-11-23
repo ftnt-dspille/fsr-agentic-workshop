@@ -40,6 +40,9 @@ const SCAN_ALERT = /Internal (?:port scanning|intrusion)/i;
 // Lab-internal addresses never reach a picture: the gate refuses them, so the policy masks them for every shot.
 const LAB_IP = /\b(?:192\.168|10\.99|10\.254)\.\d{1,3}\.\d{1,3}\b/g;
 
+/** Shell reads a fresh agent makes before it answers: listing its folder. Nothing that changes the machine. */
+const LOOK_AROUND = ['ls', 'ls -la', 'ls -l', 'ls -a', 'pwd'];
+
 const open = (ctx: StepCtx): Promise<FortisoarSession> => ctx.open(fortisoar, 'soar');
 /** The approval terminal is hosted in a FortiSOAR page (ttyd opens in a fresh context of it). */
 const termPage = async (ctx: StepCtx) => (await open(ctx)).page;
@@ -144,6 +147,8 @@ const groupRead = (ops: string[]): Allowed => ({
 async function groupReadTurn(ctx: StepCtx, page: string, n: number, id: string, expect: RegExp, ops: string[]) {
   const { held, plain } = await approvedTurnOnce(await termPage(ctx), promptFor(CHAPTER, page, n), [groupRead(ops)], {
     nudge: 'Yes, go ahead and read it.', timeoutMs: 4 * 60 * 1000,
+    // A fresh agent often lists its folder first; that read is harmless. Every other shell command stays denied.
+    bash: LOOK_AROUND,
   });
   await (ctx.capture as any).agent(id, held, { expect: [expect] });
   return plain;
@@ -164,6 +169,8 @@ function requireSource(): string {
 
 export default chapter('11-fabric-integrations', {
   devices: ['soar', 'laptop'],
+  // An agent turn is given 10 minutes (turn()); a step's budget must outlast it, or a slow but healthy turn is cut off.
+  stepTimeoutMs: 12 * 60 * 1000,
   policy: {
     ...fortisoarPolicy,
     maskText: [...(fortisoarPolicy.maskText ?? []), LAB_IP],
@@ -234,13 +241,15 @@ export default chapter('11-fabric-integrations', {
       spend: 'subscription',
       run: async (ctx) => {
         const source = requireSource();
+        containment.add(source);   // tracked BEFORE the call: a block that lands while the turn then fails is still undone
         const { held, plain } = await approvedTurnOnce(await termPage(ctx), promptFor(CHAPTER, P03, 1), [blockCall(source)], {
           // The page's prompt asks for a yes in chat first: a short wait for the approval, then the student's yes as the nudge.
-          nudge: 'Yes, go ahead and run it.', timeoutMs: 4 * 60 * 1000,
+          nudge: 'Yes, go ahead and run it.', timeoutMs: 4 * 60 * 1000, bash: LOOK_AROUND,
         });
-        // Record the member the moment the block returns, before anything else can fail: the afterAll undo removes it.
-        const member = groupMembers().find((m) => m !== SEED) ?? source;
-        containment.add(member);
+        // Track the source the moment the block is through, before anything else can fail: the afterAll undo removes every
+        // group member that carries this IP, whatever name the gate gave the address object.
+        containment.add(source);
+        const member = groupMembers().find((m) => m !== SEED && m.includes(source)) ?? source;
         await (ctx.capture as any).agent('ch11-03-block', held, { expect: [/newly_blocked|newly blocked/i] });
         return { source, member, plain };
       },
@@ -290,7 +299,7 @@ export default chapter('11-fabric-integrations', {
         const source = requireSource();
         const { held, plain } = await approvedTurnOnce(await termPage(ctx), promptFor(CHAPTER, P04, 1), [unblockCall(source)], {
           // The page's prompt asks for a yes in chat first: a short wait for the approval, then the student's yes as the nudge.
-          nudge: 'Yes, go ahead and run it.', timeoutMs: 4 * 60 * 1000,
+          nudge: 'Yes, go ahead and run it.', timeoutMs: 4 * 60 * 1000, bash: LOOK_AROUND,
         });
         await (ctx.capture as any).agent('ch11-04-undo', held, { expect: [/newly_unblocked|newly unblocked/i] });
         return { plain };
@@ -313,17 +322,28 @@ export default chapter('11-fabric-integrations', {
   },
 });
 
-// Teardown: whatever this run blocked and did not see removed is undone, and the group is read back to prove it. The
-// group's seed member is never touched. A failed undo fails the run with the member named.
+// Teardown: every group member that carries an IP this run blocked is removed (by IP, the way the page's undo does), and
+// the group is read back to prove it. The seed member is never touched. Every action is logged; a failed undo fails the
+// run with the member named. Matching on the IP, not on an exact member name, is the point: the gate names the address
+// object itself, so an exact-name match can miss it and pass silently.
+function membersFor(members: string[], ip: string): string[] {
+  return members.filter((m) => m !== SEED && (m === ip || m.includes(ip)));
+}
+
 test.afterAll(async () => {
-  for (const member of [...containment]) {
-    if (groupMembers().includes(member)) {
+  for (const ip of [...containment]) {
+    const before = membersFor(groupMembers(), ip);
+    console.log(`[ch11 teardown] ${GROUP} members for ${ip}: ${JSON.stringify(before)}`);
+    if (before.length) {
       toolkit('run_connector_operation', { connector: 'fortigatev2', operation: 'unblock_ip', config: GATE_CONFIG, params: {
-        method: 'Policy Based', ip: [member], ip_group_name: GROUP, ip_block_policy: POLICY, ip_type: 'IPv4',
+        method: 'Policy Based', ip: [ip], ip_group_name: GROUP, ip_block_policy: POLICY, ip_type: 'IPv4',
       } });
     }
-    const left = groupMembers();
-    if (left.includes(member)) throw new Error(`teardown: ${member} is still in ${GROUP} after the undo (members: ${JSON.stringify(left)})`);
-    containment.delete(member);
+    const all = groupMembers();
+    const left = membersFor(all, ip);
+    console.log(`[ch11 teardown] after the undo: ${JSON.stringify(all)}`);
+    if (left.length) throw new Error(`teardown: ${JSON.stringify(left)} still in ${GROUP} after the undo of ${ip}`);
+    if (!all.includes(SEED)) throw new Error(`teardown: the seed member ${SEED} is missing from ${GROUP}`);
+    containment.delete(ip);
   }
 });
