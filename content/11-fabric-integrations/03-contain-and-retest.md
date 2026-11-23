@@ -15,7 +15,7 @@ The block is reversible, and the next page removes it.
 Give your agent this prompt. It names the exact connector operation and its parameters:
 
 ```text
-Block the source IP of that alert on the Branch2 gate. Use the fortigatev2 connector, configuration Branch2, operation block_ip_new with these parameters: method "Policy Based", ip as a list with the one source IP of the alert, ip_group_name "SOAR-Blocklist", ip_block_policy "SOAR-contain-deny", ip_type "IPv4", is_new true. Before you run it, show me the parameters and wait for my yes. After it runs, tell me the newly_blocked list it returned.
+Block the source IP of the port scan alert from the red-team host on the Branch2 gate. The alert's name starts with "Internal port scanning" or "Internal intrusion". Use the fortigatev2 connector, configuration Branch2, operation block_ip_new with these parameters: method "Policy Based", ip as a list with the one source IP of the alert, ip_group_name "SOAR-Blocklist", ip_block_policy "SOAR-contain-deny", ip_type "IPv4", is_new true. Before you run it, show me the parameters and wait for my yes. After it runs, tell me the newly_blocked list it returned.
 ```
 
 Read the parameters the agent shows before you answer yes. The source IP must be the one from the alert, and the group must be **SOAR-Blocklist**. Approve only then.
@@ -43,9 +43,11 @@ The scan now starts from a source Branch2 denies. Branch2 drops it under policy 
 Give your agent this prompt:
 
 ```text
-Tell me whether the red-team source is still reaching the payroll server on Branch2. Check the policy 20 hits or deny logs in FortiAnalyzer for the source IP, and tell me which evidence you used.
+Use the faz-branch FortiAnalyzer configuration. Find the source IP of the port scan alert from the red-team host, the one named Internal port scanning or Internal intrusion. Then tell me whether that source is still reaching the payroll server on Branch2. Check the policy 20 hits or deny logs in the branch ADOM for that IP, and tell me which evidence you used.
 ```
 
-The lab proves this check with traffic logs: the source address has deny rows under policy 20. Your agent reports what it could read. If it cannot read the FortiAnalyzer traffic logs, it says so, and your instructor shows the denies in FortiAnalyzer.
+The branch traffic logs live in the **branch** ADOM, under the **faz-branch** configuration. The default FortiAnalyzer configuration sees only the lab's root ADOM, which holds no Branch2 traffic. If your agent answers from the default configuration and reports no logs, ask it again and name **faz-branch** and the **branch** ADOM.
 
-**You are done when:** the scan has finished and the agent reports that the source is denied on Branch2 under policy 20.
+The newest deny rows for the source under policy 20 are the answer for this scan. Check the time on the rows: a session from before the block (policy 905) is older than the denies from the scan you fired after the block. Your agent reports the deny rows it read and the time of the newest one.
+
+**You are done when:** the scan has finished and the agent reports that the source is denied on Branch2 under policy 20, with the time of the newest deny row.
