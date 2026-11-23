@@ -20,7 +20,7 @@ These prompt patterns worked throughout the workshop. Adapt them to your own goa
 
 ## Safety knobs
 
-Set these in the MCP server's env block (see chapter 6):
+Set these as environment variables on the MCP server entry from chapter 6, in the env block that chapter 9 shows (or FortiAgent's **Environment variables** field). Restart the agent after you change them:
 
 | Variable | Effect |
 |---|---|

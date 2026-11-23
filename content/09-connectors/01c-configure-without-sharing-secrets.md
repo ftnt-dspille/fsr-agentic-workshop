@@ -13,7 +13,7 @@ If you paste a real key into a prompt by mistake, rotate it. Deleting the messag
 
 ## 1. Put the secret where the server can read it
 
-Add the key to the env block of the MCP server entry you made in chapter 6. The name has this form: `FSR_SECRET_`, then the connector name, two underscores, and the field name. For VirusTotal the name is `FSR_SECRET_VIRUSTOTAL__API_KEY`:
+Add the key to the env block of the MCP server entry you made in chapter 6. Chapter 6's entries have no env block, so add one to the entry: in Claude Code's `.mcp.json` it is an `env` object beside `command` and `args`; in FortiAgent, enter the variable in the **Environment variables** field. The name has this form: `FSR_SECRET_`, then the connector name, two underscores, and the field name. For VirusTotal the name is `FSR_SECRET_VIRUSTOTAL__API_KEY`:
 
 ```json
 "env": {
