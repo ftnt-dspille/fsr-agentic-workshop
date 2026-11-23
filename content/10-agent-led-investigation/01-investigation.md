@@ -110,9 +110,8 @@ and the deny policy in front of the accept rules starts dropping it.
 
 > **If the block list is empty or the gates never pick it up:** the feed is a
 > post-install step (the gates' subscription key is minted when the feed is set up,
-> so a fabric reinstall drops it). Re-run
-> `topologies/fsr_agentic_lab/config/soar_taxii_feed.yml` to re-establish it. That
-> play also verifies, end to end, that every gate builds the indicator into its
+> so a fabric reinstall drops it). Ask your instructor to re-run the feed setup. That
+> setup also verifies, end to end, that every gate builds the indicator into its
 > address table.
 
 ## 6. Optional: compare with the platform's own AI investigation
