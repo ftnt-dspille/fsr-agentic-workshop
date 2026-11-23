@@ -12,6 +12,13 @@ Everything up to here runs against **any FortiSOAR box**. This track is differen
 **Prerequisites:** the lab fabric (gates + FAZ + FMG + red-team LXC) built and onboarded, with FortiSOAR's FAZ and FMG connector configurations and the FAZ→alert ingestion already in place (they ship in the lab's SOAR baseline). These labs generate real attack traffic and change device policy.
 {{% /notice %}}
 
-Here the agent does what a standalone SOAR cannot show: it turns a live attack into an alert, investigates it with real FortiAnalyzer evidence, and contains it back onto the gates. Then you re-run the attack and watch it get blocked.
+Here the agent does what a standalone SOAR cannot show: it works from a live attack that FortiAnalyzer logged, investigates the alert FortiSOAR ingests from it with the FortiAnalyzer evidence behind it, and contains the source on the Branch2 gate. Then you re-fire the attack and watch the gate deny it. The pages are in order:
+
+1. Fire an attack from the red-team dashboard.
+2. Investigate the alert with the FortiAnalyzer log lines behind it.
+3. Contain the source on Branch2 and retest.
+4. Undo the containment.
+
+Each lab page ends with a check you can see. The alerts you work on are shared with the rest of your class, so the pages do not ask you to delete anything.
 
 {{% children %}}
