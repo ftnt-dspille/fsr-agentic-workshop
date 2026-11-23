@@ -131,7 +131,7 @@ FortiAgent keeps its MCP servers in its own settings. FortiAgent searches only t
 
 <!-- step: fsa06-15-fortiagent-add-mcp-form -->
 <!-- capture: fsa06-15-fortiagent-add-mcp-form -->
-![fsa06-15-fortiagent-add-mcp-form](fsa06-15-fortiagent-add-mcp-form.png?height=600px)
+![fsa06-15-fortiagent-add-mcp-form](fsa06-15-fortiagent-add-mcp-form.png)
 
 From a shell, the same thing is:
 
