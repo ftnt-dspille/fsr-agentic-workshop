@@ -13,20 +13,22 @@ The alert from the last page is a summary. This page has the agent read the raw 
 Give your agent this prompt. It asks for the alert by what it is, not by its ID:
 
 ```text
-In FortiSOAR, find the open alert for a port scan that came from the red-team host on Branch2. The name starts with "Internal intrusion" or "Internal port scanning". Tell me its name, its source IP, its destination IP and its sourceId.
+In FortiSOAR, find the most recent open alert for a port scan that came from the red-team host on Branch2. The name starts with "Internal intrusion" or "Internal port scanning". Tell me its name, its source IP, its destination IP and its sourceId.
 ```
 
 The agent searches the alerts and reports the alert it found. The **sourceId** is the FortiAnalyzer event ID, and it is what ties the alert to the evidence in the next step.
+
+![ch11-02-find-alert](ch11-02-find-alert.png?height=600px)
 
 ## 2. Pull the FortiAnalyzer evidence
 
 Give your agent this prompt:
 
 ```text
-Use the faz-branch FortiAnalyzer configuration to get the log lines behind that alert's FortiAnalyzer event. Use the event ID as the alert ID and the branch ADOM. List each log line's time, source and destination IP, destination port, policy ID, IPS profile and the attack name. Then tell me which policy the scan went through.
+Pull the FortiAnalyzer logs behind that alert through our faz-branch connector configuration in FortiSOAR, branch ADOM. For each log line give me the time, source and destination IP, destination port, policy ID, IPS profile and attack name. Then tell me which policy let the scan through when it started.
 ```
 
-The agent calls the FortiAnalyzer operation for the event's log lines. Read the policy ID in the answer. The lab's scan goes through policy **905**, which is the red-team plumbing on Branch2. Policy 905 accepts the scan to the payroll server, and the IPS profile logs it as an intrusion.
+The agent finds the FortiAnalyzer operation for the event's log lines and reads them. Read the policy ID in the answer. The lab's scan goes through policy **905**, which is the red-team plumbing on Branch2. Policy 905 accepts the scan to the payroll server, and the IPS profile logs it as an intrusion. If the source was contained in an earlier run, later lines of the same event show policy **20** (**SOAR-contain-deny**) with action deny. Ask the agent which lines came before the block.
 
 {{% notice note %}}
 The FortiAnalyzer event and its log lines change over time. A repeat hit updates the event's last time and count, so the number of log lines can be higher than the number of times you fired. That is expected.

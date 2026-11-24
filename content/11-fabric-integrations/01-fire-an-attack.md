@@ -16,15 +16,25 @@ Open the red-team dashboard in your browser:
 https://<pod-host>:<dashboard-port>/
 ```
 
-Replace `<pod-host>` and `<dashboard-port>` with the pod host and port your instructor gave you. Sign in with the dashboard login from the same handout. The dashboard shows three tabs: **Red team**, **Lab health** and **SOAR demo**.
+Replace `<pod-host>` and `<dashboard-port>` with the pod host and port your instructor gave you. Sign in with the dashboard login from the same handout.
+
+The dashboard opens on the **Red team** tab. Four tabs run across the top: **Red team**, **Lab health**, **Onboarding** and **SOAR demo**. Under **Scenarios** each attack has its own row with a **Fire** button on the left, its name, the time of its last run and the result code of that run (`rc=0` means the scenario ran clean). **Port scan** is the first row.
+
+![ch11-01-dashboard-tabs](ch11-01-dashboard-tabs.png?height=600px)
 
 ## 2. Fire the port scan
 
-1. Open the **Red team** tab. It opens first.
-2. Find the row **Port scan**. Its description says it runs an nmap SYN and service scan against the payroll server.
-3. Click **Fire**.
+1. Stay on the **Red team** tab. It opens first.
+2. Find the row **Port scan**. It runs an nmap SYN and service scan against the payroll server.
+3. Click **Fire** at the left of that row.
 
-The button changes to **Running** while the scan runs. When the scan finishes, the row shows the result of the run.
+The row shows **Running** while the scan runs.
+
+![ch11-01-dashboard-running](ch11-01-dashboard-running.png?height=600px)
+
+When the scan finishes, the row shows the time of the run and its result code again.
+
+![ch11-01-dashboard-finished](ch11-01-dashboard-finished.png?height=600px)
 
 {{% notice note %}}
 The scan takes about a minute. Do not fire it again while it runs: the dashboard runs one scenario at a time and answers a second fire with a busy message.
@@ -37,3 +47,5 @@ FortiAnalyzer groups repeated hits from the same source and signature into one e
 Every student who fires this scenario in a class shares the same alert. You do not get a private copy, and you do not need one: the alert is the scenario's record, and the next page works on it.
 
 **You are done when:** the dashboard shows **Port scan** with a finished result, and within five minutes the FortiSOAR alerts list shows an alert named like **Internal intrusion Port.Scanning detected by IPS**, or **Internal port scanning from: ... detected**, whose source IP is the red-team host. The next page starts from that alert.
+
+![ch11-01-alert-in-fortisoar](ch11-01-alert-in-fortisoar.png?height=600px)

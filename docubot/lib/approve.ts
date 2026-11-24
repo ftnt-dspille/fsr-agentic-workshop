@@ -18,6 +18,9 @@ export const READ_BUILTINS = ['Read', 'Glob', 'Grep', 'TodoWrite', 'ToolSearch',
 
 export type Args = Record<string, any>;
 
+/** Observe mode: see the builtinRules note in startClaude and the event log in approvedTurn. */
+const OBSERVE = process.env.DOCUBOT_OBSERVE === '1';
+
 /** One call a step lets the agent make, and approves when it is asked. */
 export interface Allowed {
   tool: string;
@@ -69,14 +72,28 @@ export async function startClaude(page: Page, o: { bash?: Array<string | { match
   // way -- the kit's segment mode), and Write/Edit only on a path inside the lab folder (both spellings of a temp path).
   const dirs = [...new Set([cwd, fs.realpathSync(cwd)])];
   const builtinRules = [
+    // Observe mode (DOCUBOT_OBSERVE=1, for building a step by hand): any shell command fits, so the trial shows what the
+    // agent does instead of where the step's rule stops it. Never set in a capture run.
+    ...(OBSERVE ? [{ tool: 'Bash', key: 'command', matches: '[\\s\\S]*' }] : []),
     ...(o.bash ?? []).map((b) => (typeof b === 'string' ? { tool: 'Bash', key: 'command', matches: b } : { tool: 'Bash', key: 'command', ...b })),
     ...(o.writeFiles ? ['Write', 'Edit'].map((tool) => ({ tool, key: 'file_path', under: dirs })) : []),
   ];
+  if (OBSERVE) console.log('[docubot observe] startClaude: launching');
   const run = await startClaudeApproval(page, {
     mcpConfig: config, cwd, isolation: 'operator-login', callRunMs: 15 * 60 * 1000, cols: o.cols ?? 100, rows: o.rows ?? 90,
     policyExtra: { noConfirm: true, targetKeys: TOOLKIT_TARGET_KEYS, builtins: READ_BUILTINS, builtinRules },
   });
+  if (OBSERVE) console.log('[docubot observe] startClaude: launched');
   return { ...run, cwd };
+}
+
+/**
+ * Decline a call, but do not wait out the client: a declined Claude dialog can take the full call-resolve budget (15 min) to settle,
+ * and every caller of this throws right after (or, in observe mode, moves on). The decision is written at once; a bounded wait
+ * is enough to let it land.
+ */
+async function declineQuickly(approval: ClaudeRun['approval'], call: PendingCall): Promise<void> {
+  await Promise.race([approval.answer(call, 'decline').catch(() => undefined), new Promise((r) => setTimeout(r, 20_000))]);
 }
 
 /**
@@ -92,14 +109,29 @@ export async function approvedTurn(run: ClaudeRun, prompt: string, allowed: Allo
   const need = new Set(allowed.map(keyOf).filter((k): k is string => !!k));
   const got = new Set<string>();
   const approved: PendingCall[] = [];
+  if (OBSERVE) console.log('[docubot observe] approvedTurn: sending the prompt');
   await session.send(prompt);
+  if (OBSERVE) console.log('[docubot observe] approvedTurn: prompt sent');
   for (let nudges = 0; ;) {
     const call = await approval.pendingAny(timeoutMs);
+    if (OBSERVE) {
+      const tail = run.real.term.plainScreen().split('\n').filter((r) => r.trim()).slice(-12).join('\n');
+      console.log(`[docubot observe] ${call ? `call ${call.tool} ${JSON.stringify(call.args).slice(0, 200)}` : 'no call (turn ended or wait timed out)'}\n${tail}`);
+    }
     if (call) {
-      const entry = allowed.find((a) => a.tool === call.tool && matches(a.args ?? {}, call.args)) ?? allowed.find((a) => a.tool === call.tool)!;
+      // Several entries can share a tool and its target (a block and a read on the same connector): take the first one whose
+      // check accepts these arguments, and complain with the first match's reason only when none does.
+      const fits = allowed.filter((a) => a.tool === call.tool && matches(a.args ?? {}, call.args));
+      const entry = fits.find((a) => !a.check?.(call.args)) ?? fits[0] ?? allowed.find((a) => a.tool === call.tool);
+      if (!entry) {
+        // Only reachable in observe mode's wider net or a policy gap: a call the step never listed is declined, never approved.
+        await declineQuickly(approval, call);
+        if (OBSERVE) { console.log(`[docubot observe] declined unlisted ${call.tool} ${JSON.stringify(call.args).slice(0, 300)}`); continue; }
+        throw new Error(`${call.tool} is not a call this step allows. Arguments: ${JSON.stringify(call.args).slice(0, 600)}`);
+      }
       const complaint = entry.check?.(call.args);
       if (complaint) {
-        await approval.answer(call, 'decline');
+        await declineQuickly(approval, call);
         throw new Error(`${call.tool} was declined: ${complaint}. Arguments: ${JSON.stringify(call.args).slice(0, 600)}`);
       }
       await approval.answer(call, 'approve');   // the row named "Yes", never "always"
@@ -116,6 +148,15 @@ export async function approvedTurn(run: ClaudeRun, prompt: string, allowed: Allo
   await approval.turnDone(timeoutMs);
   // A denied call is on the screen the picture would show (and the agent's answer is about it): that is a finding, not a picture.
   const denied = approval.events().filter((e) => e.hook_event_name === 'PreToolUse' && e.verdict?.effect === 'deny');
+  if (OBSERVE) {
+    const dir = path.join(process.env.DOCUBOT_TARGET ?? '.', '.docubot', 'observe');
+    fs.mkdirSync(dir, { recursive: true });
+    const out = path.join(dir, `observe-${Date.now()}.json`);
+    fs.writeFileSync(out, JSON.stringify(approval.events().filter((e) => e.hook_event_name === 'PreToolUse')
+      .map((e) => ({ tool: e.tool_name, input: e.tool_input, verdict: e.verdict })), null, 1));
+    console.log(`[docubot observe] ${approval.events().length} hook events, ${denied.length} denied: ${out}`);
+    return approved;
+  }
   if (denied.length) throw new Error(`the policy denied ${denied.length} call(s): ${denied.map((e) => `${e.tool_name} ${JSON.stringify(e.tool_input).slice(0, 200)} (${e.verdict.reason})`).join('; ')}`);
   return approved;
 }

@@ -18,6 +18,8 @@ On the Branch2 gate, remove the source IP of the port scan alert from the red-te
 
 **You are done when:** the operation returns the source IP in **newly_unblocked**.
 
+![ch11-04-undo](ch11-04-undo.png?height=600px)
+
 ## 2. Confirm the group is back to its seed
 
 Give your agent this prompt:
@@ -27,6 +29,8 @@ On the Branch2 gate, read the SOAR-Blocklist address group and tell me its membe
 ```
 
 **You are done when:** the members list is **SOAR-blocklist-seed** only, and the agent confirms the seed member is still there.
+
+![ch11-04-group-seed](ch11-04-group-seed.png?height=600px)
 
 ## 3. Check the scan reaches the server again
 

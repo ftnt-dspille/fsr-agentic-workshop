@@ -12,15 +12,17 @@ The block is reversible, and the next page removes it.
 
 ## 1. Block the source
 
-Give your agent this prompt. It names the exact connector operation and its parameters:
+Give your agent this prompt:
 
 ```text
-Block the source IP of the port scan alert from the red-team host on the Branch2 gate. The alert's name starts with "Internal port scanning" or "Internal intrusion". Use the fortigatev2 connector, configuration Branch2, operation block_ip_new with these parameters: method "Policy Based", ip as a list with the one source IP of the alert, ip_group_name "SOAR-Blocklist", ip_block_policy "SOAR-contain-deny", ip_type "IPv4", is_new true. Before you run it, show me the parameters and wait for my yes. After it runs, tell me the newly_blocked list it returned.
+Contain the source of the port scan alert from the red-team host (the one named Internal port scanning or Internal intrusion). Block it on the Branch2 gate through our Branch2 FortiGate connector configuration in FortiSOAR, in our SOAR-Blocklist group, which the SOAR-contain-deny policy denies. Before you change anything, show me exactly what you will run and wait for my yes. Then tell me what it changed.
 ```
 
 Read the parameters the agent shows before you answer yes. The source IP must be the one from the alert, and the group must be **SOAR-Blocklist**. Approve only then.
 
-**You are done when:** the operation returns the source IP in **newly_blocked**, and the agent reports it.
+**You are done when:** the agent reports the source IP as blocked in **SOAR-Blocklist**.
+
+![ch11-03-block](ch11-03-block.png?height=600px)
 
 ## 2. Check the group and the policy
 
@@ -31,6 +33,8 @@ On the Branch2 gate, read the SOAR-Blocklist address group and tell me its membe
 ```
 
 **You are done when:** the members list holds the **SOAR-blocklist-seed** member that was already there and the source IP you blocked. The policy shows action **deny** and matches the SOAR-Blocklist group.
+
+![ch11-03-group-check](ch11-03-group-check.png?height=600px)
 
 ## 3. Fire the scan again
 
@@ -43,7 +47,7 @@ The scan now starts from a source Branch2 denies. Branch2 drops it under policy 
 Give your agent this prompt:
 
 ```text
-Use the faz-branch FortiAnalyzer configuration. Find the source IP of the port scan alert from the red-team host, the one named Internal port scanning or Internal intrusion. Then tell me whether that source is still reaching the payroll server on Branch2. Check the policy 20 hits or deny logs in the branch ADOM for that IP, and tell me which evidence you used.
+We blocked the source of the port scan alert from the red-team host (the one named Internal port scanning or Internal intrusion). Is that source still reaching the payroll server on Branch2? Check FortiAnalyzer through our faz-branch connector configuration in FortiSOAR, branch ADOM: look for policy 20 hits or deny logs from that IP, and tell me which evidence you used.
 ```
 
 The branch traffic logs live in the **branch** ADOM, under the **faz-branch** configuration. The default FortiAnalyzer configuration sees only the lab's root ADOM, which holds no Branch2 traffic. If your agent answers from the default configuration and reports no logs, ask it again and name **faz-branch** and the **branch** ADOM.
@@ -51,3 +55,5 @@ The branch traffic logs live in the **branch** ADOM, under the **faz-branch** co
 The newest deny rows for the source under policy 20 are the answer for this scan. Check the time on the rows: a session from before the block (policy 905) is older than the denies from the scan you fired after the block. Your agent reports the deny rows it read and the time of the newest one.
 
 **You are done when:** the scan has finished and the agent reports that the source is denied on Branch2 under policy 20, with the time of the newest deny row.
+
+![ch11-03-denies](ch11-03-denies.png?height=600px)
