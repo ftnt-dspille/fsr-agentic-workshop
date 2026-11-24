@@ -1,27 +1,23 @@
-# Chapter 11 spec: parked
+# Chapter 11 spec: what is left
 
-The pages are live; this spec is not finished. Before the next live run, fix and prove offline:
+Every step passes live. Two chapter 02 pictures are not on the pages yet:
 
-1. **FortiGate scratch login.** The kit's FortiGate REST scratch handler cannot sign in to the Branch2 GUI
-   ("Please Login"; `/logincheck` 404), so the `blocklist-member` kind (docubot `dspille`) is unused here.
-2. **Group-check approvals.** The page's group-check prompt makes the agent call both `get_address_groups` and
-   `get_list_of_policies`; the step's allowed-tool list held only the first. The agent also tried a shell `ls`,
-   which the policy denies. Align the prompt, the allowed read tools and the approval scope (approve only the
-   containment write).
-3. **Teardown.** The `afterAll` unblock did not run on the last live attempt (no teardown output in the log), and the
-   block was removed by hand. Prove the teardown path offline, then let the scratch read-back prove the undo.
-4. **Re-take gating.** `FORCE=1` did not re-take a step reused by resume; use `RESUME=0`, and full step ids for `ONLY`.
+- `ch11-02-faz-evidence` (page 02, section 2) and `ch11-02-investigate` (section 3).
 
-The RedTeam dashboard has no gui driver, so the scenario is fired over HTTP and has no picture.
+**Why:** the picture for section 2 has to show policy 905 letting the scan through before the block. FortiAnalyzer keeps
+one event per scan source and device and keeps adding to it, and FortiSOAR raises one alert per event. The first scan of a
+day, fired while the containment group is clean, makes the alert whose logs start with policy 905. Any block earlier in that
+event's life puts policy 20 denies at the start of the same event, and the agent then (correctly) answers that no policy let
+the scan through. The `faz-evidence` verify requires the answer to name 905 and fails otherwise.
 
-## Progress (2026-11-23, later)
+**To capture them:** from a lab where the open Branch2 port-scan alert comes from a scan fired with the group clean, run
+`make chapter T=<this repo> CH=11-fabric-integrations FROM=ch11-02-find-alert FORCE=1 RESUME=0`. The three chapter 02 steps
+share one chat, so they run together, starting at find-alert. Then copy the two pictures next to the page and add their
+embeds back to `02-investigate-the-alert.md`.
 
-Fixed in the spec: read and approval steps may list the folder (`LOOK_AROUND`); the containment is tracked by source IP
-before the block call, and the teardown removes every member carrying that IP and logs what it did; the step budget is
-12 minutes (agent turns run about 5 minutes each).
+**Other facts the next run should know:**
 
-Live: steps 01 (fire, alert picture) and 02 (find, FAZ evidence, investigate) passed. `ch11-03-block` failed in 0.5 s:
-the toolkit's `search_records` (module alerts, term "Internal port scanning", `fields` + `summary: false`) exited
-non-zero, so `requireSource()` never got the scan source. Next: run that exact call by hand, fix the arguments or read
-the source another way (for example `findAlert` in the UI or the alert's sourceId), then `FROM=ch11-03-block`.
-The blocklist was seed-only after the run.
+- Steps that need the block in place (`group-check`, `refire`, `denies`, `undo`) arrange it themselves, so they run alone.
+- The agent reads the gate before it blocks, through either FortiGate connector. The steps allow any `get_`/`list_` read.
+  A declined call used to hang the step for the full call budget; the helper now gives up on a decline after 20 seconds.
+- Observe mode (`DOCUBOT_OBSERVE=1`) writes its breadcrumbs to `.docubot/last-run.log`, not to the terminal.
